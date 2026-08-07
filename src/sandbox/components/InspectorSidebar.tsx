@@ -1,0 +1,146 @@
+import React from 'react';
+
+interface InspectedElementData {
+  tagName: string;
+  id: string;
+  classes: string[];
+  attributes: Record<string, string>;
+  text: string;
+  suggestedSelectors: string[];
+}
+
+interface InspectorSidebarProps {
+  inspectedElement: InspectedElementData | null;
+  activeSelector: string;
+  setActiveSelector: (sel: string) => void;
+  jsonString: string;
+  setJsonString: (val: string) => void;
+  jsonError: boolean;
+  setJsonError: (err: boolean) => void;
+  setTargetUrl: (url: string) => void;
+  setUrlInput: (url: string) => void;
+  setTheme: React.Dispatch<React.SetStateAction<{
+    bgPrimary: string;
+    bgSecondary: string;
+    accent: string;
+    textPrimary: string;
+    customStyles: string;
+  }>>;
+  theme: {
+    bgPrimary: string;
+    bgSecondary: string;
+    accent: string;
+    textPrimary: string;
+    customStyles: string;
+  };
+}
+
+export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
+  inspectedElement,
+  activeSelector,
+  setActiveSelector,
+  jsonString,
+  setJsonString,
+  jsonError,
+  setJsonError,
+  setTargetUrl,
+  setUrlInput,
+  setTheme,
+  theme
+}) => {
+  return (
+    <aside className="w-80 border-l border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
+      
+      {/* Element Inspector details */}
+      {inspectedElement ? (
+        <div className="border-b border-[#333333] pb-4">
+          <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Element Inspector</div>
+          <div className="bg-zinc-950 border border-zinc-800 rounded p-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-zinc-400">Tag</span>
+              <span className="font-mono text-purple-400 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded">{inspectedElement.tagName}</span>
+            </div>
+            {inspectedElement.id && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-zinc-400">ID</span>
+                <span className="font-mono text-white bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">#{inspectedElement.id}</span>
+              </div>
+            )}
+            {inspectedElement.classes.length > 0 && (
+              <div>
+                <span className="text-[11px] font-semibold text-zinc-400 block mb-1">Classes</span>
+                <div className="flex flex-wrap gap-1">
+                  {inspectedElement.classes.map((c, i) => (
+                    <span key={i} className="text-[10px] font-mono text-zinc-300 bg-zinc-900 border border-zinc-800 px-1 rounded truncate max-w-[120px]">{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {inspectedElement.suggestedSelectors.length > 0 && (
+              <div className="mt-1">
+                <span className="text-[11px] font-semibold text-zinc-400 block mb-1">Suggested CSS Selectors</span>
+                <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
+                  {inspectedElement.suggestedSelectors.map((sel, i) => (
+                    <button 
+                      key={i}
+                      onClick={() => setActiveSelector(sel)}
+                      className={`text-left font-mono text-[10px] p-1 border rounded truncate transition ${activeSelector === sel ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-black border-[#222222] text-zinc-400 hover:border-zinc-600'}`}
+                    >
+                      {sel}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="text-xs text-zinc-500 italic border-b border-[#333333] pb-4">
+          Click elements in Legacy View to inspect classes and capture selectors.
+        </div>
+      )}
+
+      {/* Consolidated raw JSON outputs */}
+      <div className="flex-1 flex flex-col gap-2 min-h-[250px]">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-semibold text-zinc-400">Layout JSON Output</label>
+          {jsonError && (
+            <span className="text-[10px] text-red-400 font-medium">Invalid JSON Syntax</span>
+          )}
+        </div>
+        <textarea
+          value={jsonString}
+          onChange={(e) => {
+            const val = e.target.value;
+            setJsonString(val);
+            try {
+              const parsed = JSON.parse(val);
+              setJsonError(false);
+
+              if (parsed.targetUrl) {
+                const clean = parsed.targetUrl.replace(/\/\*$/, '');
+                setTargetUrl(clean);
+                setUrlInput(clean);
+              }
+
+              if (parsed.theme) {
+                setTheme({
+                  bgPrimary: parsed.theme.cssVariables?.['--spm-bg-primary'] || theme.bgPrimary,
+                  bgSecondary: parsed.theme.cssVariables?.['--spm-bg-secondary'] || theme.bgSecondary,
+                  accent: parsed.theme.cssVariables?.['--spm-accent'] || theme.accent,
+                  textPrimary: parsed.theme.cssVariables?.['--spm-text-primary'] || theme.textPrimary,
+                  customStyles: parsed.theme.customStyles || ''
+                });
+              }
+            } catch (err) {
+              setJsonError(true);
+            }
+          }}
+          rows={15}
+          className={`flex-1 bg-black border rounded p-3 text-[10px] text-zinc-400 font-mono focus:outline-none focus:text-white resize-none ${jsonError ? 'border-red-500/50 focus:border-red-500' : 'border-[#333333] focus:border-zinc-500'}`}
+          placeholder="Paste or edit config JSON..."
+        />
+      </div>
+    </aside>
+  );
+};
