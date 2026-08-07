@@ -1,4 +1,5 @@
 import { UiImageCard } from './UiImageCard';
+import { UiPaginationBar } from './UiPaginationBar';
 
 interface GridItem {
   imageUrl: string;
@@ -7,12 +8,18 @@ interface GridItem {
   id: string;
 }
 
+interface PageLink {
+  label: string;
+  url: string;
+}
+
 interface UiModernGridPageProps {
   pageTitle: string;
   items: GridItem[];
+  pageLinks?: PageLink[];
 }
 
-export function UiModernGridPage({ pageTitle, items }: UiModernGridPageProps) {
+export function UiModernGridPage({ pageTitle, items, pageLinks }: UiModernGridPageProps) {
   return (
     <div
       style={{
@@ -40,26 +47,29 @@ export function UiModernGridPage({ pageTitle, items }: UiModernGridPageProps) {
         {/* Header */}
         <header
           style={{
-            padding: '20px 24px',
+            padding: '16px 24px',
             borderBottom: '1px solid var(--spm-border)',
             display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: '22px',
-                fontWeight: 700,
-                color: 'var(--spm-text-primary)',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {pageTitle || 'Gallery'}
-            </h1>
-          </div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: '20px',
+              fontWeight: 700,
+              color: 'var(--spm-text-primary)',
+              letterSpacing: '-0.02em',
+              flexShrink: 0,
+            }}
+          >
+            {pageTitle || 'Gallery'}
+          </h1>
+
+          <UiPaginationBar pageLinks={pageLinks} />
         </header>
 
         {/* Grid */}
