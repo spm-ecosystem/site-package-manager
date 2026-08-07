@@ -11,28 +11,47 @@ interface PrimitiveElement {
   content?: string;
 }
 
+interface CustomTheme {
+  bgPrimary: string;
+  bgSecondary: string;
+  accent: string;
+  textPrimary: string;
+  customStyles: string;
+}
+
+type LayoutType = 'gallery' | 'post';
 
 function SandboxApp() {
-  const [targetUrl] = useState<string>('https://safebooru.org/index.php?page=post&s=list');
+  const [targetUrl, setTargetUrl] = useState<string>('https://safebooru.org/index.php?page=post&s=list');
+  const [urlInput, setUrlInput] = useState<string>('https://safebooru.org/index.php?page=post&s=list');
   const [wsStatus, setWsStatus] = useState<string>('Disconnected');
   const [activeSelector, setActiveSelector] = useState<string>('');
   const [elementsList, setElementsList] = useState<PrimitiveElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  
+  // Theme state
+  const [theme, setTheme] = useState<CustomTheme>({
+    bgPrimary: '#000000',
+    bgSecondary: '#111111',
+    accent: '#ffffff',
+    textPrimary: '#ffffff',
+    customStyles: '/* Add your CSS overrides here */\n.sidebar { padding: 0 !important; }'
+  });
+
+  // Reconstructor Layout selector
+  const [layoutType, setLayoutType] = useState<LayoutType>('gallery');
 
   const legacyExplorerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    // 1. Fetch and inject mock legacy page DOM nodes
     fetchHtmlDump();
-
-    // 2. Setup WebSocket Live synchronization
     connectWebSocket();
 
     return () => {
       if (socketRef.current) socketRef.current.close();
     };
-  }, []);
+  }, [targetUrl]); // Refetch when targetUrl changes
 
   const connectWebSocket = () => {
     try {
@@ -42,7 +61,7 @@ function SandboxApp() {
       ws.onopen = () => setWsStatus('Connected');
       ws.onclose = () => {
         setWsStatus('Disconnected');
-        setTimeout(connectWebSocket, 5000); // Reconnection retry
+        setTimeout(connectWebSocket, 5000);
       };
       ws.onmessage = (event) => {
         try {
@@ -72,9 +91,45 @@ function SandboxApp() {
     }
   };
 
-  const fetchHtmlDump = async () => {
-    if (legacyExplorerRef.current) {
-      const shadow = legacyExplorerRef.current.shadowRoot || legacyExplorerRef.current.attachShadow({ mode: 'open' });
+  const fetchHtmlDump = () => {
+    if (!legacyExplorerRef.current) return;
+    const shadow = legacyExplorerRef.current.shadowRoot || legacyExplorerRef.current.attachShadow({ mode: 'open' });
+    
+    // Simulate DOM dump based on targetUrl type
+    const isPostPage = targetUrl.includes('s=view') || targetUrl.includes('id=');
+    
+    if (isPostPage) {
+      shadow.innerHTML = `
+        <style>
+          .legacy-container { padding: 16px; background: #ffffff; color: #333333; font-family: system-ui, sans-serif; min-height: 200px; }
+          #tag-sidebar { width: 160px; float: left; border-right: 1px solid #e5e7eb; padding-right: 8px; }
+          .tag-type-artist { color: #a855f7; }
+          .tag-type-general { color: #3b82f6; }
+          .related-posts { margin-top: 16px; border-top: 1px solid #eee; padding-top: 8px; }
+          .related-posts a { display: block; font-size: 12px; color: #10b981; text-decoration: none; margin-bottom: 4px; }
+          h2 { font-size: 18px; margin-top: 0; margin-bottom: 8px; color: #111827; }
+          .content { margin-left: 180px; text-align: center; }
+          #image { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 4px; }
+        </style>
+        <div class="legacy-container">
+          <div id="tag-sidebar">
+            <h2>Tags</h2>
+            <ul>
+              <li class="tag-type-artist"><a href="#">?</a> <a href="#">artist_name</a> <span>(1)</span></li>
+              <li class="tag-type-general"><a href="#">?</a> <a href="#">solo</a> <span>(321)</span></li>
+            </ul>
+            <div class="related-posts">
+              <h5>Related Posts</h5>
+              <a href="#">Previous</a>
+              <a href="#">Next</a>
+            </div>
+          </div>
+          <div class="content">
+            <img id="image" src="https://safebooru.org/thumbnails/3909/thumbnail_6cb6cbfad7e.jpg" />
+          </div>
+        </div>
+      `;
+    } else {
       shadow.innerHTML = `
         <style>
           .legacy-container { padding: 16px; background: #ffffff; color: #333333; font-family: system-ui, sans-serif; min-height: 200px; }
@@ -108,26 +163,28 @@ function SandboxApp() {
           </div>
         </div>
       `;
-
-      shadow.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const target = e.target as HTMLElement;
-        if (target) {
-          const selector = computeCssSelector(target);
-          setActiveSelector(selector);
-        }
-      });
     }
+
+    shadow.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const target = e.target as HTMLElement;
+      if (target) {
+        const selector = computeCssSelector(target);
+        setActiveSelector(selector);
+      }
+    });
   };
 
   const computeCssSelector = (el: HTMLElement): string => {
     if (el.id) return `#${el.id}`;
     if (el.classList.contains('thumb')) return '.thumb';
+    if (el.tagName.toLowerCase() === 'img') return 'img';
+    if (el.tagName.toLowerCase() === 'a') return 'a';
     
     const path: string[] = [];
     let current: HTMLElement | null = el;
-    while (current && current.tagName && current.tagName.toLowerCase() !== 'div' && current.id !== 'post-list') {
+    while (current && current.tagName && current.tagName.toLowerCase() !== 'div') {
       let selector = current.tagName.toLowerCase();
       if (current.className) {
         selector += `.${current.className.trim().split(/\s+/)[0]}`;
@@ -155,35 +212,99 @@ function SandboxApp() {
 
   const activeElement = elementsList.find(el => el.id === selectedElementId);
 
+  // Compile JSON dynamically based on type, selectors and style inputs
   const compiledJson = {
-    targetUrl: "*://safebooru.org/*",
+    targetUrl: new URL(targetUrl).origin + "/*",
+    version: "1.12.0",
     theme: {
+      label: "Custom Theme",
       cssVariables: {
-        "--bg-color": "#000000",
-        "--text-color": "#ffffff"
-      }
+        "--spm-bg-primary": theme.bgPrimary,
+        "--spm-bg-secondary": theme.bgSecondary,
+        "--spm-text-primary": theme.textPrimary,
+        "--spm-accent": theme.accent,
+        "--spm-border": "#333333",
+        "--spm-radius": "8px"
+      },
+      customStyles: theme.customStyles
     },
-    reconstructs: [
+    components: [
       {
+        "name": "UiNavHeader",
+        "selector": "#header",
+        "action": "replace",
+        "propsMap": {
+          "siteName": "#site-title a | text"
+        },
+        "children": [
+          {
+            "name": "primaryLinks",
+            "selector": "#navbar a",
+            "scope": "document",
+            "propsMap": {
+              "label": "self | text",
+              "url": "self | attr:href"
+            }
+          }
+        ]
+      }
+    ],
+    reconstructs: [
+      layoutType === 'gallery' ? {
         containerSelector: "#post-list",
         layoutComponent: "UiModernGridPage",
         propsMap: {
           pageTitle: "h2 | text"
         },
         preserve: {
-          paginationSlot: "div.pagination",
           sidebarSlot: "div.sidebar"
         },
-        children: elementsList.map(el => ({
-          name: "items",
-          selector: el.selector || ".thumb",
-          propsMap: {
-            imageUrl: el.name === 'UiImage' || el.name === 'UiImageCard' ? `img | attr:src` : undefined,
-            linkUrl: `a | attr:href`,
-            title: `img | attr:title`,
-            id: `self | attr:id`
+        children: [
+          {
+            name: "items",
+            selector: elementsList.find(e => e.name === 'UiImageCard')?.selector || ".thumb",
+            propsMap: {
+              imageUrl: "img | attr:src",
+              linkUrl: "a | attr:href",
+              title: "img | attr:title",
+              id: "self | attr:id"
+            }
           }
-        }))
+        ]
+      } : {
+        containerSelector: "div.content:has(#image)",
+        layoutComponent: "UiPostDetails",
+        propsMap: {
+          imageUrl: "#image | attr:src",
+          statisticsHtml: "#tag-sidebar ul:last-child | html"
+        },
+        props: {
+          showSearch: true,
+          searchSubmitUrl: new URL(targetUrl).origin + "/index.php?page=post&s=list",
+          searchParamName: "tags"
+        },
+        children: [
+          {
+            name: "buttons",
+            selector: elementsList.find(e => e.name === 'UiLink')?.selector || "#tag-sidebar .related-posts a",
+            scope: "document",
+            propsMap: {
+              label: "self | text",
+              url: "self | attr:href"
+            }
+          },
+          {
+            name: "tags",
+            selector: "#tag-sidebar li",
+            scope: "document",
+            propsMap: {
+              name: "a:nth-child(2) | text",
+              count: "span | text",
+              type: "self | attr:class",
+              url: "a:nth-child(2) | attr:href"
+            }
+          }
+        ]
       }
     ]
   };
@@ -192,21 +313,45 @@ function SandboxApp() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(compiledJson, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "safebooru.json");
+    downloadAnchor.setAttribute("download", `${new URL(targetUrl).hostname}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
   };
 
+  const handleFetchTarget = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (urlInput) {
+      setTargetUrl(urlInput);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen font-sans select-none bg-black text-[#d4d4d4]">
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-[#333333] px-6 py-3 bg-[#111111] shrink-0">
-        <div className="flex items-center gap-4">
-          <h1 className="text-base font-bold text-white tracking-tight font-sans">SPM Visual Sandbox IDE</h1>
-          <span className="text-xs text-zinc-500 truncate max-w-[300px] font-sans">URL: {targetUrl}</span>
+      <header className="flex items-center justify-between border-b border-[#333333] px-6 py-3 bg-[#111111] shrink-0 gap-4">
+        <div className="flex items-center gap-4 shrink-0">
+          <h1 className="text-sm font-bold text-white tracking-tight font-sans">SPM Visual Sandbox IDE</h1>
         </div>
-        <div className="flex items-center gap-4">
+        
+        {/* Dynamic target url input */}
+        <form onSubmit={handleFetchTarget} className="flex-1 max-w-[500px] flex items-center gap-2">
+          <input
+            type="text"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="Target URL..."
+            className="w-full bg-black border border-[#333333] px-3 py-1 text-xs text-white rounded focus:outline-none focus:border-zinc-500 font-mono"
+          />
+          <button 
+            type="submit"
+            className="px-3 py-1 bg-zinc-800 text-white rounded text-xs font-semibold hover:bg-zinc-700 transition"
+          >
+            Fetch
+          </button>
+        </form>
+
+        <div className="flex items-center gap-4 shrink-0">
           <button 
             onClick={handleDownload}
             className="px-3 py-1.5 rounded text-xs font-semibold bg-white text-black hover:bg-zinc-200 transition font-sans"
@@ -222,10 +367,30 @@ function SandboxApp() {
       {/* Main Studio Workspace */}
       <main className="flex-1 flex overflow-hidden">
         
-        {/* Left Elements Palette */}
-        <aside className="w-64 border-r border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 shrink-0">
+        {/* Left Elements & Styling Palette */}
+        <aside className="w-72 border-r border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
+          {/* Layout Type Selection */}
           <div>
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 font-sans">Primitives Canvas</div>
+            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 font-sans">Layout Type</div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setLayoutType('gallery')}
+                className={`flex-1 py-1.5 rounded text-xs font-semibold border ${layoutType === 'gallery' ? 'bg-white text-black border-white' : 'bg-[#222222] border-[#333333] text-white hover:border-zinc-500'}`}
+              >
+                Gallery List
+              </button>
+              <button
+                onClick={() => setLayoutType('post')}
+                className={`flex-1 py-1.5 rounded text-xs font-semibold border ${layoutType === 'post' ? 'bg-white text-black border-white' : 'bg-[#222222] border-[#333333] text-white hover:border-zinc-500'}`}
+              >
+                Post Details
+              </button>
+            </div>
+          </div>
+
+          {/* Primitive Elements */}
+          <div>
+            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 font-sans">Components Palette</div>
             <div className="grid grid-cols-2 gap-2">
               {['UiBox', 'UiGrid', 'UiFlexRow', 'UiText', 'UiImage', 'UiLink'].map(item => (
                 <button 
@@ -237,15 +402,44 @@ function SandboxApp() {
                 </button>
               ))}
             </div>
-          </div>
-          <div>
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 font-sans">Custom Blocks</div>
             <button 
               onClick={() => addPrimitiveToCanvas('UiImageCard')}
-              className="w-full p-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-500 rounded text-center text-xs text-indigo-400 font-semibold transition font-sans"
+              className="w-full mt-2 p-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-500 rounded text-center text-xs text-indigo-400 font-semibold transition font-sans"
             >
               + UiImageCard
             </button>
+          </div>
+
+          {/* Theme custom styles & vars binder */}
+          <div className="border-t border-[#333333] pt-4 flex flex-col gap-3">
+            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider font-sans">Theme Tokens</div>
+            <div>
+              <label className="text-[10px] text-zinc-400 block mb-1">Primary Bg Color</label>
+              <input
+                type="text"
+                value={theme.bgPrimary}
+                onChange={(e) => setTheme({ ...theme, bgPrimary: e.target.value })}
+                className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-zinc-400 block mb-1">Accent Accent</label>
+              <input
+                type="text"
+                value={theme.accent}
+                onChange={(e) => setTheme({ ...theme, accent: e.target.value })}
+                className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-zinc-400 block mb-1">Custom CSS rules</label>
+              <textarea
+                rows={4}
+                value={theme.customStyles}
+                onChange={(e) => setTheme({ ...theme, customStyles: e.target.value })}
+                className="w-full bg-black border border-[#333333] rounded p-2 text-[10px] text-zinc-400 font-mono focus:outline-none"
+              />
+            </div>
           </div>
         </aside>
 
