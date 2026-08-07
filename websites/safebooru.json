@@ -3,8 +3,8 @@
   "version": "1.2.0",
   "theme": {
     "cssVariables": {
-      "--bg-color": "#1a1b26",
-      "--text-color": "#c0caf5"
+      "--bg-color": "#000000",
+      "--text-color": "#ffffff"
     }
   },
   "reconstructs": [
