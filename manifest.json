@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Site Package Manager Engine",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Modernizes old web interfaces using React and Shadow DOM",
   "content_scripts": [
     {
@@ -9,5 +9,8 @@
       "js": ["src/content/index.tsx"]
     }
   ],
-  "permissions": ["storage"]
+  "action": {
+    "default_popup": "index.html"
+  },
+  "permissions": ["storage", "activeTab"]
 }
