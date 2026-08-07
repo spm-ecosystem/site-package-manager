@@ -97,18 +97,41 @@ function SandboxApp() {
     if (!legacyExplorerRef.current) return;
     const shadow = legacyExplorerRef.current.shadowRoot || legacyExplorerRef.current.attachShadow({ mode: 'open' });
     
-    try {
-      // 1. Attempt to fetch real page html
-      const response = await fetch(targetUrl, { method: 'GET' });
-      if (!response.ok) {
-        throw new Error(`Server returned status ${response.status}`);
-      }
-      let htmlText = await response.text();
+    let htmlText = '';
+    let fetched = false;
 
-      // 2. Clear script tags to prevent running scripts from breaking the sandbox
+    // 1. First, attempt a direct fetch from browser context
+    try {
+      const response = await fetch(targetUrl, { method: 'GET' });
+      if (response.ok) {
+        htmlText = await response.text();
+        fetched = true;
+      }
+    } catch (directErr) {
+      console.warn('[SPM Sandbox] Direct browser fetch failed (CORS likely). Retrying via local proxy...', directErr);
+    }
+
+    // 2. If direct fetch fails, attempt fetch through local CORS bypass proxy
+    if (!fetched) {
+      try {
+        const proxyUrl = `http://localhost:8080/fetch?url=${encodeURIComponent(targetUrl)}`;
+        const response = await fetch(proxyUrl, { method: 'GET' });
+        if (response.ok) {
+          htmlText = await response.text();
+          fetched = true;
+        } else {
+          throw new Error(`Proxy returned status ${response.status}`);
+        }
+      } catch (proxyErr) {
+        console.error('[SPM Sandbox] Local proxy fetch failed too:', proxyErr);
+      }
+    }
+
+    if (fetched) {
+      // Clear script tags to prevent sandbox runtime breaks
       htmlText = htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 
-      // 3. Inject base href and the fetched HTML to resolve relative styles/images natively
+      // Inject base href to resolve relative styles and images natively
       const baseTag = `<base href="${new URL(targetUrl).origin}">`;
       shadow.innerHTML = `
         ${baseTag}
@@ -116,14 +139,12 @@ function SandboxApp() {
           ${htmlText}
         </div>
       `;
-    } catch (err) {
-      console.warn('[SPM Sandbox] Live fetch failed. Error:', err);
+    } else {
       shadow.innerHTML = `
         <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
           <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Unable to fetch target page</h4>
           <p style="margin: 0; font-size: 12px; line-height: 1.5;">
-            Could not fetch <code>${targetUrl}</code>. Make sure the server is reachable and CORS policies allow connections.
-            You can still inspect any elements by entering a different URL in the fetch bar.
+            Could not fetch <code>${targetUrl}</code>. Make sure the local dev-server proxy is running (<code>npm run dev-server</code>) and CORS policies allow connections.
           </p>
         </div>
       `;
