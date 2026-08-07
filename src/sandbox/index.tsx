@@ -50,11 +50,11 @@ function SandboxApp() {
   const [activeSelector, setActiveSelector] = useState<string>('');
   const [inspectedElement, setInspectedElement] = useState<InspectedElementData | null>(null);
 
-  // Theme states
   const [theme, setTheme] = useState<CustomTheme>(savedTheme);
   const [jsonString, setJsonString] = useState<string>(savedJsonString);
   const [jsonError, setJsonError] = useState<boolean>(false);
   const [rawHtml, setRawHtml] = useState<string>(savedRawHtml);
+  const [selectedComponentConfig, setSelectedComponentConfig] = useState<any | null>(null);
 
   // Drag & Drop Modal states
   const [dropModalOpen, setDropModalOpen] = useState<boolean>(false);
@@ -128,6 +128,59 @@ function SandboxApp() {
       }
     } catch (e) {}
   }, [theme, targetUrl]);
+
+  // Connect visual editor callbacks to the preview container host
+  useEffect(() => {
+    if (!previewContainerRef.current) return;
+
+    const host = previewContainerRef.current as any;
+
+    host.__deleteComponent = (selector: string, type: 'component' | 'reconstruct') => {
+      try {
+        const parsed = JSON.parse(jsonString);
+        if (type === 'reconstruct') {
+          parsed.reconstructs = parsed.reconstructs.filter((c: any) => c.containerSelector !== selector);
+        } else {
+          parsed.components = parsed.components.filter((c: any) => c.selector !== selector);
+        }
+        setJsonString(JSON.stringify(parsed, null, 2));
+        setSelectedComponentConfig(null);
+      } catch (e) {
+        console.error('[SPM Sandbox] Error deleting component:', e);
+      }
+    };
+
+    host.__updateComponentWidth = (selector: string, type: 'component' | 'reconstruct', width: string) => {
+      try {
+        const parsed = JSON.parse(jsonString);
+        const list = type === 'reconstruct' ? parsed.reconstructs : parsed.components;
+        const matching = list.find((c: any) => (c.selector === selector || c.containerSelector === selector));
+        if (matching) {
+          matching.style = matching.style || {};
+          matching.style.width = width;
+          setJsonString(JSON.stringify(parsed, null, 2));
+        }
+      } catch (e) {
+        console.error('[SPM Sandbox] Error updating component width:', e);
+      }
+    };
+
+    host.__selectComponent = (selector: string, type: 'component' | 'reconstruct') => {
+      try {
+        const parsed = JSON.parse(jsonString);
+        const list = type === 'reconstruct' ? parsed.reconstructs : parsed.components;
+        const matching = list.find((c: any) => (c.selector === selector || c.containerSelector === selector));
+        if (matching) {
+          setSelectedComponentConfig({
+            selector,
+            type,
+            name: type === 'reconstruct' ? matching.layoutComponent : matching.name,
+            config: matching
+          });
+        }
+      } catch (e) {}
+    };
+  }, [jsonString]);
 
   // Refetch target URL when it changes
   useEffect(() => {
@@ -594,6 +647,8 @@ function SandboxApp() {
           setTheme={setTheme}
           theme={theme}
           onElementDrop={handleElementDrop}
+          selectedComponentConfig={selectedComponentConfig}
+          setSelectedComponentConfig={setSelectedComponentConfig}
         />
       </main>
 
