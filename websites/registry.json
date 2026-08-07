@@ -1,0 +1,9 @@
+[
+  {
+    "id": "safebooru-modern-theme",
+    "name": "Tokyo Night Dark",
+    "description": "Modern dark layout for Safebooru images grid.",
+    "domain": "safebooru.org",
+    "manifestPath": "websites/safebooru.json"
+  }
+]
