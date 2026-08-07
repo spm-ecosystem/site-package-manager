@@ -5,25 +5,33 @@ interface PageLink {
 
 interface UiPaginationBarProps {
   pageLinks?: PageLink[];
+  paramName?: string;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-export function UiPaginationBar({ pageLinks = [] }: UiPaginationBarProps) {
-  const currentPid = new URLSearchParams(window.location.search).get('pid') ?? '0';
+export function UiPaginationBar({
+  pageLinks = [],
+  paramName = 'pid',
+  className = '',
+  style = {},
+}: UiPaginationBarProps) {
+  const currentPid = new URLSearchParams(window.location.search).get(paramName) ?? '0';
 
   const isActive = (url: string) => {
     try {
-      const linkPid = new URL(url, window.location.origin).searchParams.get('pid') ?? '0';
+      const linkPid = new URL(url, window.location.origin).searchParams.get(paramName) ?? '0';
       return linkPid === currentPid;
     } catch {
       return false;
     }
   };
 
-  // Derive postsPerPage from consecutive pid differences so we can build prev/next
+  // Derive page offset diff dynamically from consecutive page links
   let postsPerPage = 42;
   const pidValues = pageLinks
     .map(l => {
-      try { return parseInt(new URL(l.url, window.location.origin).searchParams.get('pid') ?? 'NaN', 10); }
+      try { return parseInt(new URL(l.url, window.location.origin).searchParams.get(paramName) ?? 'NaN', 10); }
       catch { return NaN; }
     })
     .filter(v => !isNaN(v) && v >= 0)
@@ -35,12 +43,12 @@ export function UiPaginationBar({ pageLinks = [] }: UiPaginationBarProps) {
 
   const currentPidNum = parseInt(currentPid, 10);
   const prevUrl = currentPidNum > 0
-    ? (() => { const u = new URL(window.location.href); u.searchParams.set('pid', String(currentPidNum - postsPerPage)); return u.toString(); })()
+    ? (() => { const u = new URL(window.location.href); u.searchParams.set(paramName, String(currentPidNum - postsPerPage)); return u.toString(); })()
     : null;
   const nextPid = currentPidNum + postsPerPage;
   const maxPid = pidValues.length > 0 ? Math.max(...pidValues) : currentPidNum;
   const nextUrl = nextPid <= maxPid
-    ? (() => { const u = new URL(window.location.href); u.searchParams.set('pid', String(nextPid)); return u.toString(); })()
+    ? (() => { const u = new URL(window.location.href); u.searchParams.set(paramName, String(nextPid)); return u.toString(); })()
     : null;
 
   const handleGoToPage = (e: React.FormEvent<HTMLFormElement>) => {
@@ -49,7 +57,7 @@ export function UiPaginationBar({ pageLinks = [] }: UiPaginationBarProps) {
     const page = parseInt(input.value, 10);
     if (!isNaN(page) && page >= 1) {
       const u = new URL(window.location.href);
-      u.searchParams.set('pid', String((page - 1) * postsPerPage));
+      u.searchParams.set(paramName, String((page - 1) * postsPerPage));
       window.location.href = u.toString();
     }
   };
@@ -93,10 +101,16 @@ export function UiPaginationBar({ pageLinks = [] }: UiPaginationBarProps) {
 
   return (
     <nav
-      style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '3px' }}
+      className={className}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '3px',
+        ...style,
+      }}
       aria-label="Pagination"
     >
-      {/* ‹ prev */}
       {prevUrl ? (
         <a href={prevUrl} style={btnBase}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--spm-bg-tertiary)'}
@@ -106,7 +120,6 @@ export function UiPaginationBar({ pageLinks = [] }: UiPaginationBarProps) {
         <span style={dimStyle}>‹</span>
       )}
 
-      {/* Page links extracted from real DOM */}
       {pageLinks.map((link, i) => {
         const active = isActive(link.url);
         return (
@@ -123,7 +136,6 @@ export function UiPaginationBar({ pageLinks = [] }: UiPaginationBarProps) {
         );
       })}
 
-      {/* › next */}
       {nextUrl ? (
         <a href={nextUrl} style={btnBase}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--spm-bg-tertiary)'}
@@ -133,7 +145,6 @@ export function UiPaginationBar({ pageLinks = [] }: UiPaginationBarProps) {
         <span style={dimStyle}>›</span>
       )}
 
-      {/* Go to page */}
       <form onSubmit={handleGoToPage} style={{ display: 'flex', alignItems: 'center', gap: '3px', marginLeft: '4px' }}>
         <input
           name="pageid"

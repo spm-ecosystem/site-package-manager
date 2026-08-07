@@ -5,8 +5,13 @@ interface NavLink {
 
 interface UiNavHeaderProps {
   siteName?: string;
+  logoUrl?: string;
+  logoHref?: string;
   primaryLinks?: NavLink[];
   secondaryLinks?: NavLink[];
+  layout?: 'standard' | 'stacked' | 'minimal';
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 function isLinkActive(url: string): boolean {
@@ -22,75 +27,129 @@ function isLinkActive(url: string): boolean {
   }
 }
 
-export function UiNavHeader({ siteName = 'Site', primaryLinks = [], secondaryLinks = [] }: UiNavHeaderProps) {
-  return (
-    <header style={{ width: '100%', fontFamily: 'system-ui, sans-serif' }}>
+export function UiNavHeader({
+  siteName = 'Site',
+  logoUrl,
+  logoHref = '/',
+  primaryLinks = [],
+  secondaryLinks = [],
+  layout = 'standard',
+  className = '',
+  style = {},
+}: UiNavHeaderProps) {
+  const isMinimal = layout === 'minimal';
+  const isStacked = layout === 'stacked';
 
-      {/* Primary bar */}
+  return (
+    <header
+      className={className}
+      style={{
+        width: '100%',
+        fontFamily: 'system-ui, sans-serif',
+        ...style,
+      }}
+    >
+      {/* Primary Bar */}
       <div
         style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
+          flexDirection: isStacked ? 'column' : 'row',
+          alignItems: isStacked ? 'flex-start' : 'center',
+          gap: isStacked ? '8px' : '4px',
           flexWrap: 'wrap',
           background: 'var(--spm-bg-secondary)',
           borderBottom: '1px solid var(--spm-border)',
-          padding: '0 16px',
-          minHeight: '44px',
+          padding: isStacked ? '12px 16px' : '0 16px',
+          minHeight: isStacked ? 'auto' : '44px',
         }}
       >
-        {/* Logo */}
+        {/* Logo/Site Name */}
         <a
-          href="/"
+          href={logoHref}
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             fontSize: '15px',
             fontWeight: 800,
             color: 'var(--spm-text-primary)',
             textDecoration: 'none',
             letterSpacing: '-0.03em',
-            marginRight: '12px',
+            marginRight: isStacked ? '0' : '12px',
             flexShrink: 0,
+            height: isStacked ? 'auto' : '44px',
           }}
         >
-          {siteName}
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              alt={siteName}
+              style={{
+                height: '24px',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+          )}
+          <span>{siteName}</span>
         </a>
 
         {/* Primary nav links */}
-        {primaryLinks.map((link, i) => {
-          const active = isLinkActive(link.url);
-          return (
-            <a
-              key={i}
-              href={link.url}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                height: '44px',
-                padding: '0 10px',
-                fontSize: '12px',
-                fontWeight: active ? 700 : 400,
-                color: active ? 'var(--spm-text-primary)' : 'var(--spm-text-muted)',
-                textDecoration: 'none',
-                borderBottom: active ? '2px solid var(--spm-accent)' : '2px solid transparent',
-                transition: 'color 0.12s, border-color 0.12s',
-                whiteSpace: 'nowrap',
-                boxSizing: 'border-box',
-              }}
-              onMouseEnter={e => {
-                if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--spm-text-primary)';
-              }}
-              onMouseLeave={e => {
-                if (!active) (e.currentTarget as HTMLElement).style.color = 'var(--spm-text-muted)';
-              }}
-            >
-              {link.label}
-            </a>
-          );
-        })}
+        {!isMinimal && (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '4px',
+            }}
+          >
+            {primaryLinks.map((link, i) => {
+              const active = isLinkActive(link.url);
+              return (
+                <a
+                  key={i}
+                  href={link.url}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    height: isStacked ? '32px' : '44px',
+                    padding: '0 10px',
+                    fontSize: '12px',
+                    fontWeight: active ? 700 : 400,
+                    color: active ? 'var(--spm-text-primary)' : 'var(--spm-text-muted)',
+                    textDecoration: 'none',
+                    borderBottom: !isStacked && active ? '2px solid var(--spm-accent)' : '2px solid transparent',
+                    borderRadius: isStacked ? 'var(--spm-radius)' : '0',
+                    background: isStacked && active ? 'var(--spm-bg-tertiary)' : 'transparent',
+                    transition: 'color 0.12s, border-color 0.12s, background-color 0.12s',
+                    whiteSpace: 'nowrap',
+                    boxSizing: 'border-box',
+                  }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLElement;
+                    if (!active) {
+                      el.style.color = 'var(--spm-text-primary)';
+                      if (isStacked) el.style.backgroundColor = 'var(--spm-bg-tertiary)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLElement;
+                    if (!active) {
+                      el.style.color = 'var(--spm-text-muted)';
+                      if (isStacked) el.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Secondary bar */}
-      {secondaryLinks.length > 0 && (
+      {/* Secondary Bar */}
+      {!isMinimal && secondaryLinks.length > 0 && (
         <div
           style={{
             display: 'flex',
