@@ -53,6 +53,16 @@ function SandboxApp() {
   const [jsonString, setJsonString] = useState<string>(savedJsonString);
   const [jsonError, setJsonError] = useState<boolean>(false);
 
+  // Drag & Drop Modal states
+  const [dropModalOpen, setDropModalOpen] = useState<boolean>(false);
+  const [draggedElementInfo, setDraggedElementInfo] = useState<{
+    selector: string;
+    tagName: string;
+    id: string;
+    classes: string;
+  } | null>(null);
+  const [selectedMappingComponent, setSelectedMappingComponent] = useState<string>('UiImageCard');
+
   const legacyExplorerRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -217,6 +227,24 @@ function SandboxApp() {
           ${absoluteHtml}
         </div>
       `;
+
+      // Set all elements as draggable for custom drag & drop component creation
+      shadow.querySelectorAll('.sandbox-fetched-content *').forEach((el: any) => {
+        el.setAttribute('draggable', 'true');
+      });
+
+      // Package selector path on dragstart event
+      shadow.addEventListener('dragstart', (e: any) => {
+        const target = e.target as HTMLElement;
+        if (!target || target === shadow.host) return;
+
+        const selector = computeCssSelector(target);
+        e.dataTransfer?.setData('text/plain', selector);
+        e.dataTransfer?.setData('spm/element-tag', target.tagName.toLowerCase());
+        e.dataTransfer?.setData('spm/element-id', target.id || '');
+        e.dataTransfer?.setData('spm/element-classes', Array.from(target.classList).filter(c => c !== 'spm-selected-element').join(' '));
+        e.dataTransfer!.effectAllowed = 'copy';
+      });
     } else {
       shadow.innerHTML = `
         <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
@@ -364,6 +392,111 @@ function SandboxApp() {
     downloadAnchor.remove();
   };
 
+  const handleElementDrop = (data: { selector: string; tagName: string; id: string; classes: string }) => {
+    setDraggedElementInfo(data);
+    
+    // Auto-detect best match default component based on tags
+    if (data.tagName === 'img') {
+      setSelectedMappingComponent('UiImageCard');
+    } else if (data.tagName === 'header' || data.id === 'header') {
+      setSelectedMappingComponent('UiNavHeader');
+    } else if (data.tagName === 'form' || data.tagName === 'input') {
+      setSelectedMappingComponent('UiSearchBar');
+    } else {
+      setSelectedMappingComponent('UiModernGridPage');
+    }
+
+    setDropModalOpen(true);
+  };
+
+  const executeTransformation = () => {
+    if (!draggedElementInfo) return;
+    try {
+      const parsed = JSON.parse(jsonString);
+      
+      const compName = selectedMappingComponent;
+      const selector = draggedElementInfo.selector;
+
+      // 1. Pages layouts (reconstructs) vs standard elements (components)
+      if (compName === 'UiModernGridPage') {
+        parsed.reconstructs.push({
+          containerSelector: selector,
+          layoutComponent: "UiModernGridPage",
+          propsMap: {
+            pageTitle: "h2 | text"
+          },
+          children: [
+            {
+              name: "items",
+              selector: ".thumb",
+              propsMap: {
+                imageUrl: "img | attr:src",
+                linkUrl: "a | attr:href",
+                title: "img | attr:title",
+                id: "self | attr:id"
+              }
+            }
+          ]
+        });
+      } else if (compName === 'UiPostDetails') {
+        parsed.reconstructs.push({
+          containerSelector: selector,
+          layoutComponent: "UiPostDetails",
+          propsMap: {
+            imageUrl: "img | attr:src",
+            statisticsHtml: ".sidebar | html"
+          },
+          children: [
+            {
+              name: "buttons",
+              selector: "a",
+              propsMap: {
+                label: "self | text",
+                url: "self | attr:href"
+              }
+            }
+          ]
+        });
+      } else if (compName === 'UiNavHeader') {
+        parsed.components.push({
+          name: "UiNavHeader",
+          selector: selector,
+          action: "replace",
+          propsMap: {
+            siteName: "a | text"
+          },
+          children: [
+            {
+              name: "primaryLinks",
+              selector: "a",
+              scope: "document",
+              propsMap: {
+                label: "self | text",
+                url: "self | attr:href"
+              }
+            }
+          ]
+        });
+      } else {
+        // Fallback for simple elements
+        parsed.components.push({
+          name: compName,
+          selector: selector,
+          action: "replace",
+          propsMap: {
+            value: "self | text"
+          }
+        });
+      }
+
+      setJsonString(JSON.stringify(parsed, null, 2));
+      setDropModalOpen(false);
+      setDraggedElementInfo(null);
+    } catch (e) {
+      alert('Could not update JSON. Make sure config JSON contains valid syntax.');
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen font-sans select-none bg-black text-[#d4d4d4]">
       {/* Top Workspace Header */}
@@ -382,6 +515,7 @@ function SandboxApp() {
         <ThemeSidebar
           theme={theme}
           setTheme={setTheme}
+          onElementDrop={handleElementDrop}
         />
 
         {/* Center Panel: Target views (Legacy Inspector vs Modern Live Preview) */}
@@ -455,6 +589,66 @@ function SandboxApp() {
           theme={theme}
         />
       </main>
+
+      {/* Drag & Drop Convert Component Modal */}
+      {dropModalOpen && draggedElementInfo && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-[#111111] border border-purple-500/30 rounded-lg max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
+                <span>✨</span> Convert Element into Component
+              </h3>
+              <p className="text-[11px] text-zinc-500 mt-1">
+                Map target DOM node to a SPM React component. We will append this to your JSON manifest configuration.
+              </p>
+            </div>
+
+            <div className="bg-zinc-950 border border-zinc-800 rounded p-3 flex flex-col gap-2 font-mono text-[10px] text-zinc-400">
+              <div className="flex justify-between">
+                <span>Tag:</span>
+                <span className="text-purple-400 font-semibold">{draggedElementInfo.tagName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Selector:</span>
+                <span className="text-white truncate max-w-[280px]">{draggedElementInfo.selector}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">Choose React Component</label>
+              <select
+                value={selectedMappingComponent}
+                onChange={(e) => setSelectedMappingComponent(e.target.value)}
+                className="w-full bg-black border border-[#333333] hover:border-zinc-600 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition"
+              >
+                <option value="UiImageCard">UiImageCard (Single card element)</option>
+                <option value="UiModernGridPage">UiModernGridPage (Gallery Layout page)</option>
+                <option value="UiPostDetails">UiPostDetails (Image/Post details page)</option>
+                <option value="UiNavHeader">UiNavHeader (Navigation header)</option>
+                <option value="UiSearchBar">UiSearchBar (Search input)</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-zinc-800/80 pt-4 mt-2">
+              <button
+                onClick={() => {
+                  setDropModalOpen(false);
+                  setDraggedElementInfo(null);
+                }}
+                className="px-4 py-1.5 rounded text-xs font-semibold bg-[#222222] hover:bg-zinc-800 text-zinc-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={executeTransformation}
+                className="px-4 py-1.5 rounded text-xs font-semibold bg-purple-500 text-white hover:bg-purple-600 shadow-md shadow-purple-500/20 transition animate-pulse-subtle"
+              >
+                Transform Element
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
