@@ -11,13 +11,6 @@ interface PrimitiveElement {
   content?: string;
 }
 
-interface RegistryItem {
-  id: string;
-  name: string;
-  description: string;
-  domain: string;
-  manifestPath: string;
-}
 
 function SandboxApp() {
   const [targetUrl] = useState<string>('https://safebooru.org/index.php?page=post&s=list');
