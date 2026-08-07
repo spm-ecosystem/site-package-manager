@@ -90,10 +90,13 @@ function applyThemeGlobally(variables: Record<string, string>) {
     .join('\n');
 
   styleEl.textContent = `
-    :root, body, #body {
+    :root, html, body, #body, .content, #content, div.content {
       ${cssVars}
       background-color: var(--spm-bg-primary) !important;
+      background: var(--spm-bg-primary) !important;
       color: var(--spm-text-primary) !important;
+      margin: 0 !important;
+      padding: 0 !important;
     }
     /* Simple global override for text colors on elements in non-reconstructed areas */
     #tag-sidebar, .sidebar, div.content, table, tr, td, th, h1, h2, h3, h4, h5, p, span, li, ul, ol, form {
