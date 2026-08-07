@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
 import registryMock from '../../websites/registry.json';
-import safebooruConfig from '../../websites/safebooru.json';
 
 interface RegistryItem {
   id: string;
@@ -37,14 +36,7 @@ function Popup() {
   const [loading, setLoading]               = useState<boolean>(false);
   const [activeTabId, setActiveTabId]       = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab]           = useState<'theme' | 'colors'>('theme');
-
-  // Theme CSS variables — base from manifest + user overrides
-  const [themeVars, setThemeVars] = useState<Record<string, string>>(
-    Object.fromEntries(
-      Object.entries((safebooruConfig as any).theme.cssVariables as Record<string, string>)
-        .filter(([k]) => k.startsWith('--spm-'))
-    ) as Record<string, string>
-  );
+  const [themeVars, setThemeVars]           = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -55,20 +47,29 @@ function Popup() {
           try {
             const domain = new URL(tab.url).hostname;
             setCurrentDomain(domain);
-            chrome.storage.local.get(['spm_global_enabled', 'spm_active_themes', 'spm_theme_overrides'], (res) => {
+            chrome.storage.local.get(['spm_global_enabled', 'spm_active_themes', 'spm_theme_overrides', 'spm_installed_themes'], (res) => {
               if (res.spm_global_enabled !== undefined) setGlobalEnabled(res.spm_global_enabled);
-              if (res.spm_active_themes?.[domain]) setActiveThemeId(res.spm_active_themes[domain]);
-              if (res.spm_theme_overrides?.[domain]) {
-                setThemeVars(prev => ({ ...prev, ...res.spm_theme_overrides[domain] }));
+              
+              const activeId = res.spm_active_themes?.[domain] || '';
+              setActiveThemeId(activeId);
+
+              // Pull default theme variables from installed storage if available
+              let baseVars: Record<string, string> = {};
+              if (activeId && res.spm_installed_themes?.[activeId]?.theme?.cssVariables) {
+                baseVars = { ...res.spm_installed_themes[activeId].theme.cssVariables };
               }
+              
+              // Apply user color overrides on top
+              if (res.spm_theme_overrides?.[domain]) {
+                baseVars = { ...baseVars, ...res.spm_theme_overrides[domain] };
+              }
+              setThemeVars(baseVars);
             });
           } catch {
             setCurrentDomain('');
           }
         }
       });
-    } else {
-      setCurrentDomain('safebooru.org');
     }
     setThemesList(registryMock);
   }, []);
@@ -87,9 +88,10 @@ function Popup() {
     }
   };
 
-  const handleInstallTheme = (themeId: string) => {
+  const handleInstallTheme = async (themeId: string) => {
     if (!themeId) {
       setActiveThemeId('');
+      setThemeVars({});
       if (typeof chrome !== 'undefined' && chrome.storage) {
         chrome.storage.local.get(['spm_active_themes'], (res) => {
           const active = res.spm_active_themes || {};
@@ -101,19 +103,39 @@ function Popup() {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const selected = themesList.find(t => t.id === themeId);
+      if (!selected) throw new Error('Theme registry item not found');
+
+      // Fetch the theme manifest JSON dynamically using Chrome's runtime URL API
+      const manifestUrl = typeof chrome !== 'undefined' && chrome.runtime 
+        ? chrome.runtime.getURL(selected.manifestPath) 
+        : `/${selected.manifestPath}`;
+        
+      const response = await fetch(manifestUrl);
+      if (!response.ok) throw new Error('Failed to load theme manifest');
+      const manifest = await response.json();
+
       setActiveThemeId(themeId);
-      setLoading(false);
+      
+      // Load variables
+      const baseVars = manifest.theme?.cssVariables || {};
+      setThemeVars(baseVars);
+
       if (typeof chrome !== 'undefined' && chrome.storage) {
         chrome.storage.local.get(['spm_installed_themes', 'spm_active_themes'], (res) => {
           const installed = res.spm_installed_themes || {};
           const active = res.spm_active_themes || {};
-          installed[themeId] = safebooruConfig;
+          installed[themeId] = manifest;
           active[currentDomain] = themeId;
           chrome.storage.local.set({ spm_installed_themes: installed, spm_active_themes: active }, reloadTab);
         });
       }
-    }, 400);
+    } catch (err) {
+      console.error('[SPM Popup] Error fetching/installing theme manifest:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleColorChange = (key: string, value: string) => {
@@ -130,17 +152,20 @@ function Popup() {
   };
 
   const resetColors = () => {
-    const base = Object.fromEntries(
-      Object.entries((safebooruConfig as any).theme.cssVariables as Record<string, string>)
-        .filter(([k]) => k.startsWith('--spm-'))
-    ) as Record<string, string>;
-    setThemeVars(base);
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['spm_theme_overrides'], (res) => {
+      chrome.storage.local.get(['spm_installed_themes', 'spm_theme_overrides'], (res) => {
+        let baseVars: Record<string, string> = {};
+        if (activeThemeId && res.spm_installed_themes?.[activeThemeId]?.theme?.cssVariables) {
+          baseVars = { ...res.spm_installed_themes[activeThemeId].theme.cssVariables };
+        }
+        setThemeVars(baseVars);
+        
         const overrides = res.spm_theme_overrides || {};
         delete overrides[currentDomain];
         chrome.storage.local.set({ spm_theme_overrides: overrides }, reloadTab);
       });
+    } else {
+      setThemeVars({});
     }
   };
 

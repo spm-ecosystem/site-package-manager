@@ -5,7 +5,7 @@
   "description": "Modernizes old web interfaces using React and Shadow DOM",
   "content_scripts": [
     {
-      "matches": ["*://safebooru.org/*"],
+      "matches": ["*://*/*"],
       "js": ["src/content/index.tsx"]
     }
   ],
