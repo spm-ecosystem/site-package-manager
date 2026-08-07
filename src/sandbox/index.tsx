@@ -22,8 +22,8 @@ interface CustomTheme {
 type LayoutType = 'gallery' | 'post';
 
 function SandboxApp() {
-  const [targetUrl, setTargetUrl] = useState<string>('https://safebooru.org/index.php?page=post&s=list');
-  const [urlInput, setUrlInput] = useState<string>('https://safebooru.org/index.php?page=post&s=list');
+  const [targetUrl, setTargetUrl] = useState<string>('https://example.com');
+  const [urlInput, setUrlInput] = useState<string>('https://example.com');
   const [wsStatus, setWsStatus] = useState<string>('Disconnected');
   const [activeSelector, setActiveSelector] = useState<string>('');
   const [elementsList, setElementsList] = useState<PrimitiveElement[]>([]);
