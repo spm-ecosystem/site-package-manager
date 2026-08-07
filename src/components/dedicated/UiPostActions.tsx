@@ -5,9 +5,14 @@ interface Action {
 
 interface UiPostActionsProps {
   actions?: Action[];
+  customIconMap?: Record<string, string>;
+  flexDirection?: 'row' | 'column';
+  alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-const ICON_MAP: Record<string, string> = {
+const DEFAULT_ICON_MAP: Record<string, string> = {
   previous: '←',
   next: '→',
   saucenao: '🔍',
@@ -15,23 +20,35 @@ const ICON_MAP: Record<string, string> = {
   waifu2x: '✨',
 };
 
-function getIcon(label: string): string {
-  return ICON_MAP[label.toLowerCase().trim()] || '↗';
-}
-
-export function UiPostActions({ actions = [] }: UiPostActionsProps) {
+export function UiPostActions({
+  actions = [],
+  customIconMap = {},
+  flexDirection = 'row',
+  alignItems = 'center',
+  className = '',
+  style = {},
+}: UiPostActionsProps) {
   if (actions.length === 0) return null;
+
+  const mergedIconMap = { ...DEFAULT_ICON_MAP, ...customIconMap };
+
+  const getIcon = (label: string): string => {
+    return mergedIconMap[label.toLowerCase().trim()] || '↗';
+  };
 
   return (
     <div
+      className={className}
       style={{
         display: 'flex',
-        flexDirection: 'row',
+        flexDirection,
+        alignItems,
         flexWrap: 'wrap',
         gap: '6px',
         padding: '10px 0',
         width: '100%',
         boxSizing: 'border-box',
+        ...style,
       }}
     >
       {actions.map((action, i) => {

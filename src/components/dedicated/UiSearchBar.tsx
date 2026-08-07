@@ -4,6 +4,9 @@ interface UiSearchBarProps {
   placeholder?: string;
   defaultValue?: string;
   submitUrl?: string;
+  queryParamName?: string;
+  className?: string;
+  style?: React.CSSProperties;
   onSearch?: (value: string) => void;
 }
 
@@ -11,6 +14,9 @@ export function UiSearchBar({
   placeholder = 'Search…',
   defaultValue = '',
   submitUrl,
+  queryParamName = 'tags',
+  className = '',
+  style = {},
   onSearch,
 }: UiSearchBarProps) {
   const [value, setValue] = useState(defaultValue);
@@ -21,20 +27,26 @@ export function UiSearchBar({
     if (onSearch) {
       onSearch(value);
     } else if (submitUrl) {
-      const url = new URL(submitUrl, window.location.href);
-      url.searchParams.set('tags', value);
-      window.location.href = url.toString();
+      try {
+        const url = new URL(submitUrl, window.location.href);
+        url.searchParams.set(queryParamName, value);
+        window.location.href = url.toString();
+      } catch (err) {
+        console.error('Invalid submitUrl configured:', err);
+      }
     }
   };
 
   return (
     <form
       onSubmit={handleSubmit}
+      className={className}
       style={{
         display: 'flex',
         alignItems: 'center',
         width: '100%',
         boxSizing: 'border-box',
+        ...style,
       }}
     >
       <div
@@ -51,7 +63,6 @@ export function UiSearchBar({
           minWidth: 0,
         }}
       >
-        {/* Submit via icon button — no extra width */}
         <button
           type="submit"
           style={{
