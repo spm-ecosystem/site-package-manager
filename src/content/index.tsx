@@ -6,7 +6,6 @@ import { UiTagBadge } from '../components/dedicated/UiTagBadge';
 import { UiSearchBar } from '../components/dedicated/UiSearchBar';
 import { UiPaginationBar } from '../components/dedicated/UiPaginationBar';
 import { UiNavHeader } from '../components/dedicated/UiNavHeader';
-import { UiPostActions } from '../components/dedicated/UiPostActions';
 import { UiPostDetails } from '../components/dedicated/UiPostDetails';
 import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from '../components/primitives/LayoutPrimitives';
 import stylesText from './content.css?inline';
@@ -15,7 +14,6 @@ const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiImageCard,
   UiModernGridPage,
   UiNavHeader,
-  UiPostActions,
   UiPostDetails,
   UiTagBadge,
   UiSearchBar,
@@ -57,6 +55,7 @@ interface ReconstructConfig {
 interface SiteManifest {
   theme?: {
     cssVariables?: Record<string, string>;
+    customStyles?: string;
   };
   components?: ComponentConfig[];
   reconstructs?: ReconstructConfig[];
@@ -71,7 +70,7 @@ function applyTheme(shadowRoot: ShadowRoot, variables: Record<string, string>) {
   shadowRoot.appendChild(styleEl);
 }
 
-function applyThemeGlobally(variables: Record<string, string>) {
+function applyThemeGlobally(variables: Record<string, string>, customStyles: string = '') {
   // Apply design tokens to the main document body/html
   const styleId = 'spm-global-theme-styles';
   let styleEl = document.getElementById(styleId);
@@ -103,52 +102,6 @@ function applyThemeGlobally(variables: Record<string, string>) {
       overflow-x: hidden !important;
     }
 
-    /* Simple global override for text colors on elements in non-reconstructed areas */
-    #tag-sidebar, .sidebar, div.content, table, tr, td, th, h1, h2, h3, h4, h5, p, span, li, ul, ol, form {
-      color: var(--spm-text-primary) !important;
-    }
-    
-    /* Preserved sidebar styling defaults */
-    .sidebar {
-      padding: 0 !important;
-      background: transparent !important;
-    }
-    .sidebar h5 {
-      font-size: 11px !important;
-      text-transform: uppercase !important;
-      letter-spacing: 0.05em !important;
-      color: var(--spm-text-muted) !important;
-      margin: 16px 0 8px 0 !important;
-    }
-    .sidebar ul {
-      list-style: none !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 4px !important;
-    }
-    .sidebar li {
-      font-size: 12px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-    }
-    .sidebar li a {
-      color: var(--spm-text-primary) !important;
-      text-decoration: none !important;
-    }
-    .sidebar li a:hover {
-      color: var(--spm-accent) !important;
-    }
-    /* Hide the ugly blue '?' help links in the tags sidebar */
-    .sidebar li a[href*="page=help"] {
-      display: none !important;
-    }
-    .sidebar li span {
-      color: var(--spm-text-muted) !important;
-    }
-
     a {
       color: var(--spm-text-muted);
       text-decoration: none;
@@ -161,6 +114,9 @@ function applyThemeGlobally(variables: Record<string, string>) {
       color: var(--spm-text-primary) !important;
       border: 1px solid var(--spm-border) !important;
     }
+
+    /* Inject developer custom CSS overrides from the JSON theme manifest */
+    ${customStyles}
   `;
 }
 
@@ -366,7 +322,7 @@ function initEngine() {
         
         // Inject theme globally for un-reconstructed elements (like sidebars on post pages)
         if (manifest.theme?.cssVariables) {
-          applyThemeGlobally(manifest.theme.cssVariables);
+          applyThemeGlobally(manifest.theme.cssVariables, manifest.theme.customStyles || '');
         }
 
         renderEngine(manifest);

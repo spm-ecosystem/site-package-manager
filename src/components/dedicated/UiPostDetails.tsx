@@ -1,33 +1,44 @@
-import { UiPostActions } from './UiPostActions';
 import { UiTagBadge } from './UiTagBadge';
 import { UiSearchBar } from './UiSearchBar';
 
 interface TagItem {
   name: string;
   count: string;
-  type: string; // 'tag-type-copyright' | 'tag-type-character' | 'tag-type-artist' | 'tag-type-general' | 'tag-type-faults'
+  type: string;
   url: string;
 }
 
-interface ActionItem {
+interface GenericButtonItem {
   label: string;
   url: string;
+  iconSvg?: string; // Optional raw SVG path/code passed from manifest
 }
 
 interface UiPostDetailsProps {
   imageUrl: string;
-  actions?: ActionItem[];
   tags?: TagItem[];
   statisticsHtml?: string;
+  buttons?: GenericButtonItem[];
+  
+  // Customizable sidebar search configuration
+  showSearch?: boolean;
+  searchPlaceholder?: string;
+  searchSubmitUrl?: string;
+  searchParamName?: string;
 }
 
 export function UiPostDetails({
   imageUrl,
-  actions = [],
   tags = [],
   statisticsHtml = '',
+  buttons = [],
+  showSearch = true,
+  searchPlaceholder = 'Search…',
+  searchSubmitUrl = '',
+  searchParamName = 'tags',
 }: UiPostDetailsProps) {
-  // Normalize tag types from classnames (e.g. "tag-type-artist" or "tag-type-general")
+  
+  // Group tags by matching type strings dynamically
   const copyrightTags = tags.filter(t => t.type.includes('copyright'));
   const characterTags = tags.filter(t => t.type.includes('character'));
   const artistTags = tags.filter(t => t.type.includes('artist'));
@@ -73,7 +84,7 @@ export function UiPostDetails({
         fontFamily: 'system-ui, sans-serif',
       }}
     >
-      {/* Sidebar: Search, Tags & Statistics */}
+      {/* Sidebar: Configurable Search, Tags & Statistics */}
       <aside
         style={{
           width: '260px',
@@ -85,24 +96,26 @@ export function UiPostDetails({
           boxSizing: 'border-box',
         }}
       >
-        {/* Modern Search directly in the sidebar */}
-        <div style={{ marginBottom: '24px' }}>
-          <h3
-            style={{
-              fontSize: '11px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              color: 'var(--spm-text-muted)',
-              margin: '0 0 10px 0',
-            }}
-          >
-            Search
-          </h3>
-          <UiSearchBar
-            placeholder="Search tags…"
-            submitUrl="https://safebooru.org/index.php?page=post&s=list"
-          />
-        </div>
+        {showSearch && searchSubmitUrl && (
+          <div style={{ marginBottom: '24px' }}>
+            <h3
+              style={{
+                fontSize: '11px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: 'var(--spm-text-muted)',
+                margin: '0 0 10px 0',
+              }}
+            >
+              Search
+            </h3>
+            <UiSearchBar
+              placeholder={searchPlaceholder}
+              submitUrl={searchSubmitUrl}
+              queryParamName={searchParamName}
+            />
+          </div>
+        )}
 
         {renderTagGroup('Artists', artistTags)}
         {renderTagGroup('Copyright', copyrightTags)}
@@ -142,7 +155,7 @@ export function UiPostDetails({
         )}
       </aside>
 
-      {/* Main Image View */}
+      {/* Main Image View & Dynamic Buttons */}
       <main
         style={{
           flex: 1,
@@ -154,10 +167,72 @@ export function UiPostDetails({
           boxSizing: 'border-box',
         }}
       >
-        {/* Modern actions under the image */}
-        <div style={{ width: '100%', maxWidth: '800px', marginBottom: '16px' }}>
-          <UiPostActions actions={actions} />
-        </div>
+        {/* Dynamic Generic Buttons below or above image */}
+        {buttons.length > 0 && (
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '800px',
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: '6px',
+              marginBottom: '16px',
+            }}
+          >
+            {buttons.map((btn, i) => {
+              const isActionNav = btn.label.toLowerCase() === 'previous' || btn.label.toLowerCase() === 'next';
+              return (
+                <a
+                  key={i}
+                  href={btn.url}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: 'var(--spm-radius)',
+                    fontSize: '12px',
+                    fontWeight: isActionNav ? 700 : 500,
+                    textDecoration: 'none',
+                    fontFamily: 'inherit',
+                    whiteSpace: 'nowrap',
+                    transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                    background: isActionNav ? 'var(--spm-accent)' : 'var(--spm-bg-secondary)',
+                    color: isActionNav ? 'var(--spm-accent-fg)' : 'var(--spm-text-primary)',
+                    border: isActionNav ? '1px solid var(--spm-accent)' : '1px solid var(--spm-border)',
+                  }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLElement;
+                    if (isActionNav) {
+                      el.style.background = 'var(--spm-accent-hover)';
+                    } else {
+                      el.style.background = 'var(--spm-bg-tertiary)';
+                      el.style.borderColor = 'var(--spm-accent)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLElement;
+                    if (isActionNav) {
+                      el.style.background = 'var(--spm-accent)';
+                    } else {
+                      el.style.background = 'var(--spm-bg-secondary)';
+                      el.style.borderColor = 'var(--spm-border)';
+                    }
+                  }}
+                >
+                  {btn.iconSvg && (
+                    <span
+                      style={{ display: 'inline-flex', alignItems: 'center' }}
+                      dangerouslySetInnerHTML={{ __html: btn.iconSvg }}
+                    />
+                  )}
+                  {btn.label}
+                </a>
+              );
+            })}
+          </div>
+        )}
 
         {/* Image Container */}
         <div
