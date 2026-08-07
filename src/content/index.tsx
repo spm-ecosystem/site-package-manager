@@ -1,37 +1,9 @@
 import { createRoot } from 'react-dom/client';
 import { extractValue } from './engine';
-import { UiImageCard } from '../components/UiImageCard';
-import { UiModernGridPage } from '../components/UiModernGridPage';
+import { UiImageCard } from '../components/dedicated/UiImageCard';
+import { UiModernGridPage } from '../components/dedicated/UiModernGridPage';
+import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from '../components/primitives/LayoutPrimitives';
 import stylesText from './content.css?inline';
-
-// Layout Primitives
-function UiBox({ className, children, ...props }: any) {
-  return <div className={className} {...props}>{children}</div>;
-}
-
-function UiFlexRow({ className, children, ...props }: any) {
-  return <div className={`flex flex-row ${className || ''}`} {...props}>{children}</div>;
-}
-
-function UiFlexColumn({ className, children, ...props }: any) {
-  return <div className={`flex flex-col ${className || ''}`} {...props}>{children}</div>;
-}
-
-function UiGrid({ className, children, ...props }: any) {
-  return <div className={`grid ${className || ''}`} {...props}>{children}</div>;
-}
-
-function UiText({ className, content, ...props }: any) {
-  return <span className={className} {...props}>{content}</span>;
-}
-
-function UiImage({ className, src, alt, ...props }: any) {
-  return <img className={className} src={src} alt={alt} {...props} />;
-}
-
-function UiLink({ className, href, children, ...props }: any) {
-  return <a className={className} href={href} {...props}>{children}</a>;
-}
 
 const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiImageCard,
