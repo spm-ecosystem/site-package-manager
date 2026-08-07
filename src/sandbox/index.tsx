@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
+import { PRIMITIVE_COMPONENTS, DEDICATED_COMPONENTS } from '../components/registry';
+
 
 interface PrimitiveElement {
   id: string;
@@ -352,9 +354,9 @@ function SandboxApp() {
 
           {/* Primitive Elements */}
           <div>
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 font-sans">Components Palette</div>
+            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 font-sans">Primitives Palette</div>
             <div className="grid grid-cols-2 gap-2">
-              {['UiBox', 'UiGrid', 'UiFlexRow', 'UiText', 'UiImage', 'UiLink'].map(item => (
+              {PRIMITIVE_COMPONENTS.map(item => (
                 <button 
                   key={item} 
                   onClick={() => addPrimitiveToCanvas(item)}
@@ -364,12 +366,22 @@ function SandboxApp() {
                 </button>
               ))}
             </div>
-            <button 
-              onClick={() => addPrimitiveToCanvas('UiImageCard')}
-              className="w-full mt-2 p-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-500 rounded text-center text-xs text-indigo-400 font-semibold transition font-sans"
-            >
-              + UiImageCard
-            </button>
+          </div>
+
+          {/* Dedicated Custom Blocks */}
+          <div>
+            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 font-sans">Dedicated Blocks</div>
+            <div className="flex flex-col gap-2">
+              {DEDICATED_COMPONENTS.map(item => (
+                <button 
+                  key={item}
+                  onClick={() => addPrimitiveToCanvas(item)}
+                  className="w-full p-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-500 rounded text-center text-xs text-indigo-400 font-semibold transition font-sans"
+                >
+                  + {item}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Theme custom styles & vars binder */}
