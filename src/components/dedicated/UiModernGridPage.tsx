@@ -1,5 +1,4 @@
 import { UiImageCard } from './UiImageCard';
-import { UiSearchBar } from './UiSearchBar';
 
 interface GridItem {
   imageUrl: string;
@@ -60,15 +59,7 @@ export function UiModernGridPage({ pageTitle, items }: UiModernGridPageProps) {
             >
               {pageTitle || 'Gallery'}
             </h1>
-
-            {/* Pagination slot — legacy nodes reparented here */}
-            <div
-              id="paginationSlot-container"
-              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-            />
           </div>
-
-          <UiSearchBar placeholder="Search tags…" />
         </header>
 
         {/* Grid */}
