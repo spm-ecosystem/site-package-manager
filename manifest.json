@@ -12,5 +12,6 @@
   "action": {
     "default_popup": "index.html"
   },
+  "options_page": "sandbox.html",
   "permissions": ["storage", "activeTab"]
 }
