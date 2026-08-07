@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Site Package Manager Engine",
+  "version": "1.0.0",
+  "description": "Modernizes old web interfaces using React and Shadow DOM",
+  "content_scripts": [
+    {
+      "matches": ["*://safebooru.org/*"],
+      "js": ["src/content/index.tsx"]
+    }
+  ],
+  "permissions": ["storage"]
+}
