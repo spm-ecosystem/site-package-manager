@@ -34,6 +34,8 @@ interface InspectorSidebarProps {
     customStyles: string;
   };
   onElementDrop: (data: { selector: string; tagName: string; id: string; classes: string }) => void;
+  selectedComponentConfig: any | null;
+  setSelectedComponentConfig: (config: any | null) => void;
 }
 
 export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
@@ -48,13 +50,102 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
   setUrlInput,
   setTheme,
   theme,
-  onElementDrop
+  onElementDrop,
+  selectedComponentConfig,
+  setSelectedComponentConfig
 }) => {
   return (
-    <aside className="w-80 border-l border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
+    <aside className="w-80 border-r border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
       
-      {/* Element Inspector details */}
-      {inspectedElement ? (
+      {/* Component Editor Panel (Active Component Selected) */}
+      {selectedComponentConfig ? (
+        <div className="border-b border-[#333333] pb-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1">
+              <span className="text-purple-400">✨</span> Component Settings
+            </div>
+            <button 
+              onClick={() => setSelectedComponentConfig(null)}
+              className="text-[10px] text-zinc-500 hover:text-white bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded transition"
+            >
+              Close ✕
+            </button>
+          </div>
+
+          <div className="bg-zinc-950 border border-zinc-800 rounded p-3 flex flex-col gap-2 font-mono text-[10px]">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Component:</span>
+              <span className="text-purple-400 font-bold">{selectedComponentConfig.name}</span>
+            </div>
+            <div className="flex flex-col gap-1 mt-1">
+              <span className="text-zinc-500">Selector:</span>
+              <span className="text-zinc-300 break-all bg-black/50 p-1 border border-zinc-900 rounded">{selectedComponentConfig.selector}</span>
+            </div>
+          </div>
+
+          {/* Properties Form (propsMap) */}
+          <div className="flex flex-col gap-2.5">
+            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Props Mapping</div>
+            
+            {Object.keys(selectedComponentConfig.config.propsMap || {}).length === 0 ? (
+              <div className="text-[10px] text-zinc-500 italic">No customizable properties in map.</div>
+            ) : (
+              Object.entries(selectedComponentConfig.config.propsMap || {}).map(([propName, rule]) => (
+                <div key={propName} className="flex flex-col gap-1">
+                  <label className="text-[10px] text-zinc-300 font-semibold">{propName}</label>
+                  <input
+                    type="text"
+                    value={rule as string}
+                    onChange={(e) => {
+                      try {
+                        const parsed = JSON.parse(jsonString);
+                        const list = selectedComponentConfig.type === 'reconstruct' ? parsed.reconstructs : parsed.components;
+                        const matching = list.find((c: any) => 
+                          (c.selector === selectedComponentConfig.selector || c.containerSelector === selectedComponentConfig.selector)
+                        );
+                        if (matching) {
+                          matching.propsMap = matching.propsMap || {};
+                          matching.propsMap[propName] = e.target.value;
+                          setJsonString(JSON.stringify(parsed, null, 2));
+                          
+                          // Sync local sidebar state to maintain cursor focus
+                          setSelectedComponentConfig({
+                            ...selectedComponentConfig,
+                            config: matching
+                          });
+                        }
+                      } catch (err) {}
+                    }}
+                    className="w-full bg-black border border-zinc-800 focus:border-purple-500 rounded px-2.5 py-1 text-xs text-white font-mono focus:outline-none transition"
+                    placeholder="self | text or selector"
+                  />
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Delete Component Button */}
+          <div className="pt-2 border-t border-zinc-900 mt-2">
+            <button
+              onClick={() => {
+                try {
+                  const parsed = JSON.parse(jsonString);
+                  if (selectedComponentConfig.type === 'reconstruct') {
+                    parsed.reconstructs = parsed.reconstructs.filter((c: any) => c.containerSelector !== selectedComponentConfig.selector);
+                  } else {
+                    parsed.components = parsed.components.filter((c: any) => c.selector !== selectedComponentConfig.selector);
+                  }
+                  setJsonString(JSON.stringify(parsed, null, 2));
+                  setSelectedComponentConfig(null);
+                } catch (e) {}
+              }}
+              className="w-full py-1.5 rounded text-[10px] font-bold bg-red-950/20 hover:bg-red-900 border border-red-900/30 hover:border-red-600 text-red-300 transition"
+            >
+              🗑️ Delete Component Configuration
+            </button>
+          </div>
+        </div>
+      ) : inspectedElement ? (
         <div className="border-b border-[#333333] pb-4">
           <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Element Inspector</div>
           <div className="bg-zinc-950 border border-zinc-800 rounded p-3 flex flex-col gap-2">
