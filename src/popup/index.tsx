@@ -18,12 +18,16 @@ function Popup() {
   const [themesList, setThemesList] = useState<RegistryItem[]>([]);
   const [activeThemeId, setActiveThemeId] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [activeTabId, setActiveTabId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     // 1. Detect domain of the active browser tab
     if (typeof chrome !== 'undefined' && chrome.tabs) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const tab = tabs[0];
+        if (tab?.id) {
+          setActiveTabId(tab.id);
+        }
         if (tab?.url) {
           try {
             const urlObj = new URL(tab.url);
@@ -56,7 +60,11 @@ function Popup() {
     const nextVal = !globalEnabled;
     setGlobalEnabled(nextVal);
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ spm_global_enabled: nextVal });
+      chrome.storage.local.set({ spm_global_enabled: nextVal }, () => {
+        if (activeTabId !== undefined) {
+          chrome.tabs.reload(activeTabId);
+        }
+      });
     }
   };
 
@@ -67,7 +75,11 @@ function Popup() {
         chrome.storage.local.get(['spm_active_themes'], (res) => {
           const active = res.spm_active_themes || {};
           delete active[currentDomain];
-          chrome.storage.local.set({ spm_active_themes: active });
+          chrome.storage.local.set({ spm_active_themes: active }, () => {
+            if (activeTabId !== undefined) {
+              chrome.tabs.reload(activeTabId);
+            }
+          });
         });
       }
       return;
@@ -91,6 +103,10 @@ function Popup() {
           chrome.storage.local.set({
             spm_installed_themes: installed,
             spm_active_themes: active
+          }, () => {
+            if (activeTabId !== undefined) {
+              chrome.tabs.reload(activeTabId);
+            }
           });
         });
       }
