@@ -537,40 +537,40 @@ function SandboxApp() {
           </div>
 
           <div className="flex-1 p-4 overflow-hidden flex flex-col relative bg-zinc-950">
-            {viewMode === 'legacy' ? (
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs font-bold text-zinc-500 uppercase">Legacy DOM Explorer</div>
-                  {activeSelector && (
-                    <div className="text-[11px] font-mono bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-white truncate max-w-[400px]">
-                      Inspecting: {activeSelector}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 bg-white border border-[#333333] rounded overflow-auto" ref={legacyExplorerRef}></div>
+            {/* Legacy View Panel */}
+            <div className={`flex-1 flex flex-col overflow-hidden ${viewMode === 'legacy' ? 'block' : 'hidden'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs font-bold text-zinc-500 uppercase">Legacy DOM Explorer</div>
+                {activeSelector && (
+                  <div className="text-[11px] font-mono bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-white truncate max-w-[400px]">
+                    Inspecting: {activeSelector}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="text-xs font-bold text-zinc-500 uppercase mb-2">Modern Modernized Screen Preview</div>
-                <div 
-                  className="flex-1 border border-[#333333] rounded overflow-auto p-6"
-                  ref={previewContainerRef}
-                  style={{
-                    backgroundColor: theme.bgPrimary,
-                    color: theme.textPrimary,
-                    '--spm-bg-primary': theme.bgPrimary,
-                    '--spm-bg-secondary': theme.bgSecondary,
-                    '--spm-bg-tertiary': '#222222',
-                    '--spm-text-primary': theme.textPrimary,
-                    '--spm-text-muted': '#a1a1aa',
-                    '--spm-accent': theme.accent,
-                    '--spm-accent-fg': '#000000',
-                    '--spm-border': '#333333',
-                    '--spm-radius': '8px'
-                  } as any}
-                ></div>
-              </div>
-            )}
+              <div className="flex-1 bg-white border border-[#333333] rounded overflow-auto" ref={legacyExplorerRef}></div>
+            </div>
+
+            {/* Modern Preview Panel */}
+            <div className={`flex-1 flex flex-col overflow-hidden ${viewMode === 'preview' ? 'block' : 'hidden'}`}>
+              <div className="text-xs font-bold text-zinc-500 uppercase mb-2">Modern Modernized Screen Preview</div>
+              <div 
+                className="flex-1 border border-[#333333] rounded overflow-auto p-6"
+                ref={previewContainerRef}
+                style={{
+                  backgroundColor: theme.bgPrimary,
+                  color: theme.textPrimary,
+                  '--spm-bg-primary': theme.bgPrimary,
+                  '--spm-bg-secondary': theme.bgSecondary,
+                  '--spm-bg-tertiary': '#222222',
+                  '--spm-text-primary': theme.textPrimary,
+                  '--spm-text-muted': '#a1a1aa',
+                  '--spm-accent': theme.accent,
+                  '--spm-accent-fg': '#000000',
+                  '--spm-border': '#333333',
+                  '--spm-radius': '8px'
+                } as any}
+              ></div>
+            </div>
           </div>
         </section>
 
