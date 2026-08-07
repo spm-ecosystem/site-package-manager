@@ -2,8 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Core variables placeholder */
+/* SPM Design Token System — all components should consume these variables */
 :host {
-  --bg-color: #000000;
-  --text-color: #d4d4d4;
+  /* Backgrounds */
+  --spm-bg-primary: #000000;
+  --spm-bg-secondary: #111111;
+  --spm-bg-tertiary: #222222;
+
+  /* Text */
+  --spm-text-primary: #ffffff;
+  --spm-text-muted: #a1a1aa;
+
+  /* Accent */
+  --spm-accent: #ffffff;
+  --spm-accent-hover: #d4d4d4;
+  --spm-accent-fg: #000000;
+
+  /* Borders */
+  --spm-border: #333333;
+
+  /* Radius */
+  --spm-radius: 8px;
+
+  /* Legacy compat aliases */
+  --bg-color: var(--spm-bg-primary);
+  --text-color: var(--spm-text-primary);
 }

@@ -2,12 +2,18 @@ import { createRoot } from 'react-dom/client';
 import { extractValue } from './engine';
 import { UiImageCard } from '../components/dedicated/UiImageCard';
 import { UiModernGridPage } from '../components/dedicated/UiModernGridPage';
+import { UiTagBadge } from '../components/dedicated/UiTagBadge';
+import { UiSearchBar } from '../components/dedicated/UiSearchBar';
+import { UiPaginationBar } from '../components/dedicated/UiPaginationBar';
 import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from '../components/primitives/LayoutPrimitives';
 import stylesText from './content.css?inline';
 
 const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiImageCard,
   UiModernGridPage,
+  UiTagBadge,
+  UiSearchBar,
+  UiPaginationBar,
   UiBox,
   UiFlexRow,
   UiFlexColumn,
@@ -206,23 +212,27 @@ function renderEngine(manifest: SiteManifest) {
 // Storage Orchestrator Loader
 function initEngine() {
   if (typeof chrome !== 'undefined' && chrome.storage) {
-    chrome.storage.local.get(['spm_global_enabled', 'spm_installed_themes', 'spm_active_themes'], (res) => {
-      const globalEnabled = res.spm_global_enabled !== false; // enabled by default
+    chrome.storage.local.get(['spm_global_enabled', 'spm_installed_themes', 'spm_active_themes', 'spm_theme_overrides'], (res) => {
+      const globalEnabled = res.spm_global_enabled !== false;
       if (!globalEnabled) return;
 
       const domain = window.location.hostname;
       const activeThemeId = res.spm_active_themes ? res.spm_active_themes[domain] : null;
       if (!activeThemeId) return;
 
-      const manifest = res.spm_installed_themes ? res.spm_installed_themes[activeThemeId] : null;
+      const manifest: SiteManifest | null = res.spm_installed_themes ? res.spm_installed_themes[activeThemeId] : null;
       if (manifest) {
-        renderEngine(manifest as SiteManifest);
+        // Merge user color overrides on top of manifest theme variables
+        const overrides = res.spm_theme_overrides?.[domain];
+        if (overrides && manifest.theme?.cssVariables) {
+          manifest.theme.cssVariables = { ...manifest.theme.cssVariables, ...overrides };
+        }
+        renderEngine(manifest);
       }
     });
 
-    // Listen for real-time config updates (reload to redraw/clean layout)
     chrome.storage.onChanged.addListener((changes) => {
-      if (changes.spm_global_enabled || changes.spm_active_themes) {
+      if (changes.spm_global_enabled || changes.spm_active_themes || changes.spm_theme_overrides) {
         window.location.reload();
       }
     });
