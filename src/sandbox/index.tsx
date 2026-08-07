@@ -23,6 +23,49 @@ interface InspectedElementData {
 
 type LayoutType = 'gallery' | 'post';
 
+function makeUrlsAbsolute(html: string, baseUrlStr: string): string {
+  try {
+    const baseUrl = new URL(baseUrlStr);
+    const baseOrigin = baseUrl.origin;
+    const basePath = baseUrl.pathname.substring(0, baseUrl.pathname.lastIndexOf('/') + 1);
+
+    const resolve = (rel: string) => {
+      if (!rel) return '';
+      // Keep absolute links, hash links, data-URIs and email links intact
+      if (
+        rel.startsWith('http://') || 
+        rel.startsWith('https://') || 
+        rel.startsWith('data:') || 
+        rel.startsWith('javascript:') ||
+        rel.startsWith('#') ||
+        rel.startsWith('mailto:')
+      ) {
+        return rel;
+      }
+      if (rel.startsWith('//')) {
+        return baseUrl.protocol + rel;
+      }
+      if (rel.startsWith('/')) {
+        return baseOrigin + rel;
+      }
+      // Resolve path-relative link
+      return baseOrigin + basePath + rel;
+    };
+
+    // Regex replace both href and src tags containing relative links
+    return html.replace(/\b(href|src)=["']([^"']+)["']/gi, (match, attr, val) => {
+      try {
+        return `${attr}="${resolve(val)}"`;
+      } catch (e) {
+        return match;
+      }
+    });
+  } catch (err) {
+    console.error('[SPM Sandbox] Error converting relative urls:', err);
+    return html;
+  }
+}
+
 function SandboxApp() {
   const [targetUrl, setTargetUrl] = useState<string>('https://example.com');
   const [urlInput, setUrlInput] = useState<string>('https://example.com');
@@ -191,6 +234,9 @@ function SandboxApp() {
       // Clean script tags
       htmlText = htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
 
+      // Translate all relative href/src attributes to absolute URLs to restore native styles/images
+      const absoluteHtml = makeUrlsAbsolute(htmlText, targetUrl);
+
       // Inject base href and document structure
       const baseTag = `<base href="${new URL(targetUrl).origin}">`;
       shadow.innerHTML = `
@@ -204,7 +250,7 @@ function SandboxApp() {
           }
         </style>
         <div class="sandbox-fetched-content" style="width:100%; height:100%; overflow:auto;">
-          ${htmlText}
+          ${absoluteHtml}
         </div>
       `;
     } else {
