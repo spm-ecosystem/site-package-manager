@@ -97,7 +97,16 @@ function applyThemeGlobally(variables: Record<string, string>) {
       color: var(--spm-text-primary) !important;
       margin: 0 !important;
       padding: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
     }
+    
+    html, body {
+      overflow-x: hidden !important;
+    }
+
     /* Simple global override for text colors on elements in non-reconstructed areas */
     #tag-sidebar, .sidebar, div.content, table, tr, td, th, h1, h2, h3, h4, h5, p, span, li, ul, ol, form {
       color: var(--spm-text-primary) !important;
@@ -260,14 +269,12 @@ function renderEngine(manifest: SiteManifest) {
 
         const allProps = { ...extractedProps, ...childrenLists, ...(compConfig.props || {}) };
 
-        const originalRect = (originalEl as HTMLElement).getBoundingClientRect();
         const originalDisplay = window.getComputedStyle(originalEl as HTMLElement).display;
 
         const host = document.createElement('div');
         host.className = `modern-host-${compConfig.name.toLowerCase()}`;
         host.style.display = originalDisplay === 'none' || originalDisplay === 'inline' ? 'block' : originalDisplay;
         host.style.width = '100%';
-        if (originalRect.width > 0) host.style.minWidth = `${originalRect.width}px`;
         host.style.margin = '0';
         host.style.padding = '0';
         host.style.border = 'none';
