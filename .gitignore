@@ -1,0 +1,9 @@
+node_modules
+dist
+dist-zip
+*.local
+.DS_Store
+Thumbs.db
+
+# Superpowers documentation config
+docs/superpowers
