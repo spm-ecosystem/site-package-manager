@@ -33,6 +33,7 @@ interface InspectorSidebarProps {
     textPrimary: string;
     customStyles: string;
   };
+  onElementDrop: (data: { selector: string; tagName: string; id: string; classes: string }) => void;
 }
 
 export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
@@ -46,7 +47,8 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
   setTargetUrl,
   setUrlInput,
   setTheme,
-  theme
+  theme,
+  onElementDrop
 }) => {
   return (
     <aside className="w-80 border-l border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
@@ -92,6 +94,39 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Auxiliary Drag Handle & Quick Actions */}
+            <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-zinc-800/80">
+              <div 
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/plain', activeSelector);
+                  e.dataTransfer.setData('spm/element-tag', inspectedElement.tagName);
+                  e.dataTransfer.setData('spm/element-id', inspectedElement.id || '');
+                  e.dataTransfer.setData('spm/element-classes', inspectedElement.classes.join(' '));
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
+                className="border border-purple-500/20 hover:border-purple-500/40 rounded bg-purple-500/5 hover:bg-purple-500/10 p-2.5 text-center cursor-grab transition flex items-center justify-center gap-2 group shrink-0"
+                title="Drag this handle to the builder zone on the left"
+              >
+                <span className="text-purple-400 group-hover:scale-110 transition text-xs">🫳</span>
+                <span className="text-[10px] font-semibold text-zinc-300 group-hover:text-white">Drag Handle (Drag to Builder)</span>
+              </div>
+
+              <button
+                onClick={() => {
+                  onElementDrop({
+                    selector: activeSelector,
+                    tagName: inspectedElement.tagName,
+                    id: inspectedElement.id || '',
+                    classes: inspectedElement.classes.join(' ')
+                  });
+                }}
+                className="w-full py-1.5 rounded text-[10px] font-semibold bg-purple-500 hover:bg-purple-600 text-white shadow shadow-purple-500/10 transition"
+              >
+                Transform Element...
+              </button>
+            </div>
           </div>
         </div>
       ) : (
