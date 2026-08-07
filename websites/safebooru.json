@@ -1,6 +1,6 @@
 {
   "targetUrl": "*://safebooru.org/*",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "theme": {
     "label": "Obsidian",
     "cssVariables": {
@@ -28,16 +28,6 @@
         "placeholder": "Search tags…",
         "submitUrl": "https://safebooru.org/index.php?page=post&s=list"
       }
-    },
-    {
-      "name": "UiPaginationBar",
-      "selector": "form#manualpage",
-      "action": "replace",
-      "propsMap": {},
-      "props": {
-        "baseUrl": "https://safebooru.org/index.php?page=post&s=list",
-        "totalPages": 100
-      }
     }
   ],
   "reconstructs": [
@@ -59,6 +49,14 @@
             "linkUrl": "a | attr:href",
             "title": "img | attr:title",
             "id": "self | attr:id"
+          }
+        },
+        {
+          "name": "pageLinks",
+          "selector": ".pagination a",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
           }
         }
       ]
