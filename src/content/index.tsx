@@ -107,8 +107,51 @@ function applyThemeGlobally(variables: Record<string, string>) {
     #tag-sidebar, .sidebar, div.content, table, tr, td, th, h1, h2, h3, h4, h5, p, span, li, ul, ol, form {
       color: var(--spm-text-primary) !important;
     }
+    
+    /* Preserved sidebar styling defaults */
+    .sidebar {
+      padding: 0 !important;
+      background: transparent !important;
+    }
+    .sidebar h5 {
+      font-size: 11px !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.05em !important;
+      color: var(--spm-text-muted) !important;
+      margin: 16px 0 8px 0 !important;
+    }
+    .sidebar ul {
+      list-style: none !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 4px !important;
+    }
+    .sidebar li {
+      font-size: 12px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+    }
+    .sidebar li a {
+      color: var(--spm-text-primary) !important;
+      text-decoration: none !important;
+    }
+    .sidebar li a:hover {
+      color: var(--spm-accent) !important;
+    }
+    /* Hide the ugly blue '?' help links in the tags sidebar */
+    .sidebar li a[href*="page=help"] {
+      display: none !important;
+    }
+    .sidebar li span {
+      color: var(--spm-text-muted) !important;
+    }
+
     a {
       color: var(--spm-text-muted);
+      text-decoration: none;
     }
     a:hover {
       color: var(--spm-accent);

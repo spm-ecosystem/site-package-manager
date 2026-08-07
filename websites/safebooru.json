@@ -1,6 +1,6 @@
 {
   "targetUrl": "*://safebooru.org/*",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "theme": {
     "label": "Obsidian",
     "cssVariables": {
@@ -59,9 +59,21 @@
     },
     {
       "name": "UiNavHeader",
-      "selector": "#image-list, .related-posts, .sidebar-list",
+      "selector": "#image-list, .related-posts",
       "action": "hide",
       "propsMap": {}
+    },
+    {
+      "name": "UiSearchBar",
+      "selector": "#tag-sidebar form, .sidebar form",
+      "action": "replace",
+      "propsMap": {
+        "defaultValue": "input[name='tags'] | attr:value"
+      },
+      "props": {
+        "placeholder": "Search tags…",
+        "submitUrl": "https://safebooru.org/index.php?page=post&s=list"
+      }
     }
   ],
   "reconstructs": [
