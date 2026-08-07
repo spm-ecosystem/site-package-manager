@@ -1,6 +1,6 @@
 # Site Package Manager (SPM)
 
-A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Shadow DOM — without touching the original site's code. Configure site reconstructions declaratively through `.json` theme files, and design them visually in the built-in Sandbox IDE.
+A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Shadow DOM - without touching the original site's code. Configure site reconstructions declaratively through `.json` theme files, and design them visually in the built-in Sandbox IDE.
 
 ---
 
@@ -44,7 +44,7 @@ Content Script (src/content/index.tsx)
         into named slots inside the new React layout
 ```
 
-The entire pipeline is driven by `.json` manifest files — no React code changes needed to support a new site.
+The entire pipeline is driven by `.json` manifest files - no React code changes needed to support a new site.
 
 ---
 
@@ -231,7 +231,7 @@ Pre-built, opinionated components tailored for specific UI patterns. These accep
 | `UiImageCard` | Single image card with link and title overlay |
 | `UiModernGridPage` | Full gallery page with sidebar and pagination slots |
 
-**Adding your component to the registry** — open `src/content/index.tsx` and add your import to `COMPONENT_REGISTRY`:
+**Adding your component to the registry** - open `src/content/index.tsx` and add your import to `COMPONENT_REGISTRY`:
 
 ```typescript
 import { MyNewCard } from '../components/dedicated/MyNewCard';
@@ -248,9 +248,9 @@ const COMPONENT_REGISTRY = {
 
 Click the SPM icon in the Chrome toolbar to open the popup.
 
-- **Global Activation** — toggle the engine on/off for all sites. Reloads the current tab immediately.
-- **Active Site** — shows the detected domain of the current tab.
-- **Layout Theme** — dropdown listing themes available for the current domain. Selecting a theme downloads + caches the manifest and reloads the tab.
+- **Global Activation** - toggle the engine on/off for all sites. Reloads the current tab immediately.
+- **Active Site** - shows the detected domain of the current tab.
+- **Layout Theme** - dropdown listing themes available for the current domain. Selecting a theme downloads + caches the manifest and reloads the tab.
 
 ---
 
@@ -262,11 +262,11 @@ The workspace has three panels:
 
 | Panel | Purpose |
 |---|---|
-| **Left — Primitives** | Click any primitive or dedicated component to add it to the canvas |
-| **Center — Legacy Explorer** | Interactive preview of the site's original HTML. Click any element to capture its CSS selector |
-| **Center — Modern Canvas** | Visual representation of your component layout. Click a block to inspect/bind it |
-| **Right — Properties Inspector** | Edit Tailwind classes, bind captured selectors to component props |
-| **Right — JSON Output** | Live preview of the compiled manifest. Use **Export JSON** to download |
+| **Left - Primitives** | Click any primitive or dedicated component to add it to the canvas |
+| **Center - Legacy Explorer** | Interactive preview of the site's original HTML. Click any element to capture its CSS selector |
+| **Center - Modern Canvas** | Visual representation of your component layout. Click a block to inspect/bind it |
+| **Right - Properties Inspector** | Edit Tailwind classes, bind captured selectors to component props |
+| **Right - JSON Output** | Live preview of the compiled manifest. Use **Export JSON** to download |
 
 When the Dev Server is running, the Sandbox also listens for file changes and updates the canvas in real time.
 
@@ -281,7 +281,7 @@ npm run dev-server
 # [SPM DEV] WebSocket Server started on ws://localhost:8080
 ```
 
-Any time you save a `.json` file in `websites/`, the server broadcasts the change to the Sandbox IDE — which reloads layouts instantly without a full browser refresh.
+Any time you save a `.json` file in `websites/`, the server broadcasts the change to the Sandbox IDE - which reloads layouts instantly without a full browser refresh.
 
 ---
 
@@ -338,7 +338,7 @@ Unit tests live in `tests/`. All test files that use DOM APIs must include the f
 
 ### Code Style
 
-- **Language**: English only — code, comments, commit messages, file names.
+- **Language**: English only - code, comments, commit messages, file names.
 - **Comments**: Minimal. Only add comments when the intent cannot be inferred from the code itself.
 - **TypeScript**: Strict mode. No unused locals or imports (`"noUnusedLocals": true`).
 - **Commits**: Use Conventional Commits format (`feat:`, `fix:`, `chore:`, `refactor:`, `style:`).
