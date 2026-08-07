@@ -312,33 +312,43 @@ function SandboxApp() {
       const parsedManifest = JSON.parse(jsonString);
       setJsonError(false);
 
+      const shadow = previewContainerRef.current.shadowRoot || previewContainerRef.current.attachShadow({ mode: 'open' });
+
       const absoluteHtml = makeUrlsAbsolute(rawHtmlRef.current, targetUrl);
-      previewContainerRef.current.innerHTML = absoluteHtml;
+      shadow.innerHTML = `
+        <div id="spm-preview-root" style="width: 100%; height: 100%; overflow: auto; padding: 24px; box-sizing: border-box;">
+          ${absoluteHtml}
+        </div>
+      `;
 
-      const matchedCount = runSandboxEngine(previewContainerRef.current, parsedManifest);
+      const previewRoot = shadow.getElementById('spm-preview-root');
+      if (previewRoot) {
+        const matchedCount = runSandboxEngine(previewRoot, parsedManifest);
 
-      if (matchedCount === 0) {
-        const infoBar = document.createElement('div');
-        infoBar.style.padding = '12px 16px';
-        infoBar.style.margin = '0 0 16px 0';
-        infoBar.style.backgroundColor = 'rgba(59, 130, 246, 0.08)';
-        infoBar.style.border = '1px solid rgba(59, 130, 246, 0.2)';
-        infoBar.style.borderRadius = '6px';
-        infoBar.style.color = '#93c5fd';
-        infoBar.style.fontSize = '12px';
-        infoBar.style.fontFamily = 'system-ui, sans-serif';
-        infoBar.style.lineHeight = '1.5';
-        infoBar.innerHTML = `
-          <strong>ℹ️ No elements matched your JSON selectors.</strong><br/>
-          The active configuration (selectors like <code>#post-list</code> or <code>#header</code>) did not match any nodes on <code>${new URL(targetUrl).hostname}</code>. 
-          Use <strong>Legacy View (Inspector)</strong> to click elements, inspect their classes, and update your JSON selectors in the editor.
-        `;
-        previewContainerRef.current.insertBefore(infoBar, previewContainerRef.current.firstChild);
+        if (matchedCount === 0) {
+          const infoBar = document.createElement('div');
+          infoBar.style.padding = '12px 16px';
+          infoBar.style.margin = '0 0 16px 0';
+          infoBar.style.backgroundColor = 'rgba(59, 130, 246, 0.08)';
+          infoBar.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+          infoBar.style.borderRadius = '6px';
+          infoBar.style.color = '#93c5fd';
+          infoBar.style.fontSize = '12px';
+          infoBar.style.fontFamily = 'system-ui, sans-serif';
+          infoBar.style.lineHeight = '1.5';
+          infoBar.innerHTML = `
+            <strong>ℹ️ No elements matched your JSON selectors.</strong><br/>
+            The active configuration (selectors like <code>#post-list</code> or <code>#header</code>) did not match any nodes on <code>${new URL(targetUrl).hostname}</code>. 
+            Use <strong>Legacy View (Inspector)</strong> to click elements, inspect their classes, and update your JSON selectors in the editor.
+          `;
+          previewRoot.insertBefore(infoBar, previewRoot.firstChild);
+        }
       }
     } catch (err) {
       console.warn('[SPM Sandbox] Error rendering Live Preview:', err);
       setJsonError(true);
-      previewContainerRef.current.innerHTML = `
+      const shadow = previewContainerRef.current.shadowRoot || previewContainerRef.current.attachShadow({ mode: 'open' });
+      shadow.innerHTML = `
         <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
           <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Live Preview Compilation Error</h4>
           <p style="margin: 0; font-size: 12px; line-height: 1.5;">
