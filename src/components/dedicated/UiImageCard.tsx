@@ -1,5 +1,3 @@
-
-
 interface UiImageCardProps {
   imageUrl: string;
   linkUrl: string;
@@ -9,10 +7,58 @@ interface UiImageCardProps {
 
 export function UiImageCard({ imageUrl, linkUrl, title, id }: UiImageCardProps) {
   return (
-    <a href={linkUrl} className="flex flex-col rounded-lg overflow-hidden bg-[var(--bg-color)] text-[var(--text-color)] no-underline shadow-md hover:-translate-y-1 hover:shadow-lg transition duration-200 w-[150px] h-[180px]" data-id={id}>
-      <img src={imageUrl} alt={title} className="w-full h-[120px] object-cover" />
-      <div className="p-2 text-xs truncate text-center font-sans">
-        {title || 'Untitled'}
+    <a
+      id={id}
+      href={linkUrl}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: '160px',
+        borderRadius: 'var(--spm-radius)',
+        overflow: 'hidden',
+        border: '1px solid var(--spm-border)',
+        background: 'var(--spm-bg-secondary)',
+        textDecoration: 'none',
+        transition: 'border-color 0.15s, transform 0.15s',
+        flexShrink: 0,
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--spm-accent)';
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.borderColor = 'var(--spm-border)';
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+      }}
+    >
+      <div style={{ width: '100%', height: '128px', overflow: 'hidden', background: 'var(--spm-bg-tertiary)' }}>
+        <img
+          src={imageUrl}
+          alt={title}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          loading="lazy"
+        />
+      </div>
+      <div
+        style={{
+          padding: '8px',
+          borderTop: '1px solid var(--spm-border)',
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontSize: '11px',
+            color: 'var(--spm-text-muted)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontFamily: 'inherit',
+          }}
+          title={title}
+        >
+          {title}
+        </p>
       </div>
     </a>
   );
