@@ -14,5 +14,11 @@
   },
   "options_page": "sandbox.html",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["*://*/*"]
+  "host_permissions": ["*://*/*"],
+  "web_accessible_resources": [
+    {
+      "resources": ["websites/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
