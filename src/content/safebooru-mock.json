@@ -1,0 +1,23 @@
+{
+  "targetUrl": "*://safebooru.org/*",
+  "version": "1.0.0",
+  "theme": {
+    "cssVariables": {
+      "--bg-color": "#1a1b26",
+      "--text-color": "#c0caf5"
+    }
+  },
+  "components": [
+    {
+      "name": "UiImageCard",
+      "selector": ".thumb",
+      "action": "replace",
+      "propsMap": {
+        "imageUrl": "img | attr:src",
+        "linkUrl": "a | attr:href",
+        "title": "img | attr:title",
+        "id": "self | attr:id"
+      }
+    }
+  ]
+}
