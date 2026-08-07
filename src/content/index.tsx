@@ -51,11 +51,7 @@ interface ReconstructConfig {
   propsMap: Record<string, string>;
   mediaQuery?: string;
   preserve?: Record<string, string>;
-  children: {
-    name: string;
-    selector: string;
-    propsMap: Record<string, string>;
-  }[];
+  children: ChildrenConfig[];
 }
 
 interface SiteManifest {
@@ -145,10 +141,11 @@ function renderEngine(manifest: SiteManifest) {
           pageProps[propName] = extractValue(container, rule);
         }
 
-        // Extract children lists
+        // Extract children lists (supports scope:'document' for external elements)
         const childrenLists: Record<string, any[]> = {};
         for (const childRule of children) {
-          const itemElements = container.querySelectorAll(childRule.selector);
+          const scope = childRule.scope === 'document' ? document : container;
+          const itemElements = scope.querySelectorAll(childRule.selector);
           const list: any[] = [];
 
           itemElements.forEach((itemEl) => {
