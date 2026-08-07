@@ -3,15 +3,27 @@ import { useState } from 'react';
 interface UiSearchBarProps {
   placeholder?: string;
   defaultValue?: string;
+  submitUrl?: string;
   onSearch?: (value: string) => void;
 }
 
-export function UiSearchBar({ placeholder = 'Search…', defaultValue = '', onSearch }: UiSearchBarProps) {
+export function UiSearchBar({
+  placeholder = 'Search…',
+  defaultValue = '',
+  submitUrl,
+  onSearch,
+}: UiSearchBarProps) {
   const [value, setValue] = useState(defaultValue);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch?.(value);
+    if (onSearch) {
+      onSearch(value);
+    } else if (submitUrl) {
+      const url = new URL(submitUrl, window.location.href);
+      url.searchParams.set('tags', value);
+      window.location.href = url.toString();
+    }
   };
 
   return (
@@ -39,8 +51,17 @@ export function UiSearchBar({ placeholder = 'Search…', defaultValue = '', onSe
         onFocusCapture={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--spm-accent)'}
         onBlurCapture={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--spm-border)'}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--spm-text-muted)', flexShrink: 0 }}>
-          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          style={{ color: 'var(--spm-text-muted)', flexShrink: 0 }}
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
         </svg>
         <input
           type="text"
@@ -58,6 +79,24 @@ export function UiSearchBar({ placeholder = 'Search…', defaultValue = '', onSe
             fontFamily: 'inherit',
           }}
         />
+        {value && (
+          <button
+            type="button"
+            onClick={() => setValue('')}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--spm-text-muted)',
+              padding: '0',
+              lineHeight: 1,
+              fontSize: '14px',
+            }}
+            aria-label="Clear"
+          >
+            ✕
+          </button>
+        )}
       </div>
       <button
         type="submit"

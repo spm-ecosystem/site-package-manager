@@ -28,6 +28,7 @@ interface ComponentConfig {
   selector: string;
   action: 'replace' | 'append';
   propsMap: Record<string, string>;
+  props?: Record<string, any>;
 }
 
 interface ReconstructConfig {
@@ -179,6 +180,8 @@ function renderEngine(manifest: SiteManifest) {
         for (const [propName, rule] of Object.entries(compConfig.propsMap)) {
           extractedProps[propName] = extractValue(originalEl, rule);
         }
+        // Merge static props from config (not DOM-extracted)
+        const allProps = { ...extractedProps, ...(compConfig.props || {}) };
 
         const host = document.createElement('div');
         host.className = `modern-host-${compConfig.name.toLowerCase()}`;
@@ -197,7 +200,7 @@ function renderEngine(manifest: SiteManifest) {
         shadowRoot.appendChild(rootContainer);
 
         const root = createRoot(rootContainer);
-        root.render(<Component {...extractedProps} />);
+        root.render(<Component {...allProps} />);
 
         if (compConfig.action === 'replace') {
           originalEl.replaceWith(host);
