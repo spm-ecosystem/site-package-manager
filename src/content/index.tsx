@@ -21,6 +21,7 @@ interface ReconstructConfig {
   containerSelector: string;
   layoutComponent: string;
   propsMap: Record<string, string>;
+  preserve?: Record<string, string>;
   children: {
     name: string;
     selector: string;
@@ -33,7 +34,7 @@ interface SiteManifest {
     cssVariables?: Record<string, string>;
   };
   components?: ComponentConfig[];
-  reconstruct?: ReconstructConfig;
+  reconstructs?: ReconstructConfig[];
 }
 
 function applyTheme(shadowRoot: ShadowRoot, variables: Record<string, string>) {
@@ -46,58 +47,79 @@ function applyTheme(shadowRoot: ShadowRoot, variables: Record<string, string>) {
 }
 
 function renderEngine(manifest: SiteManifest) {
-  if (manifest.reconstruct) {
-    const { containerSelector, layoutComponent, propsMap, children } = manifest.reconstruct;
-    const container = document.querySelector(containerSelector);
+  if (manifest.reconstructs && manifest.reconstructs.length > 0) {
+    for (const reconConfig of manifest.reconstructs) {
+      const { containerSelector, layoutComponent, propsMap, preserve, children } = reconConfig;
+      const container = document.querySelector(containerSelector);
 
-    if (container) {
-      const pageProps: Record<string, any> = {};
-      for (const [propName, rule] of Object.entries(propsMap)) {
-        pageProps[propName] = extractValue(container, rule);
-      }
+      if (container) {
+        const pageProps: Record<string, any> = {};
+        for (const [propName, rule] of Object.entries(propsMap)) {
+          pageProps[propName] = extractValue(container, rule);
+        }
 
-      const childrenLists: Record<string, any[]> = {};
-      for (const childRule of children) {
-        const itemElements = container.querySelectorAll(childRule.selector);
-        const list: any[] = [];
+        const childrenLists: Record<string, any[]> = {};
+        for (const childRule of children) {
+          const itemElements = container.querySelectorAll(childRule.selector);
+          const list: any[] = [];
 
-        itemElements.forEach((itemEl) => {
-          const itemProps: Record<string, any> = {};
-          for (const [propName, rule] of Object.entries(childRule.propsMap)) {
-            itemProps[propName] = extractValue(itemEl, rule);
+          itemElements.forEach((itemEl) => {
+            const itemProps: Record<string, any> = {};
+            for (const [propName, rule] of Object.entries(childRule.propsMap)) {
+              itemProps[propName] = extractValue(itemEl, rule);
+            }
+            list.push(itemProps);
+          });
+
+          childrenLists[childRule.name] = list;
+        }
+
+        const preservedNodes: Record<string, Element> = {};
+        if (preserve) {
+          for (const [slotName, selector] of Object.entries(preserve)) {
+            const targetNode = container.querySelector(selector);
+            if (targetNode) {
+              preservedNodes[slotName] = targetNode;
+            }
           }
-          list.push(itemProps);
-        });
+        }
 
-        childrenLists[childRule.name] = list;
+        (container as HTMLElement).style.display = 'none';
+
+        const host = document.createElement('div');
+        host.className = `modern-reconstruct-host-${layoutComponent.toLowerCase()}`;
+        container.parentNode?.insertBefore(host, container.nextSibling);
+
+        const shadowRoot = host.attachShadow({ mode: 'open' });
+
+        const styleTag = document.createElement('style');
+        styleTag.textContent = stylesText;
+        shadowRoot.appendChild(styleTag);
+
+        if (manifest.theme?.cssVariables) {
+          applyTheme(shadowRoot, manifest.theme.cssVariables);
+        }
+
+        const rootContainer = document.createElement('div');
+        rootContainer.id = 'modern-root';
+        shadowRoot.appendChild(rootContainer);
+
+        const Component = COMPONENT_REGISTRY[layoutComponent];
+        if (Component) {
+          const root = createRoot(rootContainer);
+          root.render(<Component {...pageProps} {...childrenLists} />);
+
+          setTimeout(() => {
+            for (const [slotName, node] of Object.entries(preservedNodes)) {
+              const slotContainer = shadowRoot.querySelector(`#${slotName}-container`);
+              if (slotContainer) {
+                slotContainer.innerHTML = '';
+                slotContainer.appendChild(node);
+              }
+            }
+          }, 0);
+        }
       }
-
-      (container as HTMLElement).style.display = 'none';
-
-      const host = document.createElement('div');
-      host.className = `modern-reconstruct-host-${layoutComponent.toLowerCase()}`;
-      container.parentNode?.insertBefore(host, container.nextSibling);
-
-      const shadowRoot = host.attachShadow({ mode: 'open' });
-
-      const styleTag = document.createElement('style');
-      styleTag.textContent = stylesText;
-      shadowRoot.appendChild(styleTag);
-
-      if (manifest.theme?.cssVariables) {
-        applyTheme(shadowRoot, manifest.theme.cssVariables);
-      }
-
-      const rootContainer = document.createElement('div');
-      rootContainer.id = 'modern-root';
-      shadowRoot.appendChild(rootContainer);
-
-      const Component = COMPONENT_REGISTRY[layoutComponent];
-      if (Component) {
-        const root = createRoot(rootContainer);
-        root.render(<Component {...pageProps} {...childrenLists} />);
-      }
-      return;
     }
   }
 
