@@ -1,6 +1,6 @@
 {
   "targetUrl": "*://safebooru.org/*",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "theme": {
     "label": "Obsidian",
     "cssVariables": {
@@ -17,6 +17,40 @@
     }
   },
   "components": [
+    {
+      "name": "UiNavHeader",
+      "selector": "#header",
+      "action": "replace",
+      "propsMap": {
+        "siteName": "h1 | text"
+      },
+      "children": [
+        {
+          "name": "primaryLinks",
+          "selector": "#navbar a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        },
+        {
+          "name": "secondaryLinks",
+          "selector": "#subnavbar a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UiNavHeader",
+      "selector": "#subnavbar",
+      "action": "hide",
+      "propsMap": {}
+    },
     {
       "name": "UiSearchBar",
       "selector": ".awesomplete",

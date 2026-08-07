@@ -5,12 +5,14 @@ import { UiModernGridPage } from '../components/dedicated/UiModernGridPage';
 import { UiTagBadge } from '../components/dedicated/UiTagBadge';
 import { UiSearchBar } from '../components/dedicated/UiSearchBar';
 import { UiPaginationBar } from '../components/dedicated/UiPaginationBar';
+import { UiNavHeader } from '../components/dedicated/UiNavHeader';
 import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from '../components/primitives/LayoutPrimitives';
 import stylesText from './content.css?inline';
 
 const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiImageCard,
   UiModernGridPage,
+  UiNavHeader,
   UiTagBadge,
   UiSearchBar,
   UiPaginationBar,
@@ -23,12 +25,20 @@ const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiLink
 };
 
+interface ChildrenConfig {
+  name: string;
+  selector: string;
+  scope?: 'element' | 'document';
+  propsMap: Record<string, string>;
+}
+
 interface ComponentConfig {
   name: string;
   selector: string;
-  action: 'replace' | 'append';
+  action: 'replace' | 'append' | 'hide';
   propsMap: Record<string, string>;
   props?: Record<string, any>;
+  children?: ChildrenConfig[];
 }
 
 interface ReconstructConfig {
@@ -167,12 +177,18 @@ function renderEngine(manifest: SiteManifest) {
     }
   }
 
-  // 2. Process Traditional replacements
+  // 2. Process component replacements
   if (manifest.components) {
     for (const compConfig of manifest.components) {
       const originalElements = document.querySelectorAll(compConfig.selector);
-      const Component = COMPONENT_REGISTRY[compConfig.name];
 
+      // action:hide — simply hide the element, no React mount
+      if (compConfig.action === 'hide') {
+        originalElements.forEach(el => { (el as HTMLElement).style.display = 'none'; });
+        continue;
+      }
+
+      const Component = COMPONENT_REGISTRY[compConfig.name];
       if (!Component) continue;
 
       originalElements.forEach((originalEl) => {
@@ -180,21 +196,33 @@ function renderEngine(manifest: SiteManifest) {
         for (const [propName, rule] of Object.entries(compConfig.propsMap)) {
           extractedProps[propName] = extractValue(originalEl, rule);
         }
-        // Merge static props from config (not DOM-extracted)
-        const allProps = { ...extractedProps, ...(compConfig.props || {}) };
 
-        // Capture original dimensions before replacement
+        // Extract children arrays (supports scope:'document' for sibling elements)
+        const childrenLists: Record<string, any[]> = {};
+        for (const childRule of (compConfig.children || [])) {
+          const scope = childRule.scope === 'document' ? document : originalEl;
+          const childEls = scope.querySelectorAll(childRule.selector);
+          const list: any[] = [];
+          childEls.forEach(childEl => {
+            const itemProps: Record<string, any> = {};
+            for (const [propName, rule] of Object.entries(childRule.propsMap)) {
+              itemProps[propName] = extractValue(childEl, rule);
+            }
+            list.push(itemProps);
+          });
+          childrenLists[childRule.name] = list;
+        }
+
+        const allProps = { ...extractedProps, ...childrenLists, ...(compConfig.props || {}) };
+
         const originalRect = (originalEl as HTMLElement).getBoundingClientRect();
         const originalDisplay = window.getComputedStyle(originalEl as HTMLElement).display;
 
         const host = document.createElement('div');
         host.className = `modern-host-${compConfig.name.toLowerCase()}`;
-        // Match display and min-width of replaced element so host doesn't collapse
         host.style.display = originalDisplay === 'none' || originalDisplay === 'inline' ? 'block' : originalDisplay;
         host.style.width = '100%';
-        if (originalRect.width > 0) {
-          host.style.minWidth = `${originalRect.width}px`;
-        }
+        if (originalRect.width > 0) host.style.minWidth = `${originalRect.width}px`;
         host.style.margin = '0';
         host.style.padding = '0';
         host.style.border = 'none';
@@ -206,17 +234,14 @@ function renderEngine(manifest: SiteManifest) {
         styleTag.textContent = stylesText;
         shadowRoot.appendChild(styleTag);
 
-        if (manifest.theme?.cssVariables) {
-          applyTheme(shadowRoot, manifest.theme.cssVariables);
-        }
+        if (manifest.theme?.cssVariables) applyTheme(shadowRoot, manifest.theme.cssVariables);
 
         const rootContainer = document.createElement('div');
         rootContainer.id = 'modern-root';
         rootContainer.style.width = '100%';
         shadowRoot.appendChild(rootContainer);
 
-        const root = createRoot(rootContainer);
-        root.render(<Component {...allProps} />);
+        createRoot(rootContainer).render(<Component {...allProps} />);
 
         if (compConfig.action === 'replace') {
           originalEl.replaceWith(host);
