@@ -587,6 +587,7 @@ function SandboxApp() {
           setUrlInput={setUrlInput}
           setTheme={setTheme}
           theme={theme}
+          onElementDrop={handleElementDrop}
         />
       </main>
 
