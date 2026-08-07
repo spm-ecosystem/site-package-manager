@@ -1,31 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import { extractValue } from './engine';
-import { UiImageCard } from '../components/dedicated/UiImageCard';
-import { UiModernGridPage } from '../components/dedicated/UiModernGridPage';
-import { UiTagBadge } from '../components/dedicated/UiTagBadge';
-import { UiSearchBar } from '../components/dedicated/UiSearchBar';
-import { UiPaginationBar } from '../components/dedicated/UiPaginationBar';
-import { UiNavHeader } from '../components/dedicated/UiNavHeader';
-import { UiPostDetails } from '../components/dedicated/UiPostDetails';
-import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from '../components/primitives/LayoutPrimitives';
+import { COMPONENT_REGISTRY } from '../components/registry';
 import stylesText from './content.css?inline';
 
-const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
-  UiImageCard,
-  UiModernGridPage,
-  UiNavHeader,
-  UiPostDetails,
-  UiTagBadge,
-  UiSearchBar,
-  UiPaginationBar,
-  UiBox,
-  UiFlexRow,
-  UiFlexColumn,
-  UiGrid,
-  UiText,
-  UiImage,
-  UiLink
-};
 
 interface ChildrenConfig {
   name: string;
