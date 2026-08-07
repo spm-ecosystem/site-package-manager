@@ -7,6 +7,7 @@ import { UiSearchBar } from '../components/dedicated/UiSearchBar';
 import { UiPaginationBar } from '../components/dedicated/UiPaginationBar';
 import { UiNavHeader } from '../components/dedicated/UiNavHeader';
 import { UiPostActions } from '../components/dedicated/UiPostActions';
+import { UiPostDetails } from '../components/dedicated/UiPostDetails';
 import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from '../components/primitives/LayoutPrimitives';
 import stylesText from './content.css?inline';
 
@@ -15,6 +16,7 @@ const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiModernGridPage,
   UiNavHeader,
   UiPostActions,
+  UiPostDetails,
   UiTagBadge,
   UiSearchBar,
   UiPaginationBar,
@@ -71,6 +73,44 @@ function applyTheme(shadowRoot: ShadowRoot, variables: Record<string, string>) {
     .join('\n');
   styleEl.textContent = `:host { ${cssVars} }`;
   shadowRoot.appendChild(styleEl);
+}
+
+function applyThemeGlobally(variables: Record<string, string>) {
+  // Apply design tokens to the main document body/html
+  const styleId = 'spm-global-theme-styles';
+  let styleEl = document.getElementById(styleId);
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    document.head.appendChild(styleEl);
+  }
+
+  const cssVars = Object.entries(variables)
+    .map(([key, val]) => `${key}: ${val};`)
+    .join('\n');
+
+  styleEl.textContent = `
+    :root, body, #body {
+      ${cssVars}
+      background-color: var(--spm-bg-primary) !important;
+      color: var(--spm-text-primary) !important;
+    }
+    /* Simple global override for text colors on elements in non-reconstructed areas */
+    #tag-sidebar, .sidebar, div.content, table, tr, td, th, h1, h2, h3, h4, h5, p, span, li, ul, ol, form {
+      color: var(--spm-text-primary) !important;
+    }
+    a {
+      color: var(--spm-text-muted);
+    }
+    a:hover {
+      color: var(--spm-accent);
+    }
+    input, textarea, select {
+      background-color: var(--spm-bg-secondary) !important;
+      color: var(--spm-text-primary) !important;
+      border: 1px solid var(--spm-border) !important;
+    }
+  `;
 }
 
 function renderEngine(manifest: SiteManifest) {
@@ -273,6 +313,12 @@ function initEngine() {
         if (overrides && manifest.theme?.cssVariables) {
           manifest.theme.cssVariables = { ...manifest.theme.cssVariables, ...overrides };
         }
+        
+        // Inject theme globally for un-reconstructed elements (like sidebars on post pages)
+        if (manifest.theme?.cssVariables) {
+          applyThemeGlobally(manifest.theme.cssVariables);
+        }
+
         renderEngine(manifest);
       }
     });
