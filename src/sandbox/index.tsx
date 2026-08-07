@@ -54,10 +54,10 @@ function SandboxApp() {
   const socketRef = useRef<WebSocket | null>(null);
   const rawHtmlRef = useRef<string>(''); // Holds fetched clean HTML text
 
-  // Default initial manifest configuration
+  // Default initial manifest configuration (pure blueprint layout)
   const defaultManifest = {
     targetUrl: new URL(targetUrl).origin + "/*",
-    version: "1.12.0",
+    version: "1.0.0",
     theme: {
       label: "Custom Theme",
       cssVariables: {
@@ -70,51 +70,8 @@ function SandboxApp() {
       },
       customStyles: theme.customStyles
     },
-    components: [
-      {
-        name: "UiNavHeader",
-        selector: "#header",
-        action: "replace",
-        propsMap: {
-          siteName: "#site-title a | text"
-        },
-        children: [
-          {
-            name: "primaryLinks",
-            selector: "#navbar a",
-            scope: "document",
-            propsMap: {
-              label: "self | text",
-              url: "self | attr:href"
-            }
-          }
-        ]
-      }
-    ],
-    reconstructs: [
-      {
-        containerSelector: "#post-list",
-        layoutComponent: "UiModernGridPage",
-        propsMap: {
-          pageTitle: "h2 | text"
-        },
-        preserve: {
-          sidebarSlot: "div.sidebar"
-        },
-        children: [
-          {
-            name: "items",
-            selector: ".thumb",
-            propsMap: {
-              imageUrl: "img | attr:src",
-              linkUrl: "a | attr:href",
-              title: "img | attr:title",
-              id: "self | attr:id"
-            }
-          }
-        ]
-      }
-    ]
+    components: [],
+    reconstructs: []
   };
 
   useEffect(() => {
