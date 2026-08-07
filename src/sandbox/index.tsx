@@ -235,11 +235,11 @@ function SandboxApp() {
       shadow.innerHTML = `
         ${baseTag}
         <style>
-          .spm-inspected-element {
-            outline: 2px solid #a855f7 !important;
-            outline-offset: -2px !important;
-            box-shadow: 0 0 12px rgba(168, 85, 247, 0.6) !important;
-            background-color: rgba(168, 85, 247, 0.05) !important;
+          .spm-selected-element {
+            outline: 2.5px solid #3b82f6 !important;
+            outline-offset: -2.5px !important;
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
+            background-color: rgba(59, 130, 246, 0.04) !important;
           }
         </style>
         <div class="sandbox-fetched-content" style="width:100%; height:100%; overflow:auto;">
@@ -264,24 +264,18 @@ function SandboxApp() {
       const target = e.target as HTMLElement;
       if (!target || target === shadow.host) return;
 
-      shadow.querySelectorAll('.spm-inspected-element').forEach(el => {
-        el.classList.remove('spm-inspected-element');
-      });
-
-      target.classList.add('spm-inspected-element');
-
       const selector = computeCssSelector(target);
       setActiveSelector(selector);
 
       const tagName = target.tagName.toLowerCase();
       const id = target.id || '';
-      const classes = Array.from(target.classList).filter(c => c !== 'spm-inspected-element');
+      const classes = Array.from(target.classList).filter(c => c !== 'spm-selected-element');
       const text = target.textContent?.trim().slice(0, 100) || '';
       
       const attributes: Record<string, string> = {};
       for (let i = 0; i < target.attributes.length; i++) {
         const attr = target.attributes[i];
-        if (attr.name !== 'class' && attr.name !== 'spm-inspected-element') {
+        if (attr.name !== 'class' && attr.name !== 'spm-selected-element') {
           attributes[attr.name] = attr.value;
         }
       }
@@ -303,6 +297,29 @@ function SandboxApp() {
       });
     });
   };
+
+  // Reactively highlight all elements matching the active selector in Legacy View
+  useEffect(() => {
+    const shadow = legacyExplorerRef.current?.shadowRoot;
+    if (!shadow) return;
+
+    // 1. Clear previous selections
+    shadow.querySelectorAll('.spm-selected-element').forEach(el => {
+      el.classList.remove('spm-selected-element');
+    });
+
+    if (!activeSelector) return;
+
+    // 2. Query and highlight all matching nodes
+    try {
+      const elements = shadow.querySelectorAll(activeSelector);
+      elements.forEach(el => {
+        el.classList.add('spm-selected-element');
+      });
+    } catch (e) {
+      // Ignore invalid query selector exceptions during user typing
+    }
+  }, [activeSelector, targetUrl]);
 
   // Perform Live Reconstruct rendering on the preview panel
   const triggerLivePreview = () => {
