@@ -115,76 +115,16 @@ function SandboxApp() {
         </div>
       `;
     } catch (err) {
-      console.warn('[SPM Sandbox] Real page fetch failed (CORS or network). Falling back to mock template. Error:', err);
-      // Fallback Simulator DOM dump based on targetUrl type
-      const isPostPage = targetUrl.includes('s=view') || targetUrl.includes('id=');
-      
-      if (isPostPage) {
-        shadow.innerHTML = `
-          <style>
-            .legacy-container { padding: 16px; background: #ffffff; color: #333333; font-family: system-ui, sans-serif; min-height: 200px; }
-            #tag-sidebar { width: 160px; float: left; border-right: 1px solid #e5e7eb; padding-right: 8px; }
-            .tag-type-artist { color: #a855f7; }
-            .tag-type-general { color: #3b82f6; }
-            .related-posts { margin-top: 16px; border-top: 1px solid #eee; padding-top: 8px; }
-            .related-posts a { display: block; font-size: 12px; color: #10b981; text-decoration: none; margin-bottom: 4px; }
-            h2 { font-size: 18px; margin-top: 0; margin-bottom: 8px; color: #111827; }
-            .content { margin-left: 180px; text-align: center; }
-            #image { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 4px; }
-          </style>
-          <div class="legacy-container">
-            <div id="tag-sidebar">
-              <h2>Tags</h2>
-              <ul>
-                <li class="tag-type-artist"><a href="#">?</a> <a href="#">artist_name</a> <span>(1)</span></li>
-                <li class="tag-type-general"><a href="#">?</a> <a href="#">solo</a> <span>(321)</span></li>
-              </ul>
-              <div class="related-posts">
-                <h5>Related Posts</h5>
-                <a href="#">Previous</a>
-                <a href="#">Next</a>
-              </div>
-            </div>
-            <div class="content">
-              <img id="image" src="https://safebooru.org/thumbnails/3909/thumbnail_6cb6cbfad7e.jpg" />
-            </div>
-          </div>
-        `;
-      } else {
-        shadow.innerHTML = `
-          <style>
-            .legacy-container { padding: 16px; background: #ffffff; color: #333333; font-family: system-ui, sans-serif; min-height: 200px; }
-            .thumb { display: inline-block; padding: 8px; border: 1px dashed #cccccc; margin: 6px; cursor: pointer; border-radius: 4px; transition: all 0.15s; }
-            .thumb:hover { background: #f0f6ff; border-color: #3b82f6; }
-            .pagination { margin: 12px 0; font-weight: bold; color: #111827; }
-            .sidebar { width: 140px; float: left; border-right: 1px solid #e5e7eb; padding-right: 8px; }
-            h2 { font-size: 20px; margin-top: 0; margin-bottom: 12px; color: #111827; }
-            ul { padding-left: 18px; margin: 6px 0; }
-            li { font-size: 13px; color: #4b5563; }
-          </style>
-          <div class="legacy-container">
-            <div class="sidebar">
-              <h2>Tags</h2>
-              <ul>
-                <li>solo (321)</li>
-                <li>original (112)</li>
-              </ul>
-            </div>
-            <div style="margin-left: 160px;">
-              <h2>Safebooru Gallery</h2>
-              <div class="pagination"><b>1</b> <a href="#">2</a> <a href="#">3</a></div>
-              <div id="post-list">
-                <span class="thumb" id="p1234">
-                  <a href="index.php?id=1234"><img src="https://safebooru.org/thumbnails/3909/thumbnail_6cb6cbfad7e.jpg" title="1234 solo original" /></a>
-                </span>
-                <span class="thumb" id="p1235">
-                  <a href="index.php?id=1235"><img src="https://safebooru.org/thumbnails/3909/thumbnail_6cb6cbfad7f.jpg" title="1235 solo scenic" /></a>
-                </span>
-              </div>
-            </div>
-          </div>
-        `;
-      }
+      console.warn('[SPM Sandbox] Live fetch failed. Error:', err);
+      shadow.innerHTML = `
+        <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Unable to fetch target page</h4>
+          <p style="margin: 0; font-size: 12px; line-height: 1.5;">
+            Could not fetch <code>${targetUrl}</code>. Make sure the server is reachable and CORS policies allow connections.
+            You can still inspect any elements by entering a different URL in the fetch bar.
+          </p>
+        </div>
+      `;
     }
 
     shadow.addEventListener('click', (e) => {
