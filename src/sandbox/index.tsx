@@ -315,7 +315,26 @@ function SandboxApp() {
       const absoluteHtml = makeUrlsAbsolute(rawHtmlRef.current, targetUrl);
       previewContainerRef.current.innerHTML = absoluteHtml;
 
-      runSandboxEngine(previewContainerRef.current, parsedManifest);
+      const matchedCount = runSandboxEngine(previewContainerRef.current, parsedManifest);
+
+      if (matchedCount === 0) {
+        const infoBar = document.createElement('div');
+        infoBar.style.padding = '12px 16px';
+        infoBar.style.margin = '0 0 16px 0';
+        infoBar.style.backgroundColor = 'rgba(59, 130, 246, 0.08)';
+        infoBar.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+        infoBar.style.borderRadius = '6px';
+        infoBar.style.color = '#93c5fd';
+        infoBar.style.fontSize = '12px';
+        infoBar.style.fontFamily = 'system-ui, sans-serif';
+        infoBar.style.lineHeight = '1.5';
+        infoBar.innerHTML = `
+          <strong>ℹ️ No elements matched your JSON selectors.</strong><br/>
+          The active configuration (selectors like <code>#post-list</code> or <code>#header</code>) did not match any nodes on <code>${new URL(targetUrl).hostname}</code>. 
+          Use <strong>Legacy View (Inspector)</strong> to click elements, inspect their classes, and update your JSON selectors in the editor.
+        `;
+        previewContainerRef.current.insertBefore(infoBar, previewContainerRef.current.firstChild);
+      }
     } catch (err) {
       console.warn('[SPM Sandbox] Error rendering Live Preview:', err);
       setJsonError(true);

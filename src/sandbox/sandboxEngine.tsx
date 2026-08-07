@@ -2,8 +2,10 @@ import { createRoot } from 'react-dom/client';
 import { COMPONENT_REGISTRY } from '../components/registry';
 import { extractValue } from '../content/engine';
 
-export function runSandboxEngine(container: HTMLElement, manifest: any) {
-  if (!manifest) return;
+export function runSandboxEngine(container: HTMLElement, manifest: any): number {
+  if (!manifest) return 0;
+
+  let matchedCount = 0;
 
   // Apply custom CSS overrides to the container context
   if (manifest.theme?.customStyles) {
@@ -17,6 +19,8 @@ export function runSandboxEngine(container: HTMLElement, manifest: any) {
     for (const config of manifest.reconstructs) {
       const originalEl = container.querySelector(config.containerSelector);
       if (!originalEl) continue;
+
+      matchedCount++;
 
       // Extract properties
       const pageProps: Record<string, any> = {};
@@ -90,7 +94,10 @@ export function runSandboxEngine(container: HTMLElement, manifest: any) {
       const originalElements = container.querySelectorAll(compConfig.selector);
 
       if (compConfig.action === 'hide') {
-        originalElements.forEach(el => { (el as HTMLElement).style.display = 'none'; });
+        originalElements.forEach(el => { 
+          (el as HTMLElement).style.display = 'none'; 
+          matchedCount++;
+        });
         continue;
       }
 
@@ -98,6 +105,7 @@ export function runSandboxEngine(container: HTMLElement, manifest: any) {
       if (!Component) continue;
 
       originalElements.forEach((originalEl) => {
+        matchedCount++;
         const extractedProps: Record<string, any> = {};
         for (const [propName, rule] of Object.entries(compConfig.propsMap || {})) {
           extractedProps[propName] = extractValue(originalEl as HTMLElement, rule as string);
@@ -138,4 +146,6 @@ export function runSandboxEngine(container: HTMLElement, manifest: any) {
       });
     }
   }
+
+  return matchedCount;
 }
