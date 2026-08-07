@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "test": "vitest run",
-    "dev-server": "node scripts/dev-server.js"
+    "dev-server": "node scripts/dev-server.cjs"
   },
   "dependencies": {
     "react": "^18.3.1",
