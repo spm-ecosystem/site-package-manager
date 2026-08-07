@@ -21,8 +21,7 @@ interface InspectedElementData {
   suggestedSelectors: string[];
 }
 
-type LayoutType = 'gallery' | 'post';
-
+// Global helper to rewrites relative asset paths into absolute URLs
 function makeUrlsAbsolute(html: string, baseUrlStr: string): string {
   try {
     const baseUrl = new URL(baseUrlStr);
@@ -31,7 +30,6 @@ function makeUrlsAbsolute(html: string, baseUrlStr: string): string {
 
     const resolve = (rel: string) => {
       if (!rel) return '';
-      // Keep absolute links, hash links, data-URIs and email links intact
       if (
         rel.startsWith('http://') || 
         rel.startsWith('https://') || 
@@ -48,11 +46,9 @@ function makeUrlsAbsolute(html: string, baseUrlStr: string): string {
       if (rel.startsWith('/')) {
         return baseOrigin + rel;
       }
-      // Resolve path-relative link
       return baseOrigin + basePath + rel;
     };
 
-    // Regex replace both href and src tags containing relative links
     return html.replace(/\b(href|src)=["']([^"']+)["']/gi, (match, attr, val) => {
       try {
         return `${attr}="${resolve(val)}"`;
@@ -66,6 +62,145 @@ function makeUrlsAbsolute(html: string, baseUrlStr: string): string {
   }
 }
 
+// Dynamic local modernizer engine runner for the Sandbox Modern Preview
+function runSandboxEngine(container: HTMLElement, manifest: any) {
+  if (!manifest) return;
+
+  // Apply custom CSS overrides to the container context
+  if (manifest.theme?.customStyles) {
+    const styleEl = document.createElement('style');
+    styleEl.textContent = manifest.theme.customStyles;
+    container.appendChild(styleEl);
+  }
+
+  // 1. Process Reconstructs (e.g. replacing layout grids or post panels)
+  if (manifest.reconstructs) {
+    for (const config of manifest.reconstructs) {
+      const originalEl = container.querySelector(config.containerSelector);
+      if (!originalEl) continue;
+
+      // Extract properties
+      const pageProps: Record<string, any> = {};
+      for (const [propName, rule] of Object.entries(config.propsMap || {})) {
+        pageProps[propName] = extractValue(originalEl as HTMLElement, rule as string);
+      }
+
+      // Extract children arrays (like post lists or tag badges)
+      const childrenLists: Record<string, any[]> = {};
+      for (const childRule of (config.children || [])) {
+        const scope = childRule.scope === 'document' ? container : originalEl;
+        const childEls = scope.querySelectorAll(childRule.selector);
+        const list: any[] = [];
+        childEls.forEach((childEl: Element) => {
+          const itemProps: Record<string, any> = {};
+          for (const [propName, rule] of Object.entries(childRule.propsMap || {})) {
+            itemProps[propName] = extractValue(childEl as HTMLElement, rule as string);
+          }
+          list.push(itemProps);
+        });
+        childrenLists[childRule.name] = list;
+      }
+
+      // Clone preserved nodes to insert in React slot slots safely
+      const preservedNodes: Record<string, HTMLElement> = {};
+      for (const [slotName, selector] of Object.entries(config.preserve || {})) {
+        const node = container.querySelector(selector as string);
+        if (node) {
+          preservedNodes[slotName] = node.cloneNode(true) as HTMLElement;
+        }
+      }
+
+      // Hide original element
+      (originalEl as HTMLElement).style.display = 'none';
+
+      // Setup React Mount host
+      const host = document.createElement('div');
+      host.className = `modern-reconstruct-host-${config.layoutComponent.toLowerCase()}`;
+      host.style.width = '100%';
+      originalEl.parentNode?.insertBefore(host, originalEl.nextSibling);
+
+      // Inject theme variables directly
+      if (manifest.theme?.cssVariables) {
+        Object.entries(manifest.theme.cssVariables).forEach(([k, v]) => {
+          host.style.setProperty(k, v as string);
+        });
+      }
+
+      const Component = COMPONENT_REGISTRY[config.layoutComponent];
+      if (Component) {
+        const root = createRoot(host);
+        root.render(<Component {...pageProps} {...childrenLists} />);
+
+        // Reparent slots
+        setTimeout(() => {
+          for (const [slotName, node] of Object.entries(preservedNodes)) {
+            const slotContainer = host.querySelector(`#${slotName}-container`) || host.shadowRoot?.querySelector(`#${slotName}-container`);
+            if (slotContainer) {
+              slotContainer.innerHTML = '';
+              slotContainer.appendChild(node);
+            }
+          }
+        }, 50);
+      }
+    }
+  }
+
+  // 2. Process Components (like headers, search bars, etc.)
+  if (manifest.components) {
+    for (const compConfig of manifest.components) {
+      const originalElements = container.querySelectorAll(compConfig.selector);
+
+      if (compConfig.action === 'hide') {
+        originalElements.forEach(el => { (el as HTMLElement).style.display = 'none'; });
+        continue;
+      }
+
+      const Component = COMPONENT_REGISTRY[compConfig.name];
+      if (!Component) continue;
+
+      originalElements.forEach((originalEl) => {
+        const extractedProps: Record<string, any> = {};
+        for (const [propName, rule] of Object.entries(compConfig.propsMap || {})) {
+          extractedProps[propName] = extractValue(originalEl as HTMLElement, rule as string);
+        }
+
+        const childrenLists: Record<string, any[]> = {};
+        for (const childRule of (compConfig.children || [])) {
+          const scope = childRule.scope === 'document' ? container : originalEl;
+          const childEls = scope.querySelectorAll(childRule.selector);
+          const list: any[] = [];
+          childEls.forEach((childEl: Element) => {
+            const itemProps: Record<string, any> = {};
+            for (const [propName, rule] of Object.entries(childRule.propsMap || {})) {
+              itemProps[propName] = extractValue(childEl as HTMLElement, rule as string);
+            }
+            list.push(itemProps);
+          });
+          childrenLists[childRule.name] = list;
+        }
+
+        const allProps = { ...extractedProps, ...childrenLists, ...(compConfig.props || {}) };
+
+        (originalEl as HTMLElement).style.display = 'none';
+
+        const host = document.createElement('div');
+        host.className = `modern-host-${compConfig.name.toLowerCase()}`;
+        host.style.width = '100%';
+        originalEl.parentNode?.insertBefore(host, originalEl.nextSibling);
+
+        if (manifest.theme?.cssVariables) {
+          Object.entries(manifest.theme.cssVariables).forEach(([k, v]) => {
+            host.style.setProperty(k, v as string);
+          });
+        }
+
+        const root = createRoot(host);
+        root.render(<Component {...allProps} />);
+      });
+    }
+  }
+}
+
 function SandboxApp() {
   const [targetUrl, setTargetUrl] = useState<string>('https://example.com');
   const [urlInput, setUrlInput] = useState<string>('https://example.com');
@@ -76,31 +211,7 @@ function SandboxApp() {
   const [activeSelector, setActiveSelector] = useState<string>('');
   const [inspectedElement, setInspectedElement] = useState<InspectedElementData | null>(null);
 
-  // Mapped Config Selectors (Consolidated state for layout mapping)
-  const [galleryProps, setGalleryProps] = useState({
-    containerSelector: '#post-list',
-    pageTitleRule: 'h2 | text',
-    itemsSelector: '.thumb',
-    imageUrlRule: 'img | attr:src',
-    linkUrlRule: 'a | attr:href',
-    titleRule: 'img | attr:title',
-    idRule: 'self | attr:id',
-    paginationSelector: 'div.pagination a'
-  });
-
-  const [postProps, setPostProps] = useState({
-    containerSelector: 'div.content:has(#image)',
-    imageUrlRule: '#image | attr:src',
-    statisticsHtmlRule: '#tag-sidebar ul:last-child | html',
-    buttonsSelector: '#tag-sidebar .related-posts a',
-    tagsSelector: '#tag-sidebar li',
-    tagNameRule: 'a:nth-child(2) | text',
-    tagCountRule: 'span | text',
-    tagTypeRule: 'self | attr:class',
-    tagUrlRule: 'a:nth-child(2) | attr:href'
-  });
-
-  // Theme states
+  // Mapped Config Selectors (Default template JSON states)
   const [theme, setTheme] = useState<CustomTheme>({
     bgPrimary: '#000000',
     bgSecondary: '#111111',
@@ -109,31 +220,107 @@ function SandboxApp() {
     customStyles: '/* Add your CSS overrides here */\n.sidebar { padding: 0 !important; }'
   });
 
-  const [layoutType, setLayoutType] = useState<LayoutType>('gallery');
   const [jsonString, setJsonString] = useState<string>('');
   const [jsonError, setJsonError] = useState<boolean>(false);
 
   const legacyExplorerRef = useRef<HTMLDivElement>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const rawHtmlRef = useRef<string>(''); // Holds fetched clean HTML text
 
-  // Sync state variables back to jsonString when form changes
+  // 1. Initial build and load of JSON String
+  const defaultManifest = {
+    targetUrl: new URL(targetUrl).origin + "/*",
+    version: "1.12.0",
+    theme: {
+      label: "Custom Theme",
+      cssVariables: {
+        "--spm-bg-primary": theme.bgPrimary,
+        "--spm-bg-secondary": theme.bgSecondary,
+        "--spm-text-primary": theme.textPrimary,
+        "--spm-accent": theme.accent,
+        "--spm-border": "#333333",
+        "--spm-radius": "8px"
+      },
+      customStyles: theme.customStyles
+    },
+    components: [
+      {
+        name: "UiNavHeader",
+        selector: "#header",
+        action: "replace",
+        propsMap: {
+          siteName: "#site-title a | text"
+        },
+        children: [
+          {
+            name: "primaryLinks",
+            selector: "#navbar a",
+            scope: "document",
+            propsMap: {
+              label: "self | text",
+              url: "self | attr:href"
+            }
+          }
+        ]
+      }
+    ],
+    reconstructs: [
+      {
+        containerSelector: "#post-list",
+        layoutComponent: "UiModernGridPage",
+        propsMap: {
+          pageTitle: "h2 | text"
+        },
+        preserve: {
+          sidebarSlot: "div.sidebar"
+        },
+        children: [
+          {
+            name: "items",
+            selector: ".thumb",
+            propsMap: {
+              imageUrl: "img | attr:src",
+              linkUrl: "a | attr:href",
+              title: "img | attr:title",
+              id: "self | attr:id"
+            }
+          }
+        ]
+      }
+    ]
+  };
+
   useEffect(() => {
-    const generatedStr = JSON.stringify(compiledJson, null, 2);
+    if (!jsonString) {
+      setJsonString(JSON.stringify(defaultManifest, null, 2));
+    }
+  }, []);
+
+  // Sync theme changes to JSON string cursor-safely
+  useEffect(() => {
+    if (!jsonString) return;
     try {
-      if (jsonString) {
-        const currentParsed = JSON.parse(jsonString);
-        const newParsed = JSON.parse(generatedStr);
-        // Avoid rewriting jsonString if the structural content is identical
-        if (JSON.stringify(currentParsed) === JSON.stringify(newParsed)) {
-          return;
-        }
+      const parsed = JSON.parse(jsonString);
+      parsed.targetUrl = new URL(targetUrl).origin + "/*";
+      if (parsed.theme) {
+        parsed.theme.cssVariables = {
+          ...parsed.theme.cssVariables,
+          "--spm-bg-primary": theme.bgPrimary,
+          "--spm-bg-secondary": theme.bgSecondary,
+          "--spm-text-primary": theme.textPrimary,
+          "--spm-accent": theme.accent
+        };
+        parsed.theme.customStyles = theme.customStyles;
+      }
+      const updatedStr = JSON.stringify(parsed, null, 2);
+      if (jsonString !== updatedStr) {
+        setJsonString(updatedStr);
       }
     } catch (e) {}
+  }, [theme, targetUrl]);
 
-    setJsonString(generatedStr);
-    setJsonError(false);
-  }, [galleryProps, postProps, theme, targetUrl, layoutType]);
-
+  // Refetch target URL when it changes
   useEffect(() => {
     fetchHtmlDump();
     connectWebSocket();
@@ -142,6 +329,13 @@ function SandboxApp() {
       if (socketRef.current) socketRef.current.close();
     };
   }, [targetUrl]);
+
+  // 2. Trigger hot reload of Modern Preview on viewMode or jsonString change
+  useEffect(() => {
+    if (viewMode === 'preview') {
+      triggerLivePreview();
+    }
+  }, [viewMode, jsonString]);
 
   const connectWebSocket = () => {
     try {
@@ -156,36 +350,8 @@ function SandboxApp() {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'theme-update' && data.content?.reconstructs?.[0]) {
-            const config = data.content.reconstructs[0];
-            if (config.layoutComponent === 'UiModernGridPage') {
-              setLayoutType('gallery');
-              setGalleryProps(prev => ({
-                ...prev,
-                containerSelector: config.containerSelector,
-                pageTitleRule: config.propsMap?.pageTitle || '',
-                itemsSelector: config.children?.[0]?.selector || '',
-                imageUrlRule: config.children?.[0]?.propsMap?.imageUrl || '',
-                linkUrlRule: config.children?.[0]?.propsMap?.linkUrl || '',
-                titleRule: config.children?.[0]?.propsMap?.title || '',
-                idRule: config.children?.[0]?.propsMap?.id || '',
-                paginationSelector: config.children?.[1]?.selector || ''
-              }));
-            } else if (config.layoutComponent === 'UiPostDetails') {
-              setLayoutType('post');
-              setPostProps(prev => ({
-                ...prev,
-                containerSelector: config.containerSelector,
-                imageUrlRule: config.propsMap?.imageUrl || '',
-                statisticsHtmlRule: config.propsMap?.statisticsHtml || '',
-                buttonsSelector: config.children?.[0]?.selector || '',
-                tagsSelector: config.children?.[1]?.selector || '',
-                tagNameRule: config.children?.[1]?.propsMap?.name || '',
-                tagCountRule: config.children?.[1]?.propsMap?.count || '',
-                tagTypeRule: config.children?.[1]?.propsMap?.type || '',
-                tagUrlRule: config.children?.[1]?.propsMap?.url || ''
-              }));
-            }
+          if (data.type === 'theme-update' && data.content) {
+            setJsonString(JSON.stringify(data.content, null, 2));
           }
         } catch (err) {
           console.error('[SPM Sandbox] Error parsing WebSocket message:', err);
@@ -231,10 +397,11 @@ function SandboxApp() {
     }
 
     if (fetched) {
-      // Clean script tags
+      // Clear scripts
       htmlText = htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      rawHtmlRef.current = htmlText; // Keep a clean copy
 
-      // Translate all relative href/src attributes to absolute URLs to restore native styles/images
+      // Translate relative URLs to absolute
       const absoluteHtml = makeUrlsAbsolute(htmlText, targetUrl);
 
       // Inject base href and document structure
@@ -333,119 +500,32 @@ function SandboxApp() {
     return path.join(' > ');
   };
 
-  // Compile JSON dynamically based on active fields
-  const compiledJson = {
-    targetUrl: new URL(targetUrl).origin + "/*",
-    version: "1.12.0",
-    theme: {
-      label: "Custom Theme",
-      cssVariables: {
-        "--spm-bg-primary": theme.bgPrimary,
-        "--spm-bg-secondary": theme.bgSecondary,
-        "--spm-text-primary": theme.textPrimary,
-        "--spm-accent": theme.accent,
-        "--spm-border": "#333333",
-        "--spm-radius": "8px"
-      },
-      customStyles: theme.customStyles
-    },
-    components: [
-      {
-        "name": "UiNavHeader",
-        "selector": "#header",
-        "action": "replace",
-        "propsMap": {
-          "siteName": "#site-title a | text"
-        },
-        "children": [
-          {
-            "name": "primaryLinks",
-            "selector": "#navbar a",
-            "scope": "document",
-            "propsMap": {
-              "label": "self | text",
-              "url": "self | attr:href"
-            }
-          }
-        ]
-      }
-    ],
-    reconstructs: [
-      layoutType === 'gallery' ? {
-        containerSelector: galleryProps.containerSelector,
-        layoutComponent: "UiModernGridPage",
-        propsMap: {
-          pageTitle: galleryProps.pageTitleRule
-        },
-        preserve: {
-          sidebarSlot: "div.sidebar"
-        },
-        children: [
-          {
-            name: "items",
-            selector: galleryProps.itemsSelector,
-            propsMap: {
-              imageUrl: galleryProps.imageUrlRule,
-              linkUrl: galleryProps.linkUrlRule,
-              title: galleryProps.titleRule,
-              id: galleryProps.idRule
-            }
-          },
-          {
-            name: "pageLinks",
-            selector: galleryProps.paginationSelector,
-            propsMap: {
-              label: "self | text",
-              url: "self | attr:href"
-            }
-          }
-        ]
-      } : {
-        containerSelector: postProps.containerSelector,
-        layoutComponent: "UiPostDetails",
-        propsMap: {
-          imageUrl: postProps.imageUrlRule,
-          statisticsHtml: postProps.statisticsHtmlRule
-        },
-        props: {
-          showSearch: true,
-          searchSubmitUrl: new URL(targetUrl).origin + "/index.php?page=post&s=list",
-          searchParamName: "tags"
-        },
-        children: [
-          {
-            name: "buttons",
-            selector: postProps.buttonsSelector,
-            scope: "document",
-            propsMap: {
-              label: "self | text",
-              url: "self | attr:href"
-            }
-          },
-          {
-            name: "tags",
-            selector: postProps.tagsSelector,
-            scope: "document",
-            propsMap: {
-              name: postProps.tagNameRule,
-              count: postProps.tagCountRule,
-              type: postProps.tagTypeRule,
-              url: postProps.tagUrlRule
-            }
-          }
-        ]
-      }
-    ]
-  };
+  // Perform Live Reconstruct rendering on the preview panel
+  const triggerLivePreview = () => {
+    if (!previewContainerRef.current || !rawHtmlRef.current) return;
+    
+    try {
+      const parsedManifest = JSON.parse(jsonString);
+      setJsonError(false);
 
-  const handleDownload = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(compiledJson, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `${new URL(targetUrl).hostname}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+      // 1. Reset container HTML to clean fetched copy
+      const absoluteHtml = makeUrlsAbsolute(rawHtmlRef.current, targetUrl);
+      previewContainerRef.current.innerHTML = absoluteHtml;
+
+      // 2. Execute local sandbox engine over the container
+      runSandboxEngine(previewContainerRef.current, parsedManifest);
+    } catch (err) {
+      console.warn('[SPM Sandbox] Error rendering Live Preview:', err);
+      setJsonError(true);
+      previewContainerRef.current.innerHTML = `
+        <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Live Preview Compilation Error</h4>
+          <p style="margin: 0; font-size: 12px; line-height: 1.5;">
+            Check your JSON config syntax and layout properties.
+          </p>
+        </div>
+      `;
+    }
   };
 
   const handleFetchTarget = (e: React.FormEvent) => {
@@ -455,103 +535,15 @@ function SandboxApp() {
     }
   };
 
-  // Preenche a propriedade ativa selecionada
-  const fillInspectedSelector = (category: 'gallery' | 'post', field: string) => {
-    if (!activeSelector) return;
-    if (category === 'gallery') {
-      setGalleryProps({ ...galleryProps, [field]: activeSelector });
-    } else {
-      setPostProps({ ...postProps, [field]: activeSelector });
-    }
+  const handleDownload = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `${new URL(targetUrl).hostname}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
   };
-
-  // Executa a extração em tempo de execução e retorna os elementos processados
-  const getPreviewData = () => {
-    const shadow = legacyExplorerRef.current?.shadowRoot;
-    if (!shadow) return null;
-
-    if (layoutType === 'gallery') {
-      const container = shadow.querySelector(galleryProps.containerSelector);
-      if (!container) return { error: `Container ${galleryProps.containerSelector} not found` };
-
-      // Page Title
-      const pageTitle = extractValue(container as HTMLElement, galleryProps.pageTitleRule);
-
-      // Extract items list
-      const items: any[] = [];
-      const itemNodes = container.querySelectorAll(galleryProps.itemsSelector);
-      itemNodes.forEach(node => {
-        items.push({
-          imageUrl: extractValue(node as HTMLElement, galleryProps.imageUrlRule),
-          linkUrl: extractValue(node as HTMLElement, galleryProps.linkUrlRule),
-          title: extractValue(node as HTMLElement, galleryProps.titleRule),
-          id: extractValue(node as HTMLElement, galleryProps.idRule)
-        });
-      });
-
-      // Pagination links
-      const pageLinks: any[] = [];
-      const linkNodes = shadow.querySelectorAll(galleryProps.paginationSelector);
-      linkNodes.forEach(node => {
-        pageLinks.push({
-          label: node.textContent?.trim() || '',
-          url: node.getAttribute('href') || '#'
-        });
-      });
-
-      return {
-        layoutComponent: 'UiModernGridPage',
-        props: {
-          pageTitle,
-          items,
-          pageLinks
-        }
-      };
-    } else {
-      // Post View layout
-      const container = shadow.querySelector(postProps.containerSelector);
-      if (!container) return { error: `Container ${postProps.containerSelector} not found` };
-
-      const imageUrl = extractValue(container as HTMLElement, postProps.imageUrlRule);
-      const statisticsHtml = extractValue(shadow as any, postProps.statisticsHtmlRule);
-
-      // Buttons
-      const buttons: any[] = [];
-      const btnNodes = shadow.querySelectorAll(postProps.buttonsSelector);
-      btnNodes.forEach(node => {
-        buttons.push({
-          label: node.textContent?.trim() || '',
-          url: node.getAttribute('href') || '#'
-        });
-      });
-
-      // Tags
-      const tags: any[] = [];
-      const tagNodes = shadow.querySelectorAll(postProps.tagsSelector);
-      tagNodes.forEach(node => {
-        tags.push({
-          name: extractValue(node as HTMLElement, postProps.tagNameRule),
-          count: extractValue(node as HTMLElement, postProps.tagCountRule),
-          type: extractValue(node as HTMLElement, postProps.tagTypeRule),
-          url: extractValue(node as HTMLElement, postProps.tagUrlRule)
-        });
-      });
-
-      return {
-        layoutComponent: 'UiPostDetails',
-        props: {
-          imageUrl,
-          statisticsHtml,
-          buttons,
-          tags,
-          showSearch: true,
-          searchSubmitUrl: new URL(targetUrl).origin + "/index.php?page=post&s=list"
-        }
-      };
-    }
-  };
-
-  const previewData = viewMode === 'preview' ? getPreviewData() : null;
 
   return (
     <div className="flex flex-col h-screen font-sans select-none bg-black text-[#d4d4d4]">
@@ -594,114 +586,12 @@ function SandboxApp() {
       {/* Main Studio Workspace */}
       <main className="flex-1 flex overflow-hidden">
         
-        {/* Left Panel: Target Template properties mapped */}
+        {/* Left Panel: Target Theme & Active Config Bindings */}
         <aside className="w-80 border-r border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
-          {/* Layout Type Selection */}
-          <div>
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Layout Template</div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setLayoutType('gallery')}
-                className={`flex-1 py-1.5 rounded text-xs font-semibold border ${layoutType === 'gallery' ? 'bg-white text-black border-white' : 'bg-[#222222] border-[#333333] text-white hover:border-zinc-500'}`}
-              >
-                Gallery List
-              </button>
-              <button
-                onClick={() => setLayoutType('post')}
-                className={`flex-1 py-1.5 rounded text-xs font-semibold border ${layoutType === 'post' ? 'bg-white text-black border-white' : 'bg-[#222222] border-[#333333] text-white hover:border-zinc-500'}`}
-              >
-                Post Details
-              </button>
-            </div>
-          </div>
-
-          {/* Properties mapping forms */}
-          <div className="flex-1 flex flex-col gap-3">
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Properties Mapping</div>
-            
-            {layoutType === 'gallery' ? (
-              <div className="flex flex-col gap-3">
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Container Selector</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={galleryProps.containerSelector} onChange={e => setGalleryProps({...galleryProps, containerSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('gallery', 'containerSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Page Title rule</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={galleryProps.pageTitleRule} onChange={e => setGalleryProps({...galleryProps, pageTitleRule: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('gallery', 'pageTitleRule')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Grid items selector</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={galleryProps.itemsSelector} onChange={e => setGalleryProps({...galleryProps, itemsSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('gallery', 'itemsSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Item Image src rule</label>
-                  <input type="text" value={galleryProps.imageUrlRule} onChange={e => setGalleryProps({...galleryProps, imageUrlRule: e.target.value})} className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Item Link href rule</label>
-                  <input type="text" value={galleryProps.linkUrlRule} onChange={e => setGalleryProps({...galleryProps, linkUrlRule: e.target.value})} className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Pagination Selector</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={galleryProps.paginationSelector} onChange={e => setGalleryProps({...galleryProps, paginationSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('gallery', 'paginationSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Container Selector</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={postProps.containerSelector} onChange={e => setPostProps({...postProps, containerSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('post', 'containerSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Image src rule</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={postProps.imageUrlRule} onChange={e => setPostProps({...postProps, imageUrlRule: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('post', 'imageUrlRule')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Statistics Html rule</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={postProps.statisticsHtmlRule} onChange={e => setPostProps({...postProps, statisticsHtmlRule: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('post', 'statisticsHtmlRule')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Buttons Selector</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={postProps.buttonsSelector} onChange={e => setPostProps({...postProps, buttonsSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('post', 'buttonsSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Tags List Selector</label>
-                  <div className="flex gap-1.5">
-                    <input type="text" value={postProps.tagsSelector} onChange={e => setPostProps({...postProps, tagsSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
-                    <button onClick={() => fillInspectedSelector('post', 'tagsSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Design System Tokens</div>
 
           {/* Theme custom styles & vars binder */}
-          <div className="border-t border-[#333333] pt-4 flex flex-col gap-3 shrink-0">
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Theme Tokens</div>
+          <div className="flex flex-col gap-3">
             <div>
               <label className="text-[10px] text-zinc-400 block mb-1">Primary Bg Color</label>
               <input
@@ -723,7 +613,7 @@ function SandboxApp() {
             <div>
               <label className="text-[10px] text-zinc-400 block mb-1">Custom CSS overrides</label>
               <textarea
-                rows={3}
+                rows={10}
                 value={theme.customStyles}
                 onChange={(e) => setTheme({ ...theme, customStyles: e.target.value })}
                 className="w-full bg-black border border-[#333333] rounded p-2 text-[10px] text-zinc-400 font-mono focus:outline-none"
@@ -750,7 +640,7 @@ function SandboxApp() {
             </button>
           </div>
 
-          <div className="flex-1 p-4 overflow-hidden flex flex-col relative">
+          <div className="flex-1 p-4 overflow-hidden flex flex-col relative bg-zinc-950">
             {viewMode === 'legacy' ? (
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
@@ -767,7 +657,8 @@ function SandboxApp() {
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="text-xs font-bold text-zinc-500 uppercase mb-2">Modern Modernized Screen Preview</div>
                 <div 
-                  className="flex-1 border border-[#333333] rounded overflow-auto p-6 animate-fade-in"
+                  className="flex-1 border border-[#333333] rounded overflow-auto p-6"
+                  ref={previewContainerRef}
                   style={{
                     backgroundColor: theme.bgPrimary,
                     color: theme.textPrimary,
@@ -781,23 +672,7 @@ function SandboxApp() {
                     '--spm-border': '#333333',
                     '--spm-radius': '8px'
                   } as any}
-                >
-                  {previewData ? (
-                    'error' in previewData ? (
-                      <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded text-xs font-sans">
-                        {previewData.error}. Make sure the Container Selector maps to a valid container.
-                      </div>
-                    ) : (
-                      (() => {
-                        const Component = COMPONENT_REGISTRY[previewData.layoutComponent];
-                        if (!Component) return <div className="text-xs text-zinc-500">Component {previewData.layoutComponent} registry missing.</div>;
-                        return <Component {...previewData.props} />;
-                      })()
-                    )
-                  ) : (
-                    <div className="text-xs text-zinc-500 p-4">Loading preview data...</div>
-                  )}
-                </div>
+                ></div>
               </div>
             )}
           </div>
@@ -871,14 +746,17 @@ function SandboxApp() {
                 try {
                   const parsed = JSON.parse(val);
                   setJsonError(false);
-                  
-                  // Apply parsed JSON parameters back to React states
+
+                  // Extract targetUrl
                   if (parsed.targetUrl) {
                     const clean = parsed.targetUrl.replace(/\/\*$/, '');
-                    setTargetUrl(clean);
-                    setUrlInput(clean);
+                    if (clean !== targetUrl) {
+                      setTargetUrl(clean);
+                      setUrlInput(clean);
+                    }
                   }
 
+                  // Extract theme tokens
                   if (parsed.theme) {
                     setTheme({
                       bgPrimary: parsed.theme.cssVariables?.['--spm-bg-primary'] || theme.bgPrimary,
@@ -887,36 +765,6 @@ function SandboxApp() {
                       textPrimary: parsed.theme.cssVariables?.['--spm-text-primary'] || theme.textPrimary,
                       customStyles: parsed.theme.customStyles || ''
                     });
-                  }
-
-                  const config = parsed.reconstructs?.[0];
-                  if (config) {
-                    if (config.layoutComponent === 'UiModernGridPage') {
-                      setLayoutType('gallery');
-                      setGalleryProps({
-                        containerSelector: config.containerSelector || '',
-                        pageTitleRule: config.propsMap?.pageTitle || '',
-                        itemsSelector: config.children?.[0]?.selector || '',
-                        imageUrlRule: config.children?.[0]?.propsMap?.imageUrl || '',
-                        linkUrlRule: config.children?.[0]?.propsMap?.linkUrl || '',
-                        titleRule: config.children?.[0]?.propsMap?.title || '',
-                        idRule: config.children?.[0]?.propsMap?.id || '',
-                        paginationSelector: config.children?.[1]?.selector || ''
-                      });
-                    } else if (config.layoutComponent === 'UiPostDetails') {
-                      setLayoutType('post');
-                      setPostProps({
-                        containerSelector: config.containerSelector || '',
-                        imageUrlRule: config.propsMap?.imageUrl || '',
-                        statisticsHtmlRule: config.propsMap?.statisticsHtml || '',
-                        buttonsSelector: config.children?.[0]?.selector || '',
-                        tagsSelector: config.children?.[1]?.selector || '',
-                        tagNameRule: config.children?.[1]?.propsMap?.name || '',
-                        tagCountRule: config.children?.[1]?.propsMap?.count || '',
-                        tagTypeRule: config.children?.[1]?.propsMap?.type || '',
-                        tagUrlRule: config.children?.[1]?.propsMap?.url || ''
-                      });
-                    }
                   }
                 } catch (err) {
                   setJsonError(true);
