@@ -1,16 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
-import { PRIMITIVE_COMPONENTS, DEDICATED_COMPONENTS } from '../components/registry';
-
-interface PrimitiveElement {
-  id: string;
-  name: string;
-  className: string;
-  selector?: string;
-  propsMap?: Record<string, string>;
-  childrenConfigs?: { name: string; selector: string; propsMap: Record<string, string> }[];
-}
+import { COMPONENT_REGISTRY } from '../components/registry';
+import { extractValue } from '../content/engine';
 
 interface CustomTheme {
   bgPrimary: string;
@@ -35,18 +27,35 @@ function SandboxApp() {
   const [targetUrl, setTargetUrl] = useState<string>('https://example.com');
   const [urlInput, setUrlInput] = useState<string>('https://example.com');
   const [wsStatus, setWsStatus] = useState<string>('Disconnected');
+  const [viewMode, setViewMode] = useState<'legacy' | 'preview'>('legacy');
   
   // Element Inspection States
   const [activeSelector, setActiveSelector] = useState<string>('');
   const [inspectedElement, setInspectedElement] = useState<InspectedElementData | null>(null);
 
-  // Canvas and selection
-  const [elementsList, setElementsList] = useState<PrimitiveElement[]>([]);
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  
-  // Dragging States for Canvas Reordering
-  const [draggedElementId, setDraggedElementId] = useState<string | null>(null);
-  const [draggedPaletteItem, setDraggedPaletteItem] = useState<string | null>(null);
+  // Mapped Config Selectors (Consolidated state for layout mapping)
+  const [galleryProps, setGalleryProps] = useState({
+    containerSelector: '#post-list',
+    pageTitleRule: 'h2 | text',
+    itemsSelector: '.thumb',
+    imageUrlRule: 'img | attr:src',
+    linkUrlRule: 'a | attr:href',
+    titleRule: 'img | attr:title',
+    idRule: 'self | attr:id',
+    paginationSelector: 'div.pagination a'
+  });
+
+  const [postProps, setPostProps] = useState({
+    containerSelector: 'div.content:has(#image)',
+    imageUrlRule: '#image | attr:src',
+    statisticsHtmlRule: '#tag-sidebar ul:last-child | html',
+    buttonsSelector: '#tag-sidebar .related-posts a',
+    tagsSelector: '#tag-sidebar li',
+    tagNameRule: 'a:nth-child(2) | text',
+    tagCountRule: 'span | text',
+    tagTypeRule: 'self | attr:class',
+    tagUrlRule: 'a:nth-child(2) | attr:href'
+  });
 
   // Theme states
   const [theme, setTheme] = useState<CustomTheme>({
@@ -86,19 +95,34 @@ function SandboxApp() {
           const data = JSON.parse(event.data);
           if (data.type === 'theme-update' && data.content?.reconstructs?.[0]) {
             const config = data.content.reconstructs[0];
-            const loaded: PrimitiveElement[] = [];
-            if (config.children) {
-              config.children.forEach((child: any, idx: number) => {
-                loaded.push({
-                  id: `elem-${idx}-${Date.now()}`,
-                  name: 'UiImageCard',
-                  className: 'w-48 bg-zinc-900 border border-zinc-800 rounded p-2',
-                  selector: child.selector,
-                  propsMap: child.propsMap || {}
-                });
-              });
+            if (config.layoutComponent === 'UiModernGridPage') {
+              setLayoutType('gallery');
+              setGalleryProps(prev => ({
+                ...prev,
+                containerSelector: config.containerSelector,
+                pageTitleRule: config.propsMap?.pageTitle || '',
+                itemsSelector: config.children?.[0]?.selector || '',
+                imageUrlRule: config.children?.[0]?.propsMap?.imageUrl || '',
+                linkUrlRule: config.children?.[0]?.propsMap?.linkUrl || '',
+                titleRule: config.children?.[0]?.propsMap?.title || '',
+                idRule: config.children?.[0]?.propsMap?.id || '',
+                paginationSelector: config.children?.[1]?.selector || ''
+              }));
+            } else if (config.layoutComponent === 'UiPostDetails') {
+              setLayoutType('post');
+              setPostProps(prev => ({
+                ...prev,
+                containerSelector: config.containerSelector,
+                imageUrlRule: config.propsMap?.imageUrl || '',
+                statisticsHtmlRule: config.propsMap?.statisticsHtml || '',
+                buttonsSelector: config.children?.[0]?.selector || '',
+                tagsSelector: config.children?.[1]?.selector || '',
+                tagNameRule: config.children?.[1]?.propsMap?.name || '',
+                tagCountRule: config.children?.[1]?.propsMap?.count || '',
+                tagTypeRule: config.children?.[1]?.propsMap?.type || '',
+                tagUrlRule: config.children?.[1]?.propsMap?.url || ''
+              }));
             }
-            setElementsList(loaded);
           }
         } catch (err) {
           console.error('[SPM Sandbox] Error parsing WebSocket message:', err);
@@ -124,7 +148,7 @@ function SandboxApp() {
         fetched = true;
       }
     } catch (directErr) {
-      console.warn('[SPM Sandbox] Direct browser fetch failed (CORS likely). Retrying via local proxy...', directErr);
+      console.warn('[SPM Sandbox] Direct browser fetch failed. Retrying via local proxy...', directErr);
     }
 
     // 2. Local CORS bypass proxy fetch fallback
@@ -152,7 +176,6 @@ function SandboxApp() {
       shadow.innerHTML = `
         ${baseTag}
         <style>
-          /* Highlight style for inspected element */
           .spm-inspected-element {
             outline: 2px solid #a855f7 !important;
             outline-offset: -2px !important;
@@ -175,7 +198,6 @@ function SandboxApp() {
       `;
     }
 
-    // Attach click inspection event listener
     shadow.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -183,25 +205,20 @@ function SandboxApp() {
       const target = e.target as HTMLElement;
       if (!target || target === shadow.host) return;
 
-      // Clear previous inspected highlight outlines
       shadow.querySelectorAll('.spm-inspected-element').forEach(el => {
         el.classList.remove('spm-inspected-element');
       });
 
-      // Highlight current inspected element
       target.classList.add('spm-inspected-element');
 
-      // Generate Suggested CSS selectors
       const selector = computeCssSelector(target);
       setActiveSelector(selector);
 
-      // Inspect details
       const tagName = target.tagName.toLowerCase();
       const id = target.id || '';
       const classes = Array.from(target.classList).filter(c => c !== 'spm-inspected-element');
       const text = target.textContent?.trim().slice(0, 100) || '';
       
-      // Read element attributes
       const attributes: Record<string, string> = {};
       for (let i = 0; i < target.attributes.length; i++) {
         const attr = target.attributes[i];
@@ -210,13 +227,12 @@ function SandboxApp() {
         }
       }
 
-      // Generate suggested selectors list
       const suggested: string[] = [];
       if (id) suggested.push(`#${id}`);
       classes.forEach(c => suggested.push(`.${c}`));
       if (classes.length > 0) suggested.push(`${tagName}.${classes[0]}`);
       suggested.push(tagName);
-      suggested.push(selector); // Hierarchical path
+      suggested.push(selector);
 
       setInspectedElement({
         tagName,
@@ -251,86 +267,7 @@ function SandboxApp() {
     return path.join(' > ');
   };
 
-  // Add new element to composition list
-  const addPrimitiveToCanvas = (name: string) => {
-    const newElem: PrimitiveElement = {
-      id: `elem-${Date.now()}`,
-      name,
-      className: name.startsWith('UiFlex') || name === 'UiBox' ? 'p-4 bg-zinc-950 border border-zinc-800 rounded' : 'p-2 text-white',
-      selector: '',
-      propsMap: {},
-      childrenConfigs: []
-    };
-    
-    // Add default template properties for components
-    if (name === 'UiImageCard') {
-      newElem.propsMap = { imageUrl: 'img | attr:src', linkUrl: 'a | attr:href', title: 'img | attr:title' };
-    } else if (name === 'UiPostDetails') {
-      newElem.propsMap = { imageUrl: '#image | attr:src', statisticsHtml: '.sidebar | html' };
-      newElem.childrenConfigs = [
-        { name: 'buttons', selector: '.sidebar a', propsMap: { label: 'self | text', url: 'self | attr:href' } },
-        { name: 'tags', selector: '.sidebar li', propsMap: { name: 'a | text', count: 'span | text', type: 'self | attr:class', url: 'a | attr:href' } }
-      ];
-    } else if (name === 'UiSearchBar') {
-      newElem.propsMap = { defaultValue: 'input | attr:value' };
-    }
-
-    setElementsList([...elementsList, newElem]);
-    setSelectedElementId(newElem.id);
-  };
-
-  const updateSelectedElement = (updates: Partial<PrimitiveElement>) => {
-    setElementsList(elementsList.map(el => el.id === selectedElementId ? { ...el, ...updates } : el));
-  };
-
-  const deleteElement = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setElementsList(elementsList.filter(el => el.id !== id));
-    if (selectedElementId === id) setSelectedElementId(null);
-  };
-
-  const clearCanvas = () => {
-    setElementsList([]);
-    setSelectedElementId(null);
-  };
-
-  // Drag and Drop Canvas Reordering
-  const handleDragStart = (id: string) => {
-    setDraggedElementId(id);
-    setDraggedPaletteItem(null);
-  };
-
-  const handlePaletteDragStart = (name: string) => {
-    setDraggedPaletteItem(name);
-    setDraggedElementId(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDropOnCanvas = () => {
-    if (draggedPaletteItem) {
-      addPrimitiveToCanvas(draggedPaletteItem);
-      setDraggedPaletteItem(null);
-    }
-  };
-
-  const handleDropOnElement = (targetId: string) => {
-    if (draggedElementId && draggedElementId !== targetId) {
-      const draggedIdx = elementsList.findIndex(e => e.id === draggedElementId);
-      const targetIdx = elementsList.findIndex(e => e.id === targetId);
-      const updated = [...elementsList];
-      const [removed] = updated.splice(draggedIdx, 1);
-      updated.splice(targetIdx, 0, removed);
-      setElementsList(updated);
-      setDraggedElementId(null);
-    }
-  };
-
-  const activeElement = elementsList.find(el => el.id === selectedElementId);
-
-  // Compile JSON dynamically based on type, selectors and style inputs
+  // Compile JSON dynamically based on active fields
   const compiledJson = {
     targetUrl: new URL(targetUrl).origin + "/*",
     version: "1.12.0",
@@ -346,19 +283,33 @@ function SandboxApp() {
       },
       customStyles: theme.customStyles
     },
-    components: elementsList.map(el => ({
-      name: el.name,
-      selector: el.selector || ".target-class",
-      action: "replace",
-      propsMap: el.propsMap || {},
-      children: el.childrenConfigs || undefined
-    })),
+    components: [
+      {
+        "name": "UiNavHeader",
+        "selector": "#header",
+        "action": "replace",
+        "propsMap": {
+          "siteName": "#site-title a | text"
+        },
+        "children": [
+          {
+            "name": "primaryLinks",
+            "selector": "#navbar a",
+            "scope": "document",
+            "propsMap": {
+              "label": "self | text",
+              "url": "self | attr:href"
+            }
+          }
+        ]
+      }
+    ],
     reconstructs: [
       layoutType === 'gallery' ? {
-        containerSelector: "#post-list",
+        containerSelector: galleryProps.containerSelector,
         layoutComponent: "UiModernGridPage",
         propsMap: {
-          pageTitle: "h2 | text"
+          pageTitle: galleryProps.pageTitleRule
         },
         preserve: {
           sidebarSlot: "div.sidebar"
@@ -366,21 +317,29 @@ function SandboxApp() {
         children: [
           {
             name: "items",
-            selector: elementsList.find(e => e.name === 'UiImageCard')?.selector || ".thumb",
+            selector: galleryProps.itemsSelector,
             propsMap: {
-              imageUrl: "img | attr:src",
-              linkUrl: "a | attr:href",
-              title: "img | attr:title",
-              id: "self | attr:id"
+              imageUrl: galleryProps.imageUrlRule,
+              linkUrl: galleryProps.linkUrlRule,
+              title: galleryProps.titleRule,
+              id: galleryProps.idRule
+            }
+          },
+          {
+            name: "pageLinks",
+            selector: galleryProps.paginationSelector,
+            propsMap: {
+              label: "self | text",
+              url: "self | attr:href"
             }
           }
         ]
       } : {
-        containerSelector: "div.content:has(#image)",
+        containerSelector: postProps.containerSelector,
         layoutComponent: "UiPostDetails",
         propsMap: {
-          imageUrl: elementsList.find(e => e.name === 'UiPostDetails')?.propsMap?.imageUrl || "#image | attr:src",
-          statisticsHtml: elementsList.find(e => e.name === 'UiPostDetails')?.propsMap?.statisticsHtml || "#tag-sidebar ul:last-child | html"
+          imageUrl: postProps.imageUrlRule,
+          statisticsHtml: postProps.statisticsHtmlRule
         },
         props: {
           showSearch: true,
@@ -390,7 +349,7 @@ function SandboxApp() {
         children: [
           {
             name: "buttons",
-            selector: elementsList.find(e => e.name === 'UiLink')?.selector || "#tag-sidebar .related-posts a",
+            selector: postProps.buttonsSelector,
             scope: "document",
             propsMap: {
               label: "self | text",
@@ -399,13 +358,13 @@ function SandboxApp() {
           },
           {
             name: "tags",
-            selector: "#tag-sidebar li",
+            selector: postProps.tagsSelector,
             scope: "document",
             propsMap: {
-              name: "a:nth-child(2) | text",
-              count: "span | text",
-              type: "self | attr:class",
-              url: "a:nth-child(2) | attr:href"
+              name: postProps.tagNameRule,
+              count: postProps.tagCountRule,
+              type: postProps.tagTypeRule,
+              url: postProps.tagUrlRule
             }
           }
         ]
@@ -430,21 +389,103 @@ function SandboxApp() {
     }
   };
 
-  // Preenche a propriedade ativa com o seletor inspecionado
-  const fillSelectorField = (key: string, isChild: boolean = false, childName: string = '') => {
+  // Preenche a propriedade ativa selecionada
+  const fillInspectedSelector = (category: 'gallery' | 'post', field: string) => {
     if (!activeSelector) return;
-    if (isChild && childName && activeElement?.childrenConfigs) {
-      const updatedChildren = activeElement.childrenConfigs.map(c => 
-        c.name === childName ? { ...c, selector: activeSelector } : c
-      );
-      updateSelectedElement({ childrenConfigs: updatedChildren });
-    } else if (activeElement?.propsMap) {
-      const updatedProps = { ...activeElement.propsMap, [key]: activeSelector };
-      updateSelectedElement({ propsMap: updatedProps });
+    if (category === 'gallery') {
+      setGalleryProps({ ...galleryProps, [field]: activeSelector });
     } else {
-      updateSelectedElement({ selector: activeSelector });
+      setPostProps({ ...postProps, [field]: activeSelector });
     }
   };
+
+  // Executa a extração em tempo de execução e retorna os elementos processados
+  const getPreviewData = () => {
+    const shadow = legacyExplorerRef.current?.shadowRoot;
+    if (!shadow) return null;
+
+    if (layoutType === 'gallery') {
+      const container = shadow.querySelector(galleryProps.containerSelector);
+      if (!container) return { error: `Container ${galleryProps.containerSelector} not found` };
+
+      // Page Title
+      const pageTitle = extractValue(container as HTMLElement, galleryProps.pageTitleRule);
+
+      // Extract items list
+      const items: any[] = [];
+      const itemNodes = container.querySelectorAll(galleryProps.itemsSelector);
+      itemNodes.forEach(node => {
+        items.push({
+          imageUrl: extractValue(node as HTMLElement, galleryProps.imageUrlRule),
+          linkUrl: extractValue(node as HTMLElement, galleryProps.linkUrlRule),
+          title: extractValue(node as HTMLElement, galleryProps.titleRule),
+          id: extractValue(node as HTMLElement, galleryProps.idRule)
+        });
+      });
+
+      // Pagination links
+      const pageLinks: any[] = [];
+      const linkNodes = shadow.querySelectorAll(galleryProps.paginationSelector);
+      linkNodes.forEach(node => {
+        pageLinks.push({
+          label: node.textContent?.trim() || '',
+          url: node.getAttribute('href') || '#'
+        });
+      });
+
+      return {
+        layoutComponent: 'UiModernGridPage',
+        props: {
+          pageTitle,
+          items,
+          pageLinks
+        }
+      };
+    } else {
+      // Post View layout
+      const container = shadow.querySelector(postProps.containerSelector);
+      if (!container) return { error: `Container ${postProps.containerSelector} not found` };
+
+      const imageUrl = extractValue(container as HTMLElement, postProps.imageUrlRule);
+      const statisticsHtml = extractValue(shadow as any, postProps.statisticsHtmlRule);
+
+      // Buttons
+      const buttons: any[] = [];
+      const btnNodes = shadow.querySelectorAll(postProps.buttonsSelector);
+      btnNodes.forEach(node => {
+        buttons.push({
+          label: node.textContent?.trim() || '',
+          url: node.getAttribute('href') || '#'
+        });
+      });
+
+      // Tags
+      const tags: any[] = [];
+      const tagNodes = shadow.querySelectorAll(postProps.tagsSelector);
+      tagNodes.forEach(node => {
+        tags.push({
+          name: extractValue(node as HTMLElement, postProps.tagNameRule),
+          count: extractValue(node as HTMLElement, postProps.tagCountRule),
+          type: extractValue(node as HTMLElement, postProps.tagTypeRule),
+          url: extractValue(node as HTMLElement, postProps.tagUrlRule)
+        });
+      });
+
+      return {
+        layoutComponent: 'UiPostDetails',
+        props: {
+          imageUrl,
+          statisticsHtml,
+          buttons,
+          tags,
+          showSearch: true,
+          searchSubmitUrl: new URL(targetUrl).origin + "/index.php?page=post&s=list"
+        }
+      };
+    }
+  };
+
+  const previewData = viewMode === 'preview' ? getPreviewData() : null;
 
   return (
     <div className="flex flex-col h-screen font-sans select-none bg-black text-[#d4d4d4]">
@@ -487,8 +528,8 @@ function SandboxApp() {
       {/* Main Studio Workspace */}
       <main className="flex-1 flex overflow-hidden">
         
-        {/* Left Elements & Styling Palette */}
-        <aside className="w-72 border-r border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
+        {/* Left Panel: Target Template properties mapped */}
+        <aside className="w-80 border-r border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
           {/* Layout Type Selection */}
           <div>
             <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Layout Template</div>
@@ -508,44 +549,92 @@ function SandboxApp() {
             </div>
           </div>
 
-          {/* Primitives Palette */}
-          <div>
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Primitives Palette</div>
-            <div className="grid grid-cols-2 gap-2">
-              {PRIMITIVE_COMPONENTS.map(item => (
-                <div 
-                  key={item} 
-                  draggable
-                  onDragStart={() => handlePaletteDragStart(item)}
-                  onClick={() => addPrimitiveToCanvas(item)}
-                  className="p-2 bg-[#222222] border border-[#333333] hover:border-zinc-500 rounded text-center text-xs text-white font-medium transition cursor-grab"
-                >
-                  {item}
+          {/* Properties mapping forms */}
+          <div className="flex-1 flex flex-col gap-3">
+            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Properties Mapping</div>
+            
+            {layoutType === 'gallery' ? (
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Container Selector</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={galleryProps.containerSelector} onChange={e => setGalleryProps({...galleryProps, containerSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('gallery', 'containerSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Dedicated Custom Blocks */}
-          <div>
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Dedicated Blocks</div>
-            <div className="flex flex-col gap-2">
-              {DEDICATED_COMPONENTS.map(item => (
-                <div 
-                  key={item}
-                  draggable
-                  onDragStart={() => handlePaletteDragStart(item)}
-                  onClick={() => addPrimitiveToCanvas(item)}
-                  className="w-full p-2 bg-zinc-900 border border-zinc-800 hover:border-zinc-500 rounded text-center text-xs text-indigo-400 font-semibold transition cursor-grab"
-                >
-                  + {item}
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Page Title rule</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={galleryProps.pageTitleRule} onChange={e => setGalleryProps({...galleryProps, pageTitleRule: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('gallery', 'pageTitleRule')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Grid items selector</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={galleryProps.itemsSelector} onChange={e => setGalleryProps({...galleryProps, itemsSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('gallery', 'itemsSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Item Image src rule</label>
+                  <input type="text" value={galleryProps.imageUrlRule} onChange={e => setGalleryProps({...galleryProps, imageUrlRule: e.target.value})} className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Item Link href rule</label>
+                  <input type="text" value={galleryProps.linkUrlRule} onChange={e => setGalleryProps({...galleryProps, linkUrlRule: e.target.value})} className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Pagination Selector</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={galleryProps.paginationSelector} onChange={e => setGalleryProps({...galleryProps, paginationSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('gallery', 'paginationSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Container Selector</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={postProps.containerSelector} onChange={e => setPostProps({...postProps, containerSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('post', 'containerSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Image src rule</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={postProps.imageUrlRule} onChange={e => setPostProps({...postProps, imageUrlRule: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('post', 'imageUrlRule')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Statistics Html rule</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={postProps.statisticsHtmlRule} onChange={e => setPostProps({...postProps, statisticsHtmlRule: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('post', 'statisticsHtmlRule')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Buttons Selector</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={postProps.buttonsSelector} onChange={e => setPostProps({...postProps, buttonsSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('post', 'buttonsSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Tags List Selector</label>
+                  <div className="flex gap-1.5">
+                    <input type="text" value={postProps.tagsSelector} onChange={e => setPostProps({...postProps, tagsSelector: e.target.value})} className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white" />
+                    <button onClick={() => fillInspectedSelector('post', 'tagsSelector')} className="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[10px]">Fill</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Theme custom styles & vars binder */}
-          <div className="border-t border-[#333333] pt-4 flex flex-col gap-3">
+          <div className="border-t border-[#333333] pt-4 flex flex-col gap-3 shrink-0">
             <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Theme Tokens</div>
             <div>
               <label className="text-[10px] text-zinc-400 block mb-1">Primary Bg Color</label>
@@ -553,7 +642,7 @@ function SandboxApp() {
                 type="text"
                 value={theme.bgPrimary}
                 onChange={(e) => setTheme({ ...theme, bgPrimary: e.target.value })}
-                className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white"
+                className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white font-mono"
               />
             </div>
             <div>
@@ -562,13 +651,13 @@ function SandboxApp() {
                 type="text"
                 value={theme.accent}
                 onChange={(e) => setTheme({ ...theme, accent: e.target.value })}
-                className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white"
+                className="w-full bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white font-mono"
               />
             </div>
             <div>
-              <label className="text-[10px] text-zinc-400 block mb-1">Custom CSS rules</label>
+              <label className="text-[10px] text-zinc-400 block mb-1">Custom CSS overrides</label>
               <textarea
-                rows={4}
+                rows={3}
                 value={theme.customStyles}
                 onChange={(e) => setTheme({ ...theme, customStyles: e.target.value })}
                 className="w-full bg-black border border-[#333333] rounded p-2 text-[10px] text-zinc-400 font-mono focus:outline-none"
@@ -577,80 +666,82 @@ function SandboxApp() {
           </div>
         </aside>
 
-        {/* Center Panel: Inspector & Composition Canvas */}
+        {/* Center Panel: Target views (Legacy Inspector vs Modern Live Preview) */}
         <section className="flex-1 flex flex-col bg-[#050505] overflow-hidden">
-          {/* Legacy Web View */}
-          <div className="flex-1 border-b border-[#333333] p-4 flex flex-col overflow-hidden min-h-[300px]">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-bold text-zinc-500 uppercase">Legacy DOM Explorer</div>
-              {activeSelector && (
-                <div className="text-[11px] font-mono bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-white truncate max-w-[400px]">
-                  Active Selector: {activeSelector}
-                </div>
-              )}
-            </div>
-            <div className="flex-1 bg-white border border-[#333333] rounded overflow-auto" ref={legacyExplorerRef}></div>
+          {/* Main Visual Tabs */}
+          <div className="flex border-b border-[#333333] bg-[#111111]">
+            <button
+              onClick={() => setViewMode('legacy')}
+              className={`px-6 py-2.5 text-xs font-bold transition ${viewMode === 'legacy' ? 'text-white border-b-2 border-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              Legacy View (Inspector)
+            </button>
+            <button
+              onClick={() => setViewMode('preview')}
+              className={`px-6 py-2.5 text-xs font-bold transition ${viewMode === 'preview' ? 'text-white border-b-2 border-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              Modern Preview (Live Run)
+            </button>
           </div>
 
-          {/* Visual Workspace Canvas */}
-          <div 
-            className="flex-1 p-4 flex flex-col overflow-hidden"
-            onDragOver={handleDragOver}
-            onDrop={handleDropOnCanvas}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs font-bold text-zinc-500 uppercase">Modern Layout Canvas (Preview)</div>
-              {elementsList.length > 0 && (
-                <button 
-                  onClick={clearCanvas}
-                  className="text-[10px] text-red-400 hover:text-red-300 font-semibold px-2 py-0.5 border border-red-500/30 rounded bg-red-500/5 transition"
-                >
-                  Clear Canvas
-                </button>
-              )}
-            </div>
-            <div className="flex-1 bg-black border border-[#333333] rounded p-4 overflow-y-auto flex flex-wrap gap-4 items-start justify-center">
-              {elementsList.length === 0 ? (
-                <div className="text-xs text-zinc-600 mt-12 text-center">
-                  Canvas is empty.<br />Click palette items on the left or drag them here to compose the modern page.
-                </div>
-              ) : (
-                elementsList.map(el => (
-                  <div 
-                    key={el.id} 
-                    draggable
-                    onDragStart={() => handleDragStart(el.id)}
-                    onDragOver={handleDragOver}
-                    onDrop={() => handleDropOnElement(el.id)}
-                    onClick={() => setSelectedElementId(el.id)}
-                    className={`p-3 bg-zinc-950 rounded border cursor-pointer hover:border-zinc-500 transition relative min-w-[150px] group ${selectedElementId === el.id ? 'border-white' : 'border-[#333333]'}`}
-                  >
-                    {/* Delete button */}
-                    <button 
-                      onClick={(e) => deleteElement(el.id, e)}
-                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 text-red-500 hover:text-red-400 transition"
-                      title="Remove element"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                    <div className="text-[10px] text-indigo-400 font-mono mb-1">{el.name}</div>
-                    <div className="text-xs text-white truncate max-w-[130px] font-sans">
-                      {el.selector ? `bind: ${el.selector}` : 'Unbound selector'}
+          <div className="flex-1 p-4 overflow-hidden flex flex-col relative">
+            {viewMode === 'legacy' ? (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold text-zinc-500 uppercase">Legacy DOM Explorer</div>
+                  {activeSelector && (
+                    <div className="text-[11px] font-mono bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-white truncate max-w-[400px]">
+                      Inspecting: {activeSelector}
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
+                  )}
+                </div>
+                <div className="flex-1 bg-white border border-[#333333] rounded overflow-auto" ref={legacyExplorerRef}></div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="text-xs font-bold text-zinc-500 uppercase mb-2">Modern Modernized Screen Preview</div>
+                <div 
+                  className="flex-1 border border-[#333333] rounded overflow-auto p-6 animate-fade-in"
+                  style={{
+                    backgroundColor: theme.bgPrimary,
+                    color: theme.textPrimary,
+                    '--spm-bg-primary': theme.bgPrimary,
+                    '--spm-bg-secondary': theme.bgSecondary,
+                    '--spm-bg-tertiary': '#222222',
+                    '--spm-text-primary': theme.textPrimary,
+                    '--spm-text-muted': '#a1a1aa',
+                    '--spm-accent': theme.accent,
+                    '--spm-accent-fg': '#000000',
+                    '--spm-border': '#333333',
+                    '--spm-radius': '8px'
+                  } as any}
+                >
+                  {previewData ? (
+                    'error' in previewData ? (
+                      <div className="p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded text-xs font-sans">
+                        {previewData.error}. Make sure the Container Selector maps to a valid container.
+                      </div>
+                    ) : (
+                      (() => {
+                        const Component = COMPONENT_REGISTRY[previewData.layoutComponent];
+                        if (!Component) return <div className="text-xs text-zinc-500">Component {previewData.layoutComponent} registry missing.</div>;
+                        return <Component {...previewData.props} />;
+                      })()
+                    )
+                  ) : (
+                    <div className="text-xs text-zinc-500 p-4">Loading preview data...</div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Right Panel: Active Element Binder & Output JSON */}
+        {/* Right Panel: Element Details & Raw JSON output */}
         <aside className="w-80 border-l border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
           
           {/* Element Inspector details */}
-          {inspectedElement && (
+          {inspectedElement ? (
             <div className="border-b border-[#333333] pb-4">
               <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Element Inspector</div>
               <div className="bg-zinc-950 border border-zinc-800 rounded p-3 flex flex-col gap-2">
@@ -677,7 +768,7 @@ function SandboxApp() {
                 {inspectedElement.suggestedSelectors.length > 0 && (
                   <div className="mt-1">
                     <span className="text-[11px] font-semibold text-zinc-400 block mb-1">Suggested CSS Selectors</span>
-                    <div className="flex flex-col gap-1 max-h-[100px] overflow-y-auto">
+                    <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
                       {inspectedElement.suggestedSelectors.map((sel, i) => (
                         <button 
                           key={i}
@@ -692,108 +783,13 @@ function SandboxApp() {
                 )}
               </div>
             </div>
+          ) : (
+            <div className="text-xs text-zinc-500 italic border-b border-[#333333] pb-4">
+              Click elements in Legacy View to inspect classes and capture selectors.
+            </div>
           )}
 
-          {/* Properties Inspector */}
-          <div>
-            <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Properties Inspector</div>
-            {activeElement ? (
-              <div className="flex flex-col gap-3 bg-black/40 border border-[#333333] p-3 rounded-lg">
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-400">Component Block</label>
-                  <div className="text-xs text-white font-mono bg-zinc-900 border border-zinc-800 px-2.5 py-1.5 rounded mt-1">{activeElement.name}</div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-400">Tailwind Classes</label>
-                  <input
-                    type="text"
-                    value={activeElement.className}
-                    onChange={(e) => updateSelectedElement({ className: e.target.value })}
-                    className="w-full bg-black border border-[#333333] rounded mt-1 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500"
-                  />
-                </div>
-
-                {/* Primary Selector Binding */}
-                <div>
-                  <label className="text-[11px] font-semibold text-zinc-400">Root Selector Binding</label>
-                  <div className="flex gap-2 mt-1">
-                    <input
-                      type="text"
-                      placeholder="e.g. .thumb"
-                      value={activeElement.selector || ''}
-                      onChange={(e) => updateSelectedElement({ selector: e.target.value })}
-                      className="flex-1 bg-black border border-[#333333] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500"
-                    />
-                    <button 
-                      disabled={!activeSelector}
-                      onClick={() => updateSelectedElement({ selector: activeSelector })}
-                      className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[11px] font-semibold transition disabled:opacity-50"
-                      title="Use selected selector"
-                    >
-                      Fill
-                    </button>
-                  </div>
-                </div>
-
-                {/* Dynamic propsMap fields depending on components */}
-                {activeElement.propsMap && Object.keys(activeElement.propsMap).map(key => (
-                  <div key={key} className="border-t border-[#222222] pt-2">
-                    <label className="text-[10px] font-semibold text-purple-400">prop: {key}</label>
-                    <div className="flex gap-2 mt-1">
-                      <input
-                        type="text"
-                        value={activeElement.propsMap?.[key] || ''}
-                        onChange={(e) => {
-                          const updated = { ...(activeElement.propsMap || {}), [key]: e.target.value };
-                          updateSelectedElement({ propsMap: updated });
-                        }}
-                        className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-zinc-500 font-mono"
-                      />
-                      <button 
-                        disabled={!activeSelector}
-                        onClick={() => fillSelectorField(key)}
-                        className="px-2 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded text-[10px] font-medium transition disabled:opacity-50"
-                      >
-                        Fill
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {/* Dynamic children configurations */}
-                {activeElement.childrenConfigs && activeElement.childrenConfigs.map(c => (
-                  <div key={c.name} className="border-t border-[#222222] pt-2">
-                    <label className="text-[10px] font-semibold text-indigo-400">child collection: {c.name}</label>
-                    <div className="flex gap-2 mt-1">
-                      <input
-                        type="text"
-                        placeholder="Child selector..."
-                        value={c.selector}
-                        onChange={(e) => {
-                          const updated = activeElement.childrenConfigs!.map(child => 
-                            child.name === c.name ? { ...child, selector: e.target.value } : child
-                          );
-                          updateSelectedElement({ childrenConfigs: updated });
-                        }}
-                        className="flex-1 bg-black border border-[#333333] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-zinc-500 font-mono"
-                      />
-                      <button 
-                        disabled={!activeSelector}
-                        onClick={() => fillSelectorField(c.name, true, c.name)}
-                        className="px-2 py-1 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded text-[10px] font-medium transition disabled:opacity-50"
-                      >
-                        Fill
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-xs text-zinc-600 italic">Select an element on canvas to inspect or map properties.</div>
-            )}
-          </div>
-
+          {/* Consolidated raw JSON outputs */}
           <div className="flex-1 flex flex-col gap-2 min-h-[200px]">
             <label className="text-[11px] font-semibold text-zinc-400">Layout JSON Output</label>
             <pre className="flex-1 bg-black border border-[#333333] rounded p-3 text-[10px] text-zinc-400 font-mono overflow-auto max-h-[300px]">
