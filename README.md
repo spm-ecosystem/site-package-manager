@@ -121,29 +121,42 @@ Each `.json` file in `websites/` represents a theme package for a specific site.
     "cssVariables": {
       "--bg-color": "#000000",
       "--text-color": "#ffffff"
-    }
+    },
+    "customStyles": ".legacy-class { display: none !important; }"
   },
+  "components": [
+    {
+      "name": "UiSearchBar",
+      "selector": ".legacy-search",
+      "action": "replace",
+      "propsMap": {
+        "defaultValue": "input | attr:value"
+      },
+      "props": {
+        "placeholder": "Search...",
+        "submitUrl": "https://example.com/search",
+        "queryParamName": "q"
+      }
+    }
+  ],
   "reconstructs": [
     {
       "containerSelector": "#content",
-      "layoutComponent": "UiModernGridPage",
-      "mediaQuery": "(min-width: 768px)",
+      "layoutComponent": "UiPostDetails",
       "propsMap": {
-        "pageTitle": "h1 | text"
+        "imageUrl": "#image-tag | attr:src"
       },
-      "preserve": {
-        "paginationSlot": "div.pagination",
-        "sidebarSlot": "#sidebar"
+      "props": {
+        "showSearch": true,
+        "searchSubmitUrl": "https://example.com/search"
       },
       "children": [
         {
-          "name": "items",
-          "selector": ".post-card",
+          "name": "buttons",
+          "selector": ".action-links a",
           "propsMap": {
-            "imageUrl": "img | attr:src",
-            "linkUrl": "a | attr:href",
-            "title": "img | attr:title",
-            "id": "self | attr:id"
+            "label": "self | text",
+            "url": "self | attr:href"
           }
         }
       ]
@@ -156,6 +169,7 @@ Each `.json` file in `websites/` represents a theme package for a specific site.
 |---|---|---|
 | `targetUrl` | `string` | Chrome match pattern for which pages to activate |
 | `theme.cssVariables` | `object` | CSS custom properties injected in the Shadow Root `:host` |
+| `theme.customStyles` | `string?` | Optional CSS string injected globally in the main document page to reset/style legacy pages |
 | `reconstructs` | `array` | List of reconstruction blocks (one per container) |
 | `containerSelector` | `string` | CSS selector of the legacy container to replace |
 | `layoutComponent` | `string` | Name of the React component to render (must be in registry) |
@@ -172,7 +186,9 @@ Rules follow the format `"selector | operation"`:
 |---|---|---|
 | `selector \| text` | `"h2 \| text"` | Text content of first matching child |
 | `selector \| attr:name` | `"img \| attr:src"` | Attribute value of first matching child |
+| `selector \| html` | `"div.stats \| html"` | HTML content of first matching child |
 | `self \| attr:name` | `"self \| attr:id"` | Attribute on the element itself |
+| `self \| text` | `"self \| text"` | Text content on the element itself |
 
 ### Preservation Slots
 
@@ -226,10 +242,29 @@ Located in `src/components/dedicated/`.
 
 Pre-built, opinionated components tailored for specific UI patterns. These accept structured props extracted from the legacy DOM and render a complete, styled section.
 
-| Component | Purpose |
-|---|---|
-| `UiImageCard` | Single image card with link and title overlay |
-| `UiModernGridPage` | Full gallery page with sidebar and pagination slots |
+| Component | Purpose | Configurable Props |
+|---|---|---|
+| `UiImageCard` | Single image card with link and title overlay | `width`, `aspectRatio`, `imageFit`, `showTitle` |
+| `UiModernGridPage` | Full gallery page with sidebar and pagination slots | `pageTitle`, `items`, `pageLinks`, `postsPerPage` |
+| `UiNavHeader` | Logo, primary tabs and secondary link bars | `siteName`, `logoUrl`, `logoHref`, `layout` |
+| `UiSearchBar` | Compact search bar with query string parameter mapping | `placeholder`, `submitUrl`, `queryParamName` |
+| `UiPaginationBar` | URL-offset / numbered page navigation links | `pageLinks`, `paramName` |
+| `UiPostDetails` | Modern booru-style image page (grouped tags + image frame) | `imageUrl`, `tags`, `statisticsHtml`, `buttons` (generic action button items list) |
+
+**Configuring Generic Buttons in Reconstructs:**
+
+Devs can dynamically configure custom buttons (e.g. for navigating posts or third-party query integrations like reverse search) by passing the `buttons` array via `children` inside the reconstruct block of `UiPostDetails`:
+
+```json
+{
+  "name": "buttons",
+  "selector": ".legacy-button-container a",
+  "propsMap": {
+    "label": "self | text",
+    "url": "self | attr:href"
+  }
+}
+```
 
 **Adding your component to the registry** - open `src/content/index.tsx` and add your import to `COMPONENT_REGISTRY`:
 
