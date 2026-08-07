@@ -136,7 +136,22 @@ function renderEngine(manifest: SiteManifest) {
         // Setup Modern Shadow DOM Root Host
         const host = document.createElement('div');
         host.className = `modern-reconstruct-host-${layoutComponent.toLowerCase()}`;
+        
+        // Reset host styles in the host DOM
+        host.style.display = 'block';
+        host.style.width = '100%';
+        host.style.margin = '0';
+        host.style.padding = '0';
+        host.style.border = 'none';
+
         container.parentNode?.insertBefore(host, container.nextSibling);
+
+        // Reset parent element padding and borders to integrate perfectly
+        if (host.parentElement) {
+          host.parentElement.style.padding = '0';
+          host.parentElement.style.margin = '0';
+          host.parentElement.style.border = 'none';
+        }
 
         const shadowRoot = host.attachShadow({ mode: 'open' });
 
