@@ -39,6 +39,8 @@ function SandboxApp() {
   };
   const savedJsonString = localStorage.getItem('spm_sandbox_json_string') || '';
 
+  const savedRawHtml = localStorage.getItem('spm_sandbox_raw_html') || '';
+
   const [targetUrl, setTargetUrl] = useState<string>(savedTargetUrl);
   const [urlInput, setUrlInput] = useState<string>(savedTargetUrl);
   const [wsStatus, setWsStatus] = useState<string>('Disconnected');
@@ -52,6 +54,7 @@ function SandboxApp() {
   const [theme, setTheme] = useState<CustomTheme>(savedTheme);
   const [jsonString, setJsonString] = useState<string>(savedJsonString);
   const [jsonError, setJsonError] = useState<boolean>(false);
+  const [rawHtml, setRawHtml] = useState<string>(savedRawHtml);
 
   // Drag & Drop Modal states
   const [dropModalOpen, setDropModalOpen] = useState<boolean>(false);
@@ -66,7 +69,6 @@ function SandboxApp() {
   const legacyExplorerRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
-  const rawHtmlRef = useRef<string>(''); // Holds fetched clean HTML text
 
   // Persist workspace state on refresh/reload
   useEffect(() => {
@@ -137,124 +139,46 @@ function SandboxApp() {
     };
   }, [targetUrl]);
 
-  // Trigger hot reload of Modern Preview on viewMode or jsonString change
+  // Render rawHtml inside Legacy DOM Explorer whenever it updates
   useEffect(() => {
-    if (viewMode === 'preview') {
-      triggerLivePreview();
-    }
-  }, [viewMode, jsonString]);
+    if (!rawHtml || !legacyExplorerRef.current) return;
 
-  const connectWebSocket = () => {
-    try {
-      const ws = new WebSocket('ws://localhost:8080');
-      socketRef.current = ws;
-
-      ws.onopen = () => setWsStatus('Connected');
-      ws.onclose = () => {
-        setWsStatus('Disconnected');
-        setTimeout(connectWebSocket, 5000);
-      };
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'theme-update' && data.content) {
-            setJsonString(JSON.stringify(data.content, null, 2));
-          }
-        } catch (err) {
-          console.error('[SPM Sandbox] Error parsing WebSocket message:', err);
-        }
-      };
-    } catch (e) {
-      setWsStatus('Disconnected');
-    }
-  };
-
-  const fetchHtmlDump = async () => {
-    if (!legacyExplorerRef.current) return;
     const shadow = legacyExplorerRef.current.shadowRoot || legacyExplorerRef.current.attachShadow({ mode: 'open' });
-    
-    let htmlText = '';
-    let fetched = false;
+    const absoluteHtml = makeUrlsAbsolute(rawHtml, targetUrl);
 
-    // 1. Direct browser context fetch
-    try {
-      const response = await fetch(targetUrl, { method: 'GET' });
-      if (response.ok) {
-        htmlText = await response.text();
-        fetched = true;
-      }
-    } catch (directErr) {
-      console.warn('[SPM Sandbox] Direct browser fetch failed. Retrying via local proxy...', directErr);
-    }
-
-    // 2. Local CORS bypass proxy fetch fallback
-    if (!fetched) {
-      try {
-        const proxyUrl = `http://localhost:8080/fetch?url=${encodeURIComponent(targetUrl)}`;
-        const response = await fetch(proxyUrl, { method: 'GET' });
-        if (response.ok) {
-          htmlText = await response.text();
-          fetched = true;
-        } else {
-          throw new Error(`Proxy returned status ${response.status}`);
+    const baseTag = `<base href="${new URL(targetUrl).origin}">`;
+    shadow.innerHTML = `
+      ${baseTag}
+      <style>
+        .spm-selected-element {
+          outline: 2.5px solid #3b82f6 !important;
+          outline-offset: -2.5px !important;
+          box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
+          background-color: rgba(59, 130, 246, 0.04) !important;
         }
-      } catch (proxyErr) {
-        console.error('[SPM Sandbox] Local proxy fetch failed too:', proxyErr);
-      }
-    }
+      </style>
+      <div class="sandbox-fetched-content" style="width:100%; height:100%; overflow:auto;">
+        ${absoluteHtml}
+      </div>
+    `;
 
-    if (fetched) {
-      // Clear scripts
-      htmlText = htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-      rawHtmlRef.current = htmlText; // Keep a clean copy
+    // Make all fetched elements draggable
+    shadow.querySelectorAll('.sandbox-fetched-content *').forEach((el: any) => {
+      el.setAttribute('draggable', 'true');
+    });
 
-      // Translate relative URLs to absolute
-      const absoluteHtml = makeUrlsAbsolute(htmlText, targetUrl);
+    // Package selector path on dragstart event
+    shadow.addEventListener('dragstart', (e: any) => {
+      const target = e.target as HTMLElement;
+      if (!target || target === shadow.host) return;
 
-      // Inject base href and document structure
-      const baseTag = `<base href="${new URL(targetUrl).origin}">`;
-      shadow.innerHTML = `
-        ${baseTag}
-        <style>
-          .spm-selected-element {
-            outline: 2.5px solid #3b82f6 !important;
-            outline-offset: -2.5px !important;
-            box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
-            background-color: rgba(59, 130, 246, 0.04) !important;
-          }
-        </style>
-        <div class="sandbox-fetched-content" style="width:100%; height:100%; overflow:auto;">
-          ${absoluteHtml}
-        </div>
-      `;
-
-      // Set all elements as draggable for custom drag & drop component creation
-      shadow.querySelectorAll('.sandbox-fetched-content *').forEach((el: any) => {
-        el.setAttribute('draggable', 'true');
-      });
-
-      // Package selector path on dragstart event
-      shadow.addEventListener('dragstart', (e: any) => {
-        const target = e.target as HTMLElement;
-        if (!target || target === shadow.host) return;
-
-        const selector = computeCssSelector(target);
-        e.dataTransfer?.setData('text/plain', selector);
-        e.dataTransfer?.setData('spm/element-tag', target.tagName.toLowerCase());
-        e.dataTransfer?.setData('spm/element-id', target.id || '');
-        e.dataTransfer?.setData('spm/element-classes', Array.from(target.classList).filter(c => c !== 'spm-selected-element').join(' '));
-        e.dataTransfer!.effectAllowed = 'copy';
-      });
-    } else {
-      shadow.innerHTML = `
-        <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
-          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Unable to fetch target page</h4>
-          <p style="margin: 0; font-size: 12px; line-height: 1.5;">
-            Could not fetch <code>${targetUrl}</code>. Make sure the local dev-server proxy is running (<code>npm run dev-server</code>) and CORS policies allow connections.
-          </p>
-        </div>
-      `;
-    }
+      const selector = computeCssSelector(target);
+      e.dataTransfer?.setData('text/plain', selector);
+      e.dataTransfer?.setData('spm/element-tag', target.tagName.toLowerCase());
+      e.dataTransfer?.setData('spm/element-id', target.id || '');
+      e.dataTransfer?.setData('spm/element-classes', Array.from(target.classList).filter(c => c !== 'spm-selected-element').join(' '));
+      e.dataTransfer!.effectAllowed = 'copy';
+    });
 
     shadow.addEventListener('click', (e) => {
       e.preventDefault();
@@ -295,6 +219,81 @@ function SandboxApp() {
         suggestedSelectors: Array.from(new Set(suggested))
       });
     });
+  }, [rawHtml, targetUrl]);
+
+  const connectWebSocket = () => {
+    try {
+      const ws = new WebSocket('ws://localhost:8080');
+      socketRef.current = ws;
+
+      ws.onopen = () => setWsStatus('Connected');
+      ws.onclose = () => {
+        setWsStatus('Disconnected');
+        setTimeout(connectWebSocket, 5000);
+      };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'theme-update' && data.content) {
+            setJsonString(JSON.stringify(data.content, null, 2));
+          }
+        } catch (err) {
+          console.error('[SPM Sandbox] Error parsing WebSocket message:', err);
+        }
+      };
+    } catch (e) {
+      setWsStatus('Disconnected');
+    }
+  };
+
+  const fetchHtmlDump = async () => {
+    let htmlText = '';
+    let fetched = false;
+
+    // 1. Direct browser context fetch
+    try {
+      const response = await fetch(targetUrl, { method: 'GET' });
+      if (response.ok) {
+        htmlText = await response.text();
+        fetched = true;
+      }
+    } catch (directErr) {
+      console.warn('[SPM Sandbox] Direct browser fetch failed. Retrying via local proxy...', directErr);
+    }
+
+    // 2. Local CORS bypass proxy fetch fallback
+    if (!fetched) {
+      try {
+        const proxyUrl = `http://localhost:8080/fetch?url=${encodeURIComponent(targetUrl)}`;
+        const response = await fetch(proxyUrl, { method: 'GET' });
+        if (response.ok) {
+          htmlText = await response.text();
+          fetched = true;
+        } else {
+          throw new Error(`Proxy returned status ${response.status}`);
+        }
+      } catch (proxyErr) {
+        console.error('[SPM Sandbox] Local proxy fetch failed too:', proxyErr);
+      }
+    }
+
+    if (fetched) {
+      // Clear scripts
+      htmlText = htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      localStorage.setItem('spm_sandbox_raw_html', htmlText);
+      setRawHtml(htmlText);
+    } else {
+      if (!rawHtml) {
+        setRawHtml(`
+          <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Unable to fetch target page</h4>
+            <p style="margin: 0; font-size: 12px; line-height: 1.5;">
+              Could not fetch <code>${targetUrl}</code>. Make sure the local dev-server proxy is running (<code>npm run dev-server</code>) and CORS policies allow connections.
+            </p>
+          </div>
+        `);
+      }
+    }
   };
 
   // Reactively highlight all elements matching the active selector in Legacy View
@@ -320,9 +319,16 @@ function SandboxApp() {
     }
   }, [activeSelector, targetUrl]);
 
+  // Trigger hot reload of Modern Preview on viewMode, rawHtml, or jsonString change
+  useEffect(() => {
+    if (viewMode === 'preview') {
+      triggerLivePreview();
+    }
+  }, [viewMode, jsonString, rawHtml]);
+
   // Perform Live Reconstruct rendering on the preview panel
   const triggerLivePreview = () => {
-    if (!previewContainerRef.current || !rawHtmlRef.current) return;
+    if (!previewContainerRef.current || !rawHtml) return;
     
     try {
       const parsedManifest = JSON.parse(jsonString);
@@ -330,7 +336,7 @@ function SandboxApp() {
 
       const shadow = previewContainerRef.current.shadowRoot || previewContainerRef.current.attachShadow({ mode: 'open' });
 
-      const absoluteHtml = makeUrlsAbsolute(rawHtmlRef.current, targetUrl);
+      const absoluteHtml = makeUrlsAbsolute(rawHtml, targetUrl);
       shadow.innerHTML = `
         <div id="spm-preview-root" style="width: 100%; height: 100%; overflow: auto; padding: 24px; box-sizing: border-box;">
           ${absoluteHtml}
