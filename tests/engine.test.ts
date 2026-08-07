@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { extractValue } from './engine';
+import { extractValue } from '../src/content/engine';
 
 describe('extractValue engine helper', () => {
   it('should extract text content from child', () => {
