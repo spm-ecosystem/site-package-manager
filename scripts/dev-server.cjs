@@ -3,7 +3,7 @@ const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
 
-const WEBSITES_DIR = path.join(__dirname, '../websites');
+const WEBSITES_DIR = path.join(__dirname, '../public/websites');
 const PORT = 8080;
 
 const server = http.createServer(async (req, res) => {

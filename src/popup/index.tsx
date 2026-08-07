@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
-import registryMock from '../../websites/registry.json';
+import registryMock from '../../public/websites/registry.json';
 
 interface RegistryItem {
   id: string;
