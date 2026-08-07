@@ -1,10 +1,11 @@
 import { UiPostActions } from './UiPostActions';
 import { UiTagBadge } from './UiTagBadge';
+import { UiSearchBar } from './UiSearchBar';
 
 interface TagItem {
   name: string;
   count: string;
-  type: string; // 'copyright' | 'character' | 'artist' | 'general' | 'meta'
+  type: string; // 'tag-type-copyright' | 'tag-type-character' | 'tag-type-artist' | 'tag-type-general' | 'tag-type-faults'
   url: string;
 }
 
@@ -26,24 +27,24 @@ export function UiPostDetails({
   tags = [],
   statisticsHtml = '',
 }: UiPostDetailsProps) {
-  // Group tags by type
-  const copyrightTags = tags.filter(t => t.type === 'copyright');
-  const characterTags = tags.filter(t => t.type === 'character');
-  const artistTags = tags.filter(t => t.type === 'artist');
-  const generalTags = tags.filter(t => t.type === 'general');
-  const metaTags = tags.filter(t => t.type === 'meta');
+  // Normalize tag types from classnames (e.g. "tag-type-artist" or "tag-type-general")
+  const copyrightTags = tags.filter(t => t.type.includes('copyright'));
+  const characterTags = tags.filter(t => t.type.includes('character'));
+  const artistTags = tags.filter(t => t.type.includes('artist'));
+  const generalTags = tags.filter(t => t.type.includes('general'));
+  const metaTags = tags.filter(t => t.type.includes('metadata') || t.type.includes('meta'));
 
   const renderTagGroup = (title: string, groupTags: TagItem[]) => {
     if (groupTags.length === 0) return null;
     return (
-      <div style={{ marginBottom: '16px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <h3
           style={{
             fontSize: '11px',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
             color: 'var(--spm-text-muted)',
-            margin: '0 0 8px 0',
+            margin: '0 0 10px 0',
           }}
         >
           {title}
@@ -72,7 +73,7 @@ export function UiPostDetails({
         fontFamily: 'system-ui, sans-serif',
       }}
     >
-      {/* Sidebar: Tags & Statistics */}
+      {/* Sidebar: Search, Tags & Statistics */}
       <aside
         style={{
           width: '260px',
@@ -84,6 +85,25 @@ export function UiPostDetails({
           boxSizing: 'border-box',
         }}
       >
+        {/* Modern Search directly in the sidebar */}
+        <div style={{ marginBottom: '24px' }}>
+          <h3
+            style={{
+              fontSize: '11px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: 'var(--spm-text-muted)',
+              margin: '0 0 10px 0',
+            }}
+          >
+            Search
+          </h3>
+          <UiSearchBar
+            placeholder="Search tags…"
+            submitUrl="https://safebooru.org/index.php?page=post&s=list"
+          />
+        </div>
+
         {renderTagGroup('Artists', artistTags)}
         {renderTagGroup('Copyright', copyrightTags)}
         {renderTagGroup('Characters', characterTags)}
