@@ -6,6 +6,7 @@ import { UiTagBadge } from '../components/dedicated/UiTagBadge';
 import { UiSearchBar } from '../components/dedicated/UiSearchBar';
 import { UiPaginationBar } from '../components/dedicated/UiPaginationBar';
 import { UiNavHeader } from '../components/dedicated/UiNavHeader';
+import { UiPostActions } from '../components/dedicated/UiPostActions';
 import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from '../components/primitives/LayoutPrimitives';
 import stylesText from './content.css?inline';
 
@@ -13,6 +14,7 @@ const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiImageCard,
   UiModernGridPage,
   UiNavHeader,
+  UiPostActions,
   UiTagBadge,
   UiSearchBar,
   UiPaginationBar,
