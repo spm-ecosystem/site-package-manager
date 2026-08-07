@@ -28,31 +28,45 @@ interface InspectedElementData {
 
 
 function SandboxApp() {
-  const [targetUrl, setTargetUrl] = useState<string>('https://example.com');
-  const [urlInput, setUrlInput] = useState<string>('https://example.com');
+  const savedTargetUrl = localStorage.getItem('spm_sandbox_target_url') || 'https://example.com';
+  const savedViewMode = (localStorage.getItem('spm_sandbox_view_mode') as 'legacy' | 'preview') || 'legacy';
+  const savedTheme = JSON.parse(localStorage.getItem('spm_sandbox_theme') || 'null') || {
+    bgPrimary: '#000000',
+    bgSecondary: '#111111',
+    accent: '#ffffff',
+    textPrimary: '#ffffff',
+    customStyles: '/* Add your CSS overrides here */\n.sidebar { padding: 0 !important; }'
+  };
+  const savedJsonString = localStorage.getItem('spm_sandbox_json_string') || '';
+
+  const [targetUrl, setTargetUrl] = useState<string>(savedTargetUrl);
+  const [urlInput, setUrlInput] = useState<string>(savedTargetUrl);
   const [wsStatus, setWsStatus] = useState<string>('Disconnected');
-  const [viewMode, setViewMode] = useState<'legacy' | 'preview'>('legacy');
+  const [viewMode, setViewMode] = useState<'legacy' | 'preview'>(savedViewMode);
   
   // Element Inspection States
   const [activeSelector, setActiveSelector] = useState<string>('');
   const [inspectedElement, setInspectedElement] = useState<InspectedElementData | null>(null);
 
   // Theme states
-  const [theme, setTheme] = useState<CustomTheme>({
-    bgPrimary: '#000000',
-    bgSecondary: '#111111',
-    accent: '#ffffff',
-    textPrimary: '#ffffff',
-    customStyles: '/* Add your CSS overrides here */\n.sidebar { padding: 0 !important; }'
-  });
-
-  const [jsonString, setJsonString] = useState<string>('');
+  const [theme, setTheme] = useState<CustomTheme>(savedTheme);
+  const [jsonString, setJsonString] = useState<string>(savedJsonString);
   const [jsonError, setJsonError] = useState<boolean>(false);
 
   const legacyExplorerRef = useRef<HTMLDivElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const rawHtmlRef = useRef<string>(''); // Holds fetched clean HTML text
+
+  // Persist workspace state on refresh/reload
+  useEffect(() => {
+    localStorage.setItem('spm_sandbox_target_url', targetUrl);
+    localStorage.setItem('spm_sandbox_view_mode', viewMode);
+    localStorage.setItem('spm_sandbox_theme', JSON.stringify(theme));
+    if (jsonString) {
+      localStorage.setItem('spm_sandbox_json_string', jsonString);
+    }
+  }, [targetUrl, viewMode, theme, jsonString]);
 
   // Default initial manifest configuration (pure blueprint layout)
   const defaultManifest = {
