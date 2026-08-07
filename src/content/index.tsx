@@ -183,8 +183,23 @@ function renderEngine(manifest: SiteManifest) {
         // Merge static props from config (not DOM-extracted)
         const allProps = { ...extractedProps, ...(compConfig.props || {}) };
 
+        // Capture original dimensions before replacement
+        const originalRect = (originalEl as HTMLElement).getBoundingClientRect();
+        const originalDisplay = window.getComputedStyle(originalEl as HTMLElement).display;
+
         const host = document.createElement('div');
         host.className = `modern-host-${compConfig.name.toLowerCase()}`;
+        // Match display and min-width of replaced element so host doesn't collapse
+        host.style.display = originalDisplay === 'none' || originalDisplay === 'inline' ? 'block' : originalDisplay;
+        host.style.width = '100%';
+        if (originalRect.width > 0) {
+          host.style.minWidth = `${originalRect.width}px`;
+        }
+        host.style.margin = '0';
+        host.style.padding = '0';
+        host.style.border = 'none';
+        host.style.background = 'transparent';
+
         const shadowRoot = host.attachShadow({ mode: 'open' });
 
         const styleTag = document.createElement('style');
@@ -197,6 +212,7 @@ function renderEngine(manifest: SiteManifest) {
 
         const rootContainer = document.createElement('div');
         rootContainer.id = 'modern-root';
+        rootContainer.style.width = '100%';
         shadowRoot.appendChild(rootContainer);
 
         const root = createRoot(rootContainer);
