@@ -67,9 +67,29 @@ function SandboxApp() {
   });
 
   const [layoutType, setLayoutType] = useState<LayoutType>('gallery');
+  const [jsonString, setJsonString] = useState<string>('');
+  const [jsonError, setJsonError] = useState<boolean>(false);
 
   const legacyExplorerRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<WebSocket | null>(null);
+
+  // Sync state variables back to jsonString when form changes
+  useEffect(() => {
+    const generatedStr = JSON.stringify(compiledJson, null, 2);
+    try {
+      if (jsonString) {
+        const currentParsed = JSON.parse(jsonString);
+        const newParsed = JSON.parse(generatedStr);
+        // Avoid rewriting jsonString if the structural content is identical
+        if (JSON.stringify(currentParsed) === JSON.stringify(newParsed)) {
+          return;
+        }
+      }
+    } catch (e) {}
+
+    setJsonString(generatedStr);
+    setJsonError(false);
+  }, [galleryProps, postProps, theme, targetUrl, layoutType]);
 
   useEffect(() => {
     fetchHtmlDump();
@@ -790,11 +810,76 @@ function SandboxApp() {
           )}
 
           {/* Consolidated raw JSON outputs */}
-          <div className="flex-1 flex flex-col gap-2 min-h-[200px]">
-            <label className="text-[11px] font-semibold text-zinc-400">Layout JSON Output</label>
-            <pre className="flex-1 bg-black border border-[#333333] rounded p-3 text-[10px] text-zinc-400 font-mono overflow-auto max-h-[300px]">
-              {JSON.stringify(compiledJson, null, 2)}
-            </pre>
+          <div className="flex-1 flex flex-col gap-2 min-h-[250px]">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold text-zinc-400">Layout JSON Output</label>
+              {jsonError && (
+                <span className="text-[10px] text-red-400 font-medium">Invalid JSON Syntax</span>
+              )}
+            </div>
+            <textarea
+              value={jsonString}
+              onChange={(e) => {
+                const val = e.target.value;
+                setJsonString(val);
+                try {
+                  const parsed = JSON.parse(val);
+                  setJsonError(false);
+                  
+                  // Apply parsed JSON parameters back to React states
+                  if (parsed.targetUrl) {
+                    const clean = parsed.targetUrl.replace(/\/\*$/, '');
+                    setTargetUrl(clean);
+                    setUrlInput(clean);
+                  }
+
+                  if (parsed.theme) {
+                    setTheme({
+                      bgPrimary: parsed.theme.cssVariables?.['--spm-bg-primary'] || theme.bgPrimary,
+                      bgSecondary: parsed.theme.cssVariables?.['--spm-bg-secondary'] || theme.bgSecondary,
+                      accent: parsed.theme.cssVariables?.['--spm-accent'] || theme.accent,
+                      textPrimary: parsed.theme.cssVariables?.['--spm-text-primary'] || theme.textPrimary,
+                      customStyles: parsed.theme.customStyles || ''
+                    });
+                  }
+
+                  const config = parsed.reconstructs?.[0];
+                  if (config) {
+                    if (config.layoutComponent === 'UiModernGridPage') {
+                      setLayoutType('gallery');
+                      setGalleryProps({
+                        containerSelector: config.containerSelector || '',
+                        pageTitleRule: config.propsMap?.pageTitle || '',
+                        itemsSelector: config.children?.[0]?.selector || '',
+                        imageUrlRule: config.children?.[0]?.propsMap?.imageUrl || '',
+                        linkUrlRule: config.children?.[0]?.propsMap?.linkUrl || '',
+                        titleRule: config.children?.[0]?.propsMap?.title || '',
+                        idRule: config.children?.[0]?.propsMap?.id || '',
+                        paginationSelector: config.children?.[1]?.selector || ''
+                      });
+                    } else if (config.layoutComponent === 'UiPostDetails') {
+                      setLayoutType('post');
+                      setPostProps({
+                        containerSelector: config.containerSelector || '',
+                        imageUrlRule: config.propsMap?.imageUrl || '',
+                        statisticsHtmlRule: config.propsMap?.statisticsHtml || '',
+                        buttonsSelector: config.children?.[0]?.selector || '',
+                        tagsSelector: config.children?.[1]?.selector || '',
+                        tagNameRule: config.children?.[1]?.propsMap?.name || '',
+                        tagCountRule: config.children?.[1]?.propsMap?.count || '',
+                        tagTypeRule: config.children?.[1]?.propsMap?.type || '',
+                        tagUrlRule: config.children?.[1]?.propsMap?.url || ''
+                      });
+                    }
+                  }
+                } catch (err) {
+                  setJsonError(true);
+                }
+              }}
+              rows={15}
+              className={`flex-1 bg-black border rounded p-3 text-[10px] text-zinc-400 font-mono focus:outline-none focus:text-white resize-none ${jsonError ? 'border-red-500/50 focus:border-red-500' : 'border-[#333333] focus:border-zinc-500'}`}
+              placeholder="Paste or edit config JSON..."
+            />
           </div>
         </aside>
       </main>
