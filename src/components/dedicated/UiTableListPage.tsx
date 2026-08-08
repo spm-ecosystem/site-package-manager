@@ -26,6 +26,7 @@ interface UiTableListPageProps {
   height?: string;
   className?: string;
   style?: React.CSSProperties;
+  onLoadMore?: () => Promise<{ tableRows: any[]; hasMore: boolean }>;
 }
 
 export function UiTableListPage({
@@ -36,7 +37,55 @@ export function UiTableListPage({
   height = '100vh',
   className = '',
   style = {},
+  onLoadMore,
 }: UiTableListPageProps) {
+  const [rows, setRows] = React.useState(tableRows);
+  const [loadingMore, setLoadingMore] = React.useState(false);
+  const mainRef = React.useRef<HTMLElement>(null);
+
+  React.useEffect(() => {
+    setRows(tableRows);
+  }, [tableRows]);
+
+  React.useEffect(() => {
+    const mainEl = mainRef.current;
+    if (!mainEl || !onLoadMore) return;
+
+    let isLoading = false;
+    let localHasMore = true;
+
+    const handleScroll = async () => {
+      if (isLoading || !localHasMore) return;
+
+      const threshold = 200; // px threshold from bottom
+      const offset = mainEl.scrollHeight - mainEl.scrollTop - mainEl.clientHeight;
+
+      if (offset <= threshold) {
+        isLoading = true;
+        setLoadingMore(true);
+        try {
+          const res = await onLoadMore();
+          if (res && res.tableRows && res.tableRows.length > 0) {
+            setRows((prev) => {
+              // Deduplicate table rows by titleUrl, aliasName or creator key
+              const uniqueKeys = new Set(prev.map(x => x.titleUrl || x.aliasUrl || x.url || x.nameUrl || JSON.stringify(x)));
+              const newRows = res.tableRows.filter(x => !uniqueKeys.has(x.titleUrl || x.aliasUrl || x.url || x.nameUrl || JSON.stringify(x)));
+              return [...prev, ...newRows];
+            });
+          }
+          localHasMore = res.hasMore;
+        } catch (err) {
+          console.error('[SPM Table Layout] Failed to load more:', err);
+        } finally {
+          isLoading = false;
+          setLoadingMore(false);
+        }
+      }
+    };
+
+    mainEl.addEventListener('scroll', handleScroll);
+    return () => mainEl.removeEventListener('scroll', handleScroll);
+  }, [onLoadMore]);
   // Build columns configuration dynamically or fall back to default wiki columns
   const columns: ColumnConfig<any>[] = columnsProp
     ? columnsProp.map((col) => ({
@@ -235,11 +284,12 @@ export function UiTableListPage({
             {pageTitle}
           </h1>
 
-          <UiPaginationBar pageLinks={pageLinks} />
+          {!onLoadMore && <UiPaginationBar pageLinks={pageLinks} />}
         </header>
 
         {/* Scrollable list of table rows */}
         <main
+          ref={mainRef as any}
           style={{
             padding: '24px',
             flex: 1,
@@ -247,7 +297,24 @@ export function UiTableListPage({
             boxSizing: 'border-box',
           }}
         >
-          <UiTable columns={columns} data={tableRows} />
+          <UiTable columns={columns} data={rows} />
+          {loadingMore && (
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+              <div style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                border: '2px solid var(--spm-border)',
+                borderTopColor: 'var(--spm-accent)',
+                animation: 'spm-spin-table 0.6s linear infinite'
+              }} />
+              <style>{`
+                @keyframes spm-spin-table {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+            </div>
+          )}
         </main>
       </div>
     </div>

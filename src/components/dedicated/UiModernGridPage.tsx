@@ -55,6 +55,7 @@ interface UiModernGridPageProps {
   mobileShowPagination?: boolean;
   className?: string;
   style?: React.CSSProperties;
+  onLoadMore?: () => Promise<{ items: any[]; hasMore: boolean }>;
 }
 
 export function UiModernGridPage({
@@ -82,8 +83,16 @@ export function UiModernGridPage({
   mobileShowPagination = true,
   className = '',
   style = {},
+  onLoadMore,
 }: UiModernGridPageProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [gridItems, setGridItems] = useState(items);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const mainRef = React.useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setGridItems(items);
+  }, [items]);
 
   useEffect(() => {
     const media = window.matchMedia(`(max-width: ${mobileBreakpoint}px)`);
@@ -93,9 +102,49 @@ export function UiModernGridPage({
     return () => media.removeEventListener('change', update);
   }, [mobileBreakpoint]);
 
+  useEffect(() => {
+    const mainEl = mainRef.current;
+    if (!mainEl || !onLoadMore) return;
+
+    let isLoading = false;
+    let localHasMore = true;
+
+    const handleScroll = async () => {
+      if (isLoading || !localHasMore) return;
+
+      const threshold = 300; // px threshold from bottom
+      const offset = mainEl.scrollHeight - mainEl.scrollTop - mainEl.clientHeight;
+
+      if (offset <= threshold) {
+        isLoading = true;
+        setLoadingMore(true);
+        try {
+          const res = await onLoadMore();
+          if (res && res.items && res.items.length > 0) {
+            setGridItems((prev) => {
+              // Deduplicate items by ID
+              const existingIds = new Set(prev.map(x => x.id));
+              const newItems = res.items.filter(x => !existingIds.has(x.id));
+              return [...prev, ...newItems];
+            });
+          }
+          localHasMore = res.hasMore;
+        } catch (err) {
+          console.error('[SPM Layout] Failed to load more:', err);
+        } finally {
+          isLoading = false;
+          setLoadingMore(false);
+        }
+      }
+    };
+
+    mainEl.addEventListener('scroll', handleScroll);
+    return () => mainEl.removeEventListener('scroll', handleScroll);
+  }, [onLoadMore]);
+
   const showSidebar = !(isMobile && hideSidebarOnMobile);
   const showHeader = !isMobile || mobileShowHeader;
-  const showPagination = !isMobile || mobileShowPagination;
+  const showPagination = (!isMobile || mobileShowPagination) && !onLoadMore;
 
   const renderTagGroup = (title: string, groupTags: TagItem[]) => {
     if (groupTags.length === 0) return null;
@@ -369,6 +418,7 @@ export function UiModernGridPage({
 
         {/* Grid */}
         <main
+          ref={mainRef as any}
           className="spm-modern-grid-main"
           style={{
             padding: '24px',
@@ -380,20 +430,39 @@ export function UiModernGridPage({
             overflowY: 'auto',
           }}
         >
-          {items.length === 0 ? (
+          {gridItems.length === 0 ? (
             <div style={{ color: 'var(--spm-text-muted)', fontSize: '14px', margin: 'auto' }}>
               No items found.
             </div>
           ) : (
-            items.map(item => (
-              <UiImageCard
-                key={item.id}
-                id={item.id}
-                imageUrl={item.imageUrl}
-                linkUrl={item.linkUrl}
-                title={item.title}
-              />
-            ))
+            <>
+              {gridItems.map(item => (
+                <UiImageCard
+                  key={item.id}
+                  id={item.id}
+                  imageUrl={item.imageUrl}
+                  linkUrl={item.linkUrl}
+                  title={item.title}
+                />
+              ))}
+              {loadingMore && (
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '24px 0', order: 9999 }}>
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    border: '2px solid var(--spm-border)',
+                    borderTopColor: 'var(--spm-accent)',
+                    animation: 'spm-spin 0.6s linear infinite'
+                  }} />
+                  <style>{`
+                    @keyframes spm-spin {
+                      to { transform: rotate(360deg); }
+                    }
+                  `}</style>
+                </div>
+              )}
+            </>
           )}
         </main>
       </div>
