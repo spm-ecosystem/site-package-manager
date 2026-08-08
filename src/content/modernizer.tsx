@@ -137,7 +137,7 @@ function extractChildren(
   return result;
 }
 
-export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string) {
+export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string, styleCSS: string = '') {
   // Helper queries targeting scoped parent
   const rootDoc = rootContext instanceof Document ? rootContext : document;
 
@@ -158,7 +158,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
     const shadowRoot = toastHost.attachShadow({ mode: 'open' });
     const styleTag = rootDoc.createElement('style');
-    styleTag.textContent = stylesText;
+    styleTag.textContent = stylesText + '\n' + styleCSS;
     shadowRoot.appendChild(styleTag);
 
     if (manifest.theme?.cssVariables) {
@@ -274,7 +274,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         const shadowRoot = host.attachShadow({ mode: 'open' });
 
         const styleTag = rootDoc.createElement('style');
-        styleTag.textContent = stylesText;
+        styleTag.textContent = stylesText + '\n' + styleCSS;
         shadowRoot.appendChild(styleTag);
 
         if (manifest.theme?.cssVariables) {
@@ -358,7 +358,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         const shadowRoot = host.attachShadow({ mode: 'open' });
 
         const styleTag = rootDoc.createElement('style');
-        styleTag.textContent = stylesText;
+        styleTag.textContent = stylesText + '\n' + styleCSS;
         shadowRoot.appendChild(styleTag);
 
         if (manifest.theme?.cssVariables) applyTheme(shadowRoot, manifest.theme.cssVariables);
@@ -378,4 +378,44 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
       });
     }
   }
+}
+
+export async function fetchRegistry(gitopsUrl: string) {
+  const base = gitopsUrl.replace(/\/$/, '');
+  const url = `${base}/registry.json?t=${Date.now()}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch registry: ${res.statusText}`);
+  }
+  return await res.json();
+}
+
+export async function fetchThemeFiles(gitopsUrl: string, domain: string, pkgDir: string, ref: string) {
+  const base = gitopsUrl.replace(/\/$/, '');
+  
+  let manifestUrl = '';
+  let cssUrl = '';
+  
+  if (base.includes('raw.githubusercontent.com') || base.includes('github.com') || base.includes('gitlab.com')) {
+    manifestUrl = `${base}/${ref}/public/websites/${domain}/${pkgDir}/manifest.json`;
+    cssUrl = `${base}/${ref}/public/websites/${domain}/${pkgDir}/style.css`;
+  } else {
+    manifestUrl = `${base}/public/websites/${domain}/${pkgDir}/manifest.json`;
+    cssUrl = `${base}/public/websites/${domain}/${pkgDir}/style.css`;
+  }
+
+  const t = Date.now();
+  const manifestRes = await fetch(`${manifestUrl}?t=${t}`);
+  if (!manifestRes.ok) {
+    throw new Error(`Failed to fetch manifest from ${manifestUrl}: ${manifestRes.statusText}`);
+  }
+  const manifest = await manifestRes.json();
+
+  const cssRes = await fetch(`${cssUrl}?t=${t}`);
+  if (!cssRes.ok) {
+    throw new Error(`Failed to fetch CSS from ${cssUrl}: ${cssRes.statusText}`);
+  }
+  const cssText = await cssRes.text();
+
+  return { manifest, cssText };
 }
