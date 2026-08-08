@@ -53,7 +53,8 @@ export function applyThemeGlobally(variables: Record<string, string>, customStyl
   if (!styleEl) {
     styleEl = document.createElement('style');
     styleEl.id = styleId;
-    document.head.appendChild(styleEl);
+    const parent = document.head || document.documentElement;
+    parent.appendChild(styleEl);
   }
 
   const cssVars = Object.entries(variables)

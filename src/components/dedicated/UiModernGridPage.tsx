@@ -56,7 +56,7 @@ export function UiModernGridPage({
         }}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
         {/* Header */}
         <header
           style={{
