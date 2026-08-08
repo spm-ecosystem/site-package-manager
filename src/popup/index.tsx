@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
-import registryMock from '../../public/websites/registry.json';
+import registryMock from '../../registry.json';
 
 interface RegistryItem {
   id: string;
@@ -71,7 +71,22 @@ function Popup() {
         }
       });
     }
-    setThemesList(registryMock);
+    const parsedThemes: RegistryItem[] = [];
+    for (const [domain, config] of Object.entries(registryMock || {})) {
+      if (config && typeof config === 'object' && 'packages' in config) {
+        for (const [pkgName, pkg] of Object.entries((config as any).packages || {})) {
+          const typedPkg = pkg as any;
+          parsedThemes.push({
+            id: `${domain}-${pkgName}`,
+            name: typedPkg.displayName || pkgName,
+            description: `Theme package for ${domain} by ${typedPkg.author || 'unknown'}`,
+            domain: domain,
+            manifestPath: `websites/${domain}/${typedPkg.directory || pkgName}/manifest.json`
+          });
+        }
+      }
+    }
+    setThemesList(parsedThemes);
   }, []);
 
   const reloadTab = () => {
