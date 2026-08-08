@@ -49,7 +49,7 @@ export function applyTheme(shadowRoot: ShadowRoot, variables: Record<string, str
   shadowRoot.appendChild(styleEl);
 }
 
-export function applyThemeGlobally(variables: Record<string, string>, customStyles: string = '') {
+export function applyThemeGlobally(variables: Record<string, string>, customStyles: string = '', noticeSelector: string = '#notice') {
   const styleId = 'spm-global-theme-styles';
   let styleEl = document.getElementById(styleId);
   if (!styleEl) {
@@ -99,7 +99,7 @@ export function applyThemeGlobally(variables: Record<string, string>, customStyl
       border: 1px solid var(--spm-border) !important;
     }
 
-    #notice, .notice {
+    #notice, .notice, ${noticeSelector} {
       display: none !important;
     }
 
