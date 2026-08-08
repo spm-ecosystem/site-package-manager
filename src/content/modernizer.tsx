@@ -165,28 +165,33 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
     createRoot(toastRoot).render(<UiToastContainer />);
   }
 
-  // Observe legacy notice element for modifications
   const noticeSelector = manifest.theme?.noticeSelector || '#notice';
   const noticeEl = rootContext.querySelector(noticeSelector);
   if (noticeEl) {
+    let lastText = '';
+
     const showToast = (text: string) => {
+      if (!text || text === lastText) return;
+      lastText = text;
       window.dispatchEvent(new CustomEvent('spm-show-toast', {
         detail: { message: text, type: 'info' }
       }));
     };
 
-    // Show initial text if the notice is visible
+    // Show initial text if present and not explicitly hidden
     const initialText = noticeEl.textContent?.trim();
-    const isInitiallyVisible = (noticeEl as HTMLElement).style.display !== 'none' && noticeEl.getBoundingClientRect().height > 0;
+    const isInitiallyVisible = (noticeEl as HTMLElement).style.display !== 'none';
     if (initialText && isInitiallyVisible) {
       showToast(initialText);
     }
 
     const observer = new MutationObserver(() => {
       const text = noticeEl.textContent?.trim();
-      const isVisible = (noticeEl as HTMLElement).style.display !== 'none' && noticeEl.getBoundingClientRect().height > 0;
+      const isVisible = (noticeEl as HTMLElement).style.display !== 'none';
       if (text && isVisible) {
         showToast(text);
+      } else if (!text) {
+        lastText = '';
       }
     });
 
