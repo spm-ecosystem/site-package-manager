@@ -7,6 +7,7 @@ export interface ChildrenConfig {
   selector: string;
   scope?: 'element' | 'document';
   propsMap: Record<string, string>;
+  children?: ChildrenConfig[];
 }
 
 export interface ComponentConfig {
@@ -100,6 +101,34 @@ export function applyThemeGlobally(variables: Record<string, string>, customStyl
   `;
 }
 
+function extractChildren(
+  rootContext: Document | HTMLElement,
+  container: Element,
+  rules: ChildrenConfig[]
+): Record<string, any[]> {
+  const result: Record<string, any[]> = {};
+  for (const rule of rules) {
+    const scope = rule.scope === 'document' ? rootContext : container;
+    const itemElements = scope.querySelectorAll(rule.selector);
+    const list: any[] = [];
+
+    itemElements.forEach((itemEl) => {
+      const itemProps: Record<string, any> = {};
+      for (const [propName, propRule] of Object.entries(rule.propsMap || {})) {
+        itemProps[propName] = extractValue(itemEl as HTMLElement, propRule);
+      }
+      if (rule.children && rule.children.length > 0) {
+        const subChildren = extractChildren(rootContext, itemEl, rule.children);
+        Object.assign(itemProps, subChildren);
+      }
+      list.push(itemProps);
+    });
+
+    result[rule.name] = list;
+  }
+  return result;
+}
+
 export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string) {
   // Helper queries targeting scoped parent
   const rootDoc = rootContext instanceof Document ? rootContext : document;
@@ -124,22 +153,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         }
 
         // Extract children lists (supports scope:'document' for external elements)
-        const childrenLists: Record<string, any[]> = {};
-        for (const childRule of children) {
-          const scope = childRule.scope === 'document' ? rootContext : container;
-          const itemElements = scope.querySelectorAll(childRule.selector);
-          const list: any[] = [];
-
-          itemElements.forEach((itemEl) => {
-            const itemProps: Record<string, any> = {};
-            for (const [propName, rule] of Object.entries(childRule.propsMap)) {
-              itemProps[propName] = extractValue(itemEl as HTMLElement, rule);
-            }
-            list.push(itemProps);
-          });
-
-          childrenLists[childRule.name] = list;
-        }
+        const childrenLists = extractChildren(rootContext, container, children);
 
         // Cache preserved original DOM element references
         const preservedNodes: Record<string, Element> = {};

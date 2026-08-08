@@ -142,6 +142,34 @@ function createEditorWrapper(
   return { wrapper, host };
 }
 
+function extractChildren(
+  container: HTMLElement,
+  itemEl: Element,
+  rules: any[]
+): Record<string, any[]> {
+  const result: Record<string, any[]> = {};
+  for (const rule of rules) {
+    const scope = rule.scope === 'document' ? container : itemEl;
+    const childEls = scope.querySelectorAll(rule.selector);
+    const list: any[] = [];
+
+    childEls.forEach((childEl: Element) => {
+      const itemProps: Record<string, any> = {};
+      for (const [propName, propRule] of Object.entries(rule.propsMap || {})) {
+        itemProps[propName] = extractValue(childEl as HTMLElement, propRule as string);
+      }
+      if (rule.children && rule.children.length > 0) {
+        const subChildren = extractChildren(container, childEl, rule.children);
+        Object.assign(itemProps, subChildren);
+      }
+      list.push(itemProps);
+    });
+
+    result[rule.name] = list;
+  }
+  return result;
+}
+
 export function runSandboxEngine(container: HTMLElement, manifest: any): number {
   if (!manifest) return 0;
 
@@ -188,20 +216,7 @@ export function runSandboxEngine(container: HTMLElement, manifest: any): number 
       }
 
       // Extract children arrays (like post lists or tag badges)
-      const childrenLists: Record<string, any[]> = {};
-      for (const childRule of (config.children || [])) {
-        const scope = childRule.scope === 'document' ? container : originalEl;
-        const childEls = scope.querySelectorAll(childRule.selector);
-        const list: any[] = [];
-        childEls.forEach((childEl: Element) => {
-          const itemProps: Record<string, any> = {};
-          for (const [propName, rule] of Object.entries(childRule.propsMap || {})) {
-            itemProps[propName] = extractValue(childEl as HTMLElement, rule as string);
-          }
-          list.push(itemProps);
-        });
-        childrenLists[childRule.name] = list;
-      }
+      const childrenLists = extractChildren(container, originalEl, config.children || []);
 
       // Clone preserved nodes to insert in React slot slots safely
       const preservedNodes: Record<string, HTMLElement> = {};
@@ -274,20 +289,7 @@ export function runSandboxEngine(container: HTMLElement, manifest: any): number 
           extractedProps[propName] = extractValue(originalEl as HTMLElement, rule as string);
         }
 
-        const childrenLists: Record<string, any[]> = {};
-        for (const childRule of (compConfig.children || [])) {
-          const scope = childRule.scope === 'document' ? container : originalEl;
-          const childEls = scope.querySelectorAll(childRule.selector);
-          const list: any[] = [];
-          childEls.forEach((childEl: Element) => {
-            const itemProps: Record<string, any> = {};
-            for (const [propName, rule] of Object.entries(childRule.propsMap || {})) {
-              itemProps[propName] = extractValue(childEl as HTMLElement, rule as string);
-            }
-            list.push(itemProps);
-          });
-          childrenLists[childRule.name] = list;
-        }
+        const childrenLists = extractChildren(container, originalEl, compConfig.children || []);
 
         const allProps = { ...extractedProps, ...childrenLists, ...(compConfig.props || {}) };
 

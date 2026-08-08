@@ -46,3 +46,43 @@ interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
 export function UiLink({ className, href, children, ...props }: LinkProps) {
   return <a className={className} href={href} {...props}>{children}</a>;
 }
+
+interface ScrollBoxProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+  children?: React.ReactNode;
+  height?: string;
+  maxHeight?: string;
+  overflow?: 'auto' | 'scroll' | 'hidden' | 'visible';
+  overflowX?: 'auto' | 'scroll' | 'hidden' | 'visible';
+  overflowY?: 'auto' | 'scroll' | 'hidden' | 'visible';
+}
+
+export function UiScrollBox({
+  className = '',
+  children,
+  height,
+  maxHeight,
+  overflow = 'auto',
+  overflowX,
+  overflowY,
+  style = {},
+  ...props
+}: ScrollBoxProps) {
+  return (
+    <div
+      className={className}
+      style={{
+        height,
+        maxHeight,
+        overflow: overflowX || overflowY ? undefined : overflow,
+        overflowX,
+        overflowY,
+        boxSizing: 'border-box',
+        ...style,
+      }}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
