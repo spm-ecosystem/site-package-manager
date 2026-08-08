@@ -100,6 +100,9 @@
       "propsMap": {
         "pageTitle": "h2 | text"
       },
+      "props": {
+        "height": "calc(100vh - 78px)"
+      },
       "preserve": {
         "sidebarSlot": "div.sidebar"
       },

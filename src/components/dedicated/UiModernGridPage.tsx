@@ -17,17 +17,30 @@ interface UiModernGridPageProps {
   pageTitle: string;
   items: GridItem[];
   pageLinks?: PageLink[];
+  height?: string;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
-export function UiModernGridPage({ pageTitle, items, pageLinks }: UiModernGridPageProps) {
+export function UiModernGridPage({
+  pageTitle,
+  items,
+  pageLinks,
+  height = '100vh',
+  className = '',
+  style = {},
+}: UiModernGridPageProps) {
   return (
     <div
+      className={className}
       style={{
         display: 'flex',
-        minHeight: '100vh',
+        height,
         background: 'var(--spm-bg-primary)',
         color: 'var(--spm-text-primary)',
         fontFamily: 'system-ui, sans-serif',
+        overflow: 'hidden',
+        ...style,
       }}
     >
       {/* Sidebar slot — legacy nodes reparented here */}
