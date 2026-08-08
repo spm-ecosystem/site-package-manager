@@ -7,6 +7,8 @@ interface TagItem {
   count: string;
   type: string;
   url: string;
+  addUrl?: string;
+  removeUrl?: string;
 }
 
 interface GenericButtonItem {
@@ -71,6 +73,8 @@ export function UiPostDetails({
               label={tag.name}
               count={tag.count}
               href={tag.url}
+              addUrl={tag.addUrl}
+              removeUrl={tag.removeUrl}
             />
           ))}
         </div>

@@ -21,6 +21,8 @@ interface TagItem {
   count?: string | number;
   type: string;
   url: string;
+  addUrl?: string;
+  removeUrl?: string;
 }
 
 export interface TagGroupConfig {
@@ -117,6 +119,8 @@ export function UiModernGridPage({
               label={tag.name}
               count={tag.count}
               href={tag.url}
+              addUrl={tag.addUrl}
+              removeUrl={tag.removeUrl}
             />
           ))}
         </div>
