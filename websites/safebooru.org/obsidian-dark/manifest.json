@@ -107,6 +107,10 @@
       "containerSelector": "#post-list",
       "layoutComponent": "UiModernGridPage",
       "urlPattern": "page=post&s=list",
+      "infiniteScroll": {
+        "nextPageSelector": "#paginator .pagination a",
+        "nextPageText": ">"
+      },
       "propsMap": {
         "searchDefaultValue": ".sidebar form input[name='tags'] | attr:value"
       },
@@ -324,6 +328,10 @@
       "containerSelector": "#content:has(table.highlightable)",
       "layoutComponent": "UiTableListPage",
       "urlPattern": "page=alias&s=list",
+      "infiniteScroll": {
+        "nextPageSelector": "#paginator .pagination a",
+        "nextPageText": ">"
+      },
       "props": {
         "pageTitle": "Tag Aliases",
         "height": "calc(100vh - 78px)",
@@ -353,6 +361,10 @@
       "containerSelector": "#content:has(table.highlightable)",
       "layoutComponent": "UiTableListPage",
       "urlPattern": "page=artist&s=list",
+      "infiniteScroll": {
+        "nextPageSelector": "#paginator .pagination a",
+        "nextPageText": ">"
+      },
       "props": {
         "pageTitle": "Artists",
         "height": "calc(100vh - 78px)",
@@ -388,6 +400,10 @@
       "containerSelector": "#content:has(table.highlightable)",
       "layoutComponent": "UiTableListPage",
       "urlPattern": "page=tags&s=list",
+      "infiniteScroll": {
+        "nextPageSelector": "#paginator .pagination a",
+        "nextPageText": ">"
+      },
       "props": {
         "pageTitle": "Tags Directory",
         "height": "calc(100vh - 78px)",
@@ -423,6 +439,10 @@
       "containerSelector": "#content:has(table.highlightable)",
       "layoutComponent": "UiTableListPage",
       "urlPattern": "page=pool&s=list",
+      "infiniteScroll": {
+        "nextPageSelector": "#paginator .pagination a",
+        "nextPageText": ">"
+      },
       "props": {
         "pageTitle": "Pools / Collections",
         "height": "calc(100vh - 78px)",
@@ -461,6 +481,10 @@
       "containerSelector": "#content:has(table.highlightable)",
       "layoutComponent": "UiTableListPage",
       "urlPattern": "page=forum&s=list",
+      "infiniteScroll": {
+        "nextPageSelector": "#paginator .pagination a",
+        "nextPageText": ">"
+      },
       "props": {
         "pageTitle": "Community Forum",
         "height": "calc(100vh - 78px)",

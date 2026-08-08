@@ -20,6 +20,11 @@ export interface ComponentConfig {
   children?: ChildrenConfig[];
 }
 
+export interface InfiniteScrollConfig {
+  nextPageSelector: string;
+  nextPageText?: string;
+}
+
 export interface ReconstructConfig {
   containerSelector: string;
   layoutComponent: string;
@@ -29,6 +34,7 @@ export interface ReconstructConfig {
   urlPattern?: string;
   preserve?: Record<string, string>;
   children: ChildrenConfig[];
+  infiniteScroll?: InfiniteScrollConfig;
 }
 
 export interface SiteManifest {
@@ -135,6 +141,26 @@ function extractChildren(
     result[rule.name] = list;
   }
   return result;
+}
+
+function getNextPageUrl(context: Document | HTMLElement, config?: InfiniteScrollConfig): string | null {
+  if (!config || !config.nextPageSelector) return null;
+  const elements = context.querySelectorAll(config.nextPageSelector);
+  for (const el of Array.from(elements)) {
+    const text = el.textContent?.trim();
+    const href = el.getAttribute('href');
+    if (!href) continue;
+
+    if (config.nextPageText) {
+      if (text === config.nextPageText) {
+        return href;
+      }
+    } else {
+      // Default: take the first one
+      return href;
+    }
+  }
+  return null;
 }
 
 export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string, styleCSS: string = '') {
@@ -287,9 +313,44 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
         const Component = COMPONENT_REGISTRY[layoutComponent];
         if (Component) {
-          console.log('[SPM Engine] Reconstructing:', layoutComponent, { staticProps, pageProps, childrenLists });
+          // Setup onLoadMore callback if infiniteScroll config exists
+          let onLoadMore: any = undefined;
+          if (reconConfig.infiniteScroll) {
+            let currentNextPageUrl = getNextPageUrl(rootDoc, reconConfig.infiniteScroll);
+            
+            onLoadMore = async () => {
+              if (!currentNextPageUrl) {
+                return { items: [], tableRows: [], hasMore: false };
+              }
+              try {
+                const absoluteUrl = new URL(currentNextPageUrl, window.location.href).href;
+                console.log('[SPM Engine] Fetching next page:', absoluteUrl);
+                const res = await fetch(absoluteUrl);
+                if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+                const html = await res.text();
+                
+                const parser = new DOMParser();
+                const nextDoc = parser.parseFromString(html, 'text/html');
+                
+                const nextChildren = extractChildren(nextDoc, nextDoc.body, children);
+                
+                currentNextPageUrl = getNextPageUrl(nextDoc, reconConfig.infiniteScroll);
+                console.log('[SPM Engine] Infinite Scroll next URL updated to:', currentNextPageUrl);
+                
+                return {
+                  ...nextChildren,
+                  hasMore: !!currentNextPageUrl
+                };
+              } catch (err) {
+                console.error('[SPM Engine] Infinite Scroll load failed:', err);
+                return { items: [], tableRows: [], hasMore: false };
+              }
+            };
+          }
+
+          console.log('[SPM Engine] Reconstructing:', layoutComponent, { staticProps, pageProps, childrenLists, hasInfiniteScroll: !!onLoadMore });
           const root = createRoot(rootContainer);
-          root.render(<Component {...(staticProps || {})} {...pageProps} {...childrenLists} />);
+          root.render(<Component {...(staticProps || {})} {...pageProps} {...childrenLists} onLoadMore={onLoadMore} />);
 
           // Execute DOM reparenting in microtask loop once React finishes mounting layout
           setTimeout(() => {
