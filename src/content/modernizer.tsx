@@ -22,6 +22,7 @@ export interface ReconstructConfig {
   containerSelector: string;
   layoutComponent: string;
   propsMap: Record<string, string>;
+  props?: Record<string, any>;
   mediaQuery?: string;
   preserve?: Record<string, string>;
   children: ChildrenConfig[];
