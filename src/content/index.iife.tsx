@@ -69,7 +69,7 @@ async function init() {
     }
 
     // 3. Dev Mode is off, look up registry.json in storage (refreshing if older than 1 hour)
-    const gitopsUrl = res.spm_gitops_url || res.gitops_url || 'http://localhost:8080';
+    const gitopsUrl = res.spm_gitops_url || res.gitops_url || 'https://github.com/watashi-00/site-package-manager';
     let registry = res.gitops_registry;
     const registryTimestamp = res.gitops_registry_timestamp || 0;
     const isRegistryStale = !registry || (Date.now() - registryTimestamp > 3600000);
