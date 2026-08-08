@@ -16,9 +16,17 @@ interface GenericButtonItem {
   iconSvg?: string; // Optional raw SVG path/code passed from manifest
 }
 
+import React from 'react';
+
+export interface TagGroupConfig {
+  title: string;
+  typeKey: string;
+}
+
 interface UiPostDetailsProps {
   imageUrl: string;
   tags?: TagItem[];
+  tagGroups?: TagGroupConfig[];
   statisticsHtml?: string;
   buttons?: GenericButtonItem[];
   
@@ -32,6 +40,7 @@ interface UiPostDetailsProps {
 export function UiPostDetails({
   imageUrl,
   tags = [],
+  tagGroups,
   statisticsHtml = '',
   buttons = [],
   showSearch = true,
@@ -39,13 +48,6 @@ export function UiPostDetails({
   searchSubmitUrl = '',
   searchParamName = 'tags',
 }: UiPostDetailsProps) {
-  
-  // Group tags by matching type strings dynamically
-  const copyrightTags = tags.filter(t => t.type.includes('copyright'));
-  const characterTags = tags.filter(t => t.type.includes('character'));
-  const artistTags = tags.filter(t => t.type.includes('artist'));
-  const generalTags = tags.filter(t => t.type.includes('general'));
-  const metaTags = tags.filter(t => t.type.includes('metadata') || t.type.includes('meta'));
 
   const renderTagGroup = (title: string, groupTags: TagItem[]) => {
     if (groupTags.length === 0) return null;
@@ -75,6 +77,31 @@ export function UiPostDetails({
       </div>
     );
   };
+
+  const renderedTagGroups = (() => {
+    if (tagGroups && tagGroups.length > 0) {
+      return tagGroups.map((g, idx) => {
+        const filtered = tags.filter(t => t.type && t.type.includes(g.typeKey));
+        return (
+          <React.Fragment key={idx}>
+            {renderTagGroup(g.title, filtered)}
+          </React.Fragment>
+        );
+      });
+    }
+
+    // Dynamic unique types fallback (completely generic!)
+    const uniqueTypes = Array.from(new Set(tags.map(t => t.type || 'general'))).filter(Boolean);
+    return uniqueTypes.map((type, idx) => {
+      const filtered = tags.filter(t => (t.type || 'general') === type);
+      const title = type.charAt(0).toUpperCase() + type.slice(1).replace(/[-_]/g, ' ') + 's';
+      return (
+        <React.Fragment key={idx}>
+          {renderTagGroup(title, filtered)}
+        </React.Fragment>
+      );
+    });
+  })();
 
   return (
     <div
@@ -119,11 +146,7 @@ export function UiPostDetails({
           </div>
         )}
 
-        {renderTagGroup('Artists', artistTags)}
-        {renderTagGroup('Copyright', copyrightTags)}
-        {renderTagGroup('Characters', characterTags)}
-        {renderTagGroup('General Tags', generalTags)}
-        {renderTagGroup('Meta', metaTags)}
+        {renderedTagGroups}
 
         {/* Statistics section */}
         {statisticsHtml && (

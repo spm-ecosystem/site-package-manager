@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UiImageCard } from './UiImageCard';
 import { UiPaginationBar } from './UiPaginationBar';
 import { UiSearchBar } from './UiSearchBar';
@@ -23,12 +23,18 @@ interface TagItem {
   url: string;
 }
 
+export interface TagGroupConfig {
+  title: string;
+  typeKey: string;
+}
+
 interface UiModernGridPageProps {
   pageTitle: string;
   items: GridItem[];
   pageLinks?: PageLink[];
   sidebarHtml?: string;
   tags?: TagItem[];
+  tagGroups?: TagGroupConfig[];
   showSearch?: boolean;
   searchPlaceholder?: string;
   searchSubmitUrl?: string;
@@ -55,6 +61,7 @@ export function UiModernGridPage({
   pageLinks,
   sidebarHtml,
   tags = [],
+  tagGroups,
   showSearch = true,
   searchPlaceholder = 'Search tags…',
   searchSubmitUrl = '',
@@ -88,16 +95,6 @@ export function UiModernGridPage({
   const showHeader = !isMobile || mobileShowHeader;
   const showPagination = !isMobile || mobileShowPagination;
 
-  // Group tags by matching type strings dynamically
-  const copyrightTags = tags.filter(t => t.type && t.type.includes('copyright'));
-  const characterTags = tags.filter(t => t.type && t.type.includes('character'));
-  const artistTags = tags.filter(t => t.type && t.type.includes('artist'));
-  const generalTags = tags.filter(t => {
-    const type = t.type || '';
-    return type.includes('general') || (!type.includes('copyright') && !type.includes('character') && !type.includes('artist') && !type.includes('metadata') && !type.includes('meta'));
-  });
-  const metaTags = tags.filter(t => t.type && (t.type.includes('metadata') || t.type.includes('meta')));
-
   const renderTagGroup = (title: string, groupTags: TagItem[]) => {
     if (groupTags.length === 0) return null;
     return (
@@ -126,6 +123,31 @@ export function UiModernGridPage({
       </div>
     );
   };
+
+  const renderedTagGroups = (() => {
+    if (tagGroups && tagGroups.length > 0) {
+      return tagGroups.map((g, idx) => {
+        const filtered = tags.filter(t => t.type && t.type.includes(g.typeKey));
+        return (
+          <React.Fragment key={idx}>
+            {renderTagGroup(g.title, filtered)}
+          </React.Fragment>
+        );
+      });
+    }
+
+    // Dynamic unique types fallback (generic!)
+    const uniqueTypes = Array.from(new Set(tags.map(t => t.type || 'general'))).filter(Boolean);
+    return uniqueTypes.map((type, idx) => {
+      const filtered = tags.filter(t => (t.type || 'general') === type);
+      const title = type.charAt(0).toUpperCase() + type.slice(1).replace(/[-_]/g, ' ') + 's';
+      return (
+        <React.Fragment key={idx}>
+          {renderTagGroup(title, filtered)}
+        </React.Fragment>
+      );
+    });
+  })();
 
   return (
     <div
@@ -301,11 +323,7 @@ export function UiModernGridPage({
                 />
               </div>
             )}
-            {renderTagGroup('Artists', artistTags)}
-            {renderTagGroup('Copyrights', copyrightTags)}
-            {renderTagGroup('Characters', characterTags)}
-            {renderTagGroup('General Tags', generalTags)}
-            {renderTagGroup('Meta', metaTags)}
+            {renderedTagGroups}
           </>
         )}
       </aside>

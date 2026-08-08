@@ -127,7 +127,14 @@
         "mobileCardAspectRatio": "1 / 1.28",
         "mobileHeaderSticky": true,
         "mobileShowHeader": true,
-        "mobileShowPagination": true
+        "mobileShowPagination": true,
+        "tagGroups": [
+          { "title": "Artists", "typeKey": "artist" },
+          { "title": "Copyrights", "typeKey": "copyright" },
+          { "title": "Characters", "typeKey": "character" },
+          { "title": "General", "typeKey": "general" },
+          { "title": "Meta", "typeKey": "metadata" }
+        ]
       },
       "children": [
         {
@@ -176,7 +183,14 @@
         "showSearch": true,
         "searchPlaceholder": "Search tags...",
         "searchSubmitUrl": "https://safebooru.org/index.php?page=post&s=list",
-        "searchParamName": "tags"
+        "searchParamName": "tags",
+        "tagGroups": [
+          { "title": "Artists", "typeKey": "artist" },
+          { "title": "Copyrights", "typeKey": "copyright" },
+          { "title": "Characters", "typeKey": "character" },
+          { "title": "General", "typeKey": "general" },
+          { "title": "Meta", "typeKey": "metadata" }
+        ]
       },
       "children": [
         {
@@ -500,54 +514,23 @@
           }
         },
         {
-          "name": "taggers",
-          "selector": "div.toptencont:nth-of-type(1) tbody tr",
+          "name": "sections",
+          "selector": "div.toptencont",
           "propsMap": {
-            "place": "td:nth-child(1) | text",
-            "amount": "td:nth-child(2) | text",
-            "name": "td:nth-child(3) a | text",
-            "profileUrl": "td:nth-child(3) a | attr:href"
-          }
-        },
-        {
-          "name": "commenters",
-          "selector": "div.toptencont:nth-of-type(2) tbody tr",
-          "propsMap": {
-            "place": "td:nth-child(1) | text",
-            "amount": "td:nth-child(2) | text",
-            "name": "td:nth-child(3) a | text",
-            "profileUrl": "td:nth-child(3) a | attr:href"
-          }
-        },
-        {
-          "name": "forumPosters",
-          "selector": "div.toptencont:nth-of-type(3) tbody tr",
-          "propsMap": {
-            "place": "td:nth-child(1) | text",
-            "amount": "td:nth-child(2) | text",
-            "name": "td:nth-child(3) a | text",
-            "profileUrl": "td:nth-child(3) a | attr:href"
-          }
-        },
-        {
-          "name": "imagePosters",
-          "selector": "div.toptencont:nth-of-type(4) tbody tr",
-          "propsMap": {
-            "place": "td:nth-child(1) | text",
-            "amount": "td:nth-child(2) | text",
-            "name": "td:nth-child(3) a | text",
-            "profileUrl": "td:nth-child(3) a | attr:href"
-          }
-        },
-        {
-          "name": "noteEditors",
-          "selector": "div.toptencont:nth-of-type(5) tbody tr",
-          "propsMap": {
-            "place": "td:nth-child(1) | text",
-            "amount": "td:nth-child(2) | text",
-            "name": "td:nth-child(3) a | text",
-            "profileUrl": "td:nth-child(3) a | attr:href"
-          }
+            "title": "thead tr th | text"
+          },
+          "children": [
+            {
+              "name": "items",
+              "selector": "tbody tr",
+              "propsMap": {
+                "place": "td:nth-child(1) | text",
+                "amount": "td:nth-child(2) | text",
+                "name": "td:nth-child(3) a | text",
+                "profileUrl": "td:nth-child(3) a | attr:href"
+              }
+            }
+          ]
         }
       ]
     },
