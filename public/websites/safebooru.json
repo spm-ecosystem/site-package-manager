@@ -134,6 +134,7 @@
         "sidebarWidth": "280px",
         "sidebarSide": "left",
         "imageFit": "contain",
+        "height": "calc(100vh - 78px)",
         "showSearch": true,
         "searchPlaceholder": "Search tags…",
         "searchSubmitUrl": "https://safebooru.org/index.php?page=post&s=list",
@@ -165,7 +166,7 @@
           "scope": "document",
           "propsMap": {
             "label": "self | text",
-            "url": "self | attr:href"
+            "url": "self | hrefOrOnclick"
           }
         }
       ]
