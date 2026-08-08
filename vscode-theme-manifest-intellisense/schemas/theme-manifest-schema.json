@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/spm-theme-manifest.json",
+  "title": "SPM Theme Manifest",
+  "type": "object",
+  "description": "Theme manifest schema for Site Package Manager themes.",
+  "properties": {
+    "targetUrl": {
+      "type": "string",
+      "description": "The URL pattern where the theme applies."
+    },
+    "version": {
+      "type": "string",
+      "description": "Theme manifest version."
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "cssVariables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "customStyles": {
+          "type": "string"
+        },
+        "noticeSelector": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/componentConfig"
+      }
+    },
+    "reconstructs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/reconstructConfig"
+      }
+    }
+  },
+  "definitions": {
+    "childrenConfig": {
+      "type": "object",
+      "required": ["name", "selector", "propsMap"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["element", "document"]
+        },
+        "propsMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/childrenConfig"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "componentConfig": {
+      "type": "object",
+      "required": ["name", "selector", "action", "propsMap"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "selector": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string",
+          "enum": ["replace", "append", "hide"]
+        },
+        "propsMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "props": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/childrenConfig"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "reconstructConfig": {
+      "type": "object",
+      "required": ["containerSelector", "layoutComponent", "children"],
+      "properties": {
+        "containerSelector": {
+          "type": "string"
+        },
+        "layoutComponent": {
+          "type": "string"
+        },
+        "propsMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "props": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "mediaQuery": {
+          "type": "string"
+        },
+        "urlPattern": {
+          "type": "string"
+        },
+        "preserve": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/childrenConfig"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

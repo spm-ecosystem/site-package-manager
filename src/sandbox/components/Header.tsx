@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
           type="submit"
           className="px-3 py-1 bg-zinc-800 text-white rounded text-xs font-semibold hover:bg-zinc-700 transition"
         >
-          Fetch
+          Capture
         </button>
       </form>
 

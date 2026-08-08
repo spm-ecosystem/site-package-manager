@@ -26,6 +26,13 @@ interface InspectedElementData {
   suggestedSelectors: string[];
 }
 
+interface CaptureDomResponse {
+  ok: boolean;
+  html?: string;
+  url?: string;
+  error?: string;
+}
+
 
 function SandboxApp() {
   const savedTargetUrl = localStorage.getItem('spm_sandbox_target_url') || 'https://example.com';
@@ -315,22 +322,92 @@ function SandboxApp() {
     }
   };
 
+  const stripScripts = (htmlText: string) => {
+    return htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  };
+
+  const tabMatchScore = (tabUrl: string | undefined, desiredUrl: string) => {
+    if (!tabUrl) return 0;
+
+    try {
+      const tab = new URL(tabUrl);
+      const desired = new URL(desiredUrl);
+
+      if (tab.href === desired.href) return 4;
+      if (tab.origin === desired.origin && tab.pathname === desired.pathname && tab.hash === desired.hash) return 3;
+      if (tab.origin === desired.origin && tab.pathname === desired.pathname) return 2;
+      if (tab.hostname === desired.hostname) return 1;
+    } catch {
+      return 0;
+    }
+
+    return 0;
+  };
+
+  const captureOpenTabHtml = async (): Promise<string | null> => {
+    if (typeof chrome === 'undefined' || !chrome.tabs) return null;
+
+    const tabs = await chrome.tabs.query({});
+    const matchingTabs = tabs
+      .map((tab) => ({ tab, score: tabMatchScore(tab.url, targetUrl) }))
+      .filter(({ tab, score }) => Boolean(tab.id) && score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    for (const { tab } of matchingTabs) {
+      if (!tab.id) continue;
+
+      try {
+        const response = await chrome.tabs.sendMessage(tab.id, {
+          type: 'SPM_SANDBOX_CAPTURE_DOM'
+        }) as CaptureDomResponse;
+
+        if (response?.ok && response.html) {
+          if (response.url && response.url !== targetUrl) {
+            setUrlInput(response.url);
+            setTargetUrl(response.url);
+          }
+
+          console.log('[SPM Sandbox] Captured rendered DOM from open tab:', response.url || tab.url);
+          return response.html;
+        }
+      } catch (err) {
+        console.warn('[SPM Sandbox] Could not capture DOM from tab:', tab.url, err);
+      }
+    }
+
+    return null;
+  };
+
   const fetchHtmlDump = async () => {
     let htmlText = '';
     let fetched = false;
 
-    // 1. Direct browser context fetch
+    // 1. Prefer an already-rendered open tab. This handles SPA pages whose DOM is
+    // created after JavaScript runs, including authenticated screens.
     try {
-      const response = await fetch(targetUrl, { method: 'GET' });
-      if (response.ok) {
-        htmlText = await response.text();
+      const capturedHtml = await captureOpenTabHtml();
+      if (capturedHtml) {
+        htmlText = capturedHtml;
         fetched = true;
+      }
+    } catch (captureErr) {
+      console.warn('[SPM Sandbox] Rendered tab capture failed. Retrying via fetch...', captureErr);
+    }
+
+    // 2. Direct browser context fetch
+    try {
+      if (!fetched) {
+        const response = await fetch(targetUrl, { method: 'GET' });
+        if (response.ok) {
+          htmlText = await response.text();
+          fetched = true;
+        }
       }
     } catch (directErr) {
       console.warn('[SPM Sandbox] Direct browser fetch failed. Retrying via local proxy...', directErr);
     }
 
-    // 2. Local CORS bypass proxy fetch fallback
+    // 3. Local CORS bypass proxy fetch fallback
     if (!fetched) {
       try {
         const proxyUrl = `http://localhost:8080/fetch?url=${encodeURIComponent(targetUrl)}`;
@@ -348,7 +425,7 @@ function SandboxApp() {
 
     if (fetched) {
       // Clear scripts
-      htmlText = htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      htmlText = stripScripts(htmlText);
       localStorage.setItem('spm_sandbox_raw_html', htmlText);
       setRawHtml(htmlText);
     } else {
@@ -453,7 +530,11 @@ function SandboxApp() {
   const handleFetchTarget = (e: React.FormEvent) => {
     e.preventDefault();
     if (urlInput) {
-      setTargetUrl(urlInput);
+      if (urlInput === targetUrl) {
+        fetchHtmlDump();
+      } else {
+        setTargetUrl(urlInput);
+      }
     }
   };
 

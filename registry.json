@@ -12,5 +12,19 @@
         ]
       }
     }
+  },
+  "studeo.unicesumar.edu.br": {
+    "defaultPackage": "obsidian-dark",
+    "packages": {
+      "obsidian-dark": {
+        "displayName": "Unicesumar Obsidian Dark",
+        "author": "watashi",
+        "directory": "obsidian-dark",
+        "activeVersion": "1.0.0",
+        "history": [
+          { "version": "1.0.0", "ref": "master", "date": "2026-08-08" }
+        ]
+      }
+    }
   }
 }
