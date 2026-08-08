@@ -24,7 +24,7 @@
   "host_permissions": ["*://*/*"],
   "web_accessible_resources": [
     {
-      "resources": ["websites/*"],
+      "resources": ["websites/*", "registry.json"],
       "matches": ["<all_urls>"]
     }
   ]
