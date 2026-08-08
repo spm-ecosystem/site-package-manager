@@ -138,6 +138,44 @@ function Popup() {
     }
   };
 
+  const handleForceReloadTheme = async () => {
+    if (!activeThemeId) return;
+    setLoading(true);
+    try {
+      const selected = themesList.find(t => t.id === activeThemeId);
+      if (!selected) throw new Error('Active theme registry item not found');
+
+      const manifestUrl = typeof chrome !== 'undefined' && chrome.runtime 
+        ? chrome.runtime.getURL(selected.manifestPath) 
+        : `/${selected.manifestPath}`;
+        
+      const response = await fetch(`${manifestUrl}?t=${Date.now()}`);
+      if (!response.ok) throw new Error('Failed to load theme manifest');
+      const manifest = await response.json();
+
+      const baseVars = manifest.theme?.cssVariables || {};
+
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.get(['spm_installed_themes', 'spm_theme_overrides'], (res) => {
+          const installed = res.spm_installed_themes || {};
+          installed[activeThemeId] = manifest;
+
+          const overrides = res.spm_theme_overrides?.[currentDomain] || {};
+          const mergedVars = { ...baseVars, ...overrides };
+          setThemeVars(mergedVars);
+
+          chrome.storage.local.set({ spm_installed_themes: installed }, reloadTab);
+        });
+      } else {
+        setThemeVars(baseVars);
+      }
+    } catch (err) {
+      console.error('[SPM Popup] Error force reloading theme manifest:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleColorChange = (key: string, value: string) => {
     const next = { ...themeVars, [key]: value };
     setThemeVars(next);
@@ -239,10 +277,23 @@ function Popup() {
             </div>
 
             {activeThemeId && (
-              <div className="bg-[#111111] border border-[#333333] rounded-lg p-3 text-[11px] text-zinc-400">
-                <div className="font-semibold text-white text-xs mb-1">{matchingThemes.find(t => t.id === activeThemeId)?.name}</div>
-                <div>{matchingThemes.find(t => t.id === activeThemeId)?.description}</div>
-              </div>
+              <>
+                <div className="bg-[#111111] border border-[#333333] rounded-lg p-3 text-[11px] text-zinc-400">
+                  <div className="font-semibold text-white text-xs mb-1">{matchingThemes.find(t => t.id === activeThemeId)?.name}</div>
+                  <div>{matchingThemes.find(t => t.id === activeThemeId)?.description}</div>
+                </div>
+                
+                <button
+                  disabled={loading}
+                  onClick={handleForceReloadTheme}
+                  className="w-full py-2 text-xs font-semibold text-white bg-[#1a1a1a] border border-[#333333] hover:bg-[#2a2a2a] transition rounded flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3-3 3 3m-3-3v12" />
+                  </svg>
+                  Force Reload Theme
+                </button>
+              </>
             )}
           </div>
         )}
