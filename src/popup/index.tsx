@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
-import registryMock from '../../public/websites/registry.json';
+import registryMock from '../../registry.json';
 
-interface RegistryItem {
-  id: string;
-  name: string;
-  description: string;
-  domain: string;
-  manifestPath: string;
-}
 
 interface ThemeVariable {
   key: string;
@@ -31,12 +24,19 @@ const THEME_VARIABLE_META: ThemeVariable[] = [
 function Popup() {
   const [globalEnabled, setGlobalEnabled]   = useState<boolean>(true);
   const [currentDomain, setCurrentDomain]   = useState<string>('');
-  const [themesList, setThemesList]         = useState<RegistryItem[]>([]);
-  const [activeThemeId, setActiveThemeId]   = useState<string>('');
-  const [loading, setLoading]               = useState<boolean>(false);
   const [activeTabId, setActiveTabId]       = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab]           = useState<'theme' | 'colors'>('theme');
   const [themeVars, setThemeVars]           = useState<Record<string, string>>({});
+
+  // GitOps registry and preferences
+  const [registry, setRegistry] = useState<Record<string, any>>({});
+  const [spmActivePackages, setSpmActivePackages] = useState<Record<string, string>>({});
+  const [spmPinnedVersions, setSpmPinnedVersions] = useState<Record<string, Record<string, string>>>({});
+  const [spmDevModeHosts, setSpmDevModeHosts] = useState<Record<string, boolean>>({});
+  const [devDraftManifestRaw, setDevDraftManifestRaw] = useState<string>('');
+  const [devDraftCssRaw, setDevDraftCssRaw] = useState<string>('');
+  
+
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -47,31 +47,79 @@ function Popup() {
           try {
             const domain = new URL(tab.url).hostname;
             setCurrentDomain(domain);
-            chrome.storage.local.get(['spm_global_enabled', 'spm_active_themes', 'spm_theme_overrides', 'spm_installed_themes'], (res) => {
+            
+            const storageKeys = [
+              'spm_global_enabled',
+              'spm_gitops_url',
+              'spm_active_packages',
+              'spm_pinned_versions',
+              'spm_dev_mode_hosts',
+              'spm_dev_mode',
+              'gitops_registry',
+              'spm_cached_registry',
+              `dev-draft-manifest:${domain}`,
+              `dev-draft-css:${domain}`,
+              `spm_pinned_package:${domain}`,
+              `spm_pinned_version:${domain}`
+            ];
+
+            chrome.storage.local.get(storageKeys, (res) => {
               if (res.spm_global_enabled !== undefined) setGlobalEnabled(res.spm_global_enabled);
               
-              const activeId = res.spm_active_themes?.[domain] || '';
-              setActiveThemeId(activeId);
+              const activeReg = res.spm_cached_registry || res.gitops_registry || registryMock;
+              setRegistry(activeReg);
 
-              // Pull default theme variables from installed storage if available
+              const activePkgs = res.spm_active_packages || {};
+              if (res[`spm_pinned_package:${domain}`] && !activePkgs[domain]) {
+                activePkgs[domain] = res[`spm_pinned_package:${domain}`];
+              }
+              setSpmActivePackages(activePkgs);
+
+              const pinnedVers = res.spm_pinned_versions || {};
+              if (res[`spm_pinned_version:${domain}`]) {
+                const pkg = activePkgs[domain] || activeReg[domain]?.defaultPackage || '';
+                if (pkg) {
+                  if (!pinnedVers[domain]) pinnedVers[domain] = {};
+                  if (!pinnedVers[domain][pkg]) {
+                    pinnedVers[domain][pkg] = res[`spm_pinned_version:${domain}`];
+                  }
+                }
+              }
+              setSpmPinnedVersions(pinnedVers);
+
+              const devHosts = res.spm_dev_mode_hosts || {};
+              if (res.spm_dev_mode && typeof res.spm_dev_mode === 'object') {
+                Object.assign(devHosts, res.spm_dev_mode);
+              } else if (res.spm_dev_mode === true) {
+                devHosts[domain] = true;
+              }
+              setSpmDevModeHosts(devHosts);
+
+              setDevDraftManifestRaw(res[`dev-draft-manifest:${domain}`] || '');
+              setDevDraftCssRaw(res[`dev-draft-css:${domain}`] || '');
+
+              const currentActivePkg = activePkgs[domain] || activeReg[domain]?.defaultPackage || '';
+              const pkgInfo = activeReg[domain]?.packages?.[currentActivePkg];
               let baseVars: Record<string, string> = {};
-              if (activeId && res.spm_installed_themes?.[activeId]?.theme?.cssVariables) {
-                baseVars = { ...res.spm_installed_themes[activeId].theme.cssVariables };
+              if (pkgInfo && pkgInfo.theme?.cssVariables) {
+                baseVars = { ...pkgInfo.theme.cssVariables };
               }
               
-              // Apply user color overrides on top
-              if (res.spm_theme_overrides?.[domain]) {
-                baseVars = { ...baseVars, ...res.spm_theme_overrides[domain] };
-              }
-              setThemeVars(baseVars);
+              chrome.storage.local.get(['spm_theme_overrides'], (overridesRes) => {
+                const overrides = overridesRes.spm_theme_overrides?.[domain];
+                if (overrides) {
+                  baseVars = { ...baseVars, ...overrides };
+                }
+                setThemeVars(baseVars);
+              });
             });
-          } catch {
+          } catch (err) {
+            console.error('[SPM Popup] Error querying active tab info:', err);
             setCurrentDomain('');
           }
         }
       });
     }
-    setThemesList(registryMock);
   }, []);
 
   const reloadTab = () => {
@@ -88,93 +136,64 @@ function Popup() {
     }
   };
 
-  const handleInstallTheme = async (themeId: string) => {
-    if (!themeId) {
-      setActiveThemeId('');
-      setThemeVars({});
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get(['spm_active_themes'], (res) => {
-          const active = res.spm_active_themes || {};
-          delete active[currentDomain];
-          chrome.storage.local.set({ spm_active_themes: active }, reloadTab);
-        });
-      }
-      return;
-    }
+  const handlePackageChange = (newPkgId: string) => {
+    const nextActivePkgs = { ...spmActivePackages, [currentDomain]: newPkgId };
+    setSpmActivePackages(nextActivePkgs);
 
-    setLoading(true);
-    try {
-      const selected = themesList.find(t => t.id === themeId);
-      if (!selected) throw new Error('Theme registry item not found');
-
-      // Fetch the theme manifest JSON dynamically using Chrome's runtime URL API
-      const manifestUrl = typeof chrome !== 'undefined' && chrome.runtime 
-        ? chrome.runtime.getURL(selected.manifestPath) 
-        : `/${selected.manifestPath}`;
-        
-      const response = await fetch(manifestUrl);
-      if (!response.ok) throw new Error('Failed to load theme manifest');
-      const manifest = await response.json();
-
-      setActiveThemeId(themeId);
-      
-      // Load variables
-      const baseVars = manifest.theme?.cssVariables || {};
-      setThemeVars(baseVars);
-
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get(['spm_installed_themes', 'spm_active_themes'], (res) => {
-          const installed = res.spm_installed_themes || {};
-          const active = res.spm_active_themes || {};
-          installed[themeId] = manifest;
-          active[currentDomain] = themeId;
-          chrome.storage.local.set({ spm_installed_themes: installed, spm_active_themes: active }, reloadTab);
-        });
-      }
-    } catch (err) {
-      console.error('[SPM Popup] Error fetching/installing theme manifest:', err);
-    } finally {
-      setLoading(false);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({
+        spm_active_packages: nextActivePkgs,
+        [`spm_pinned_package:${currentDomain}`]: newPkgId
+      }, reloadTab);
     }
   };
 
-  const handleForceReloadTheme = async () => {
-    if (!activeThemeId) return;
-    setLoading(true);
-    try {
-      const selected = themesList.find(t => t.id === activeThemeId);
-      if (!selected) throw new Error('Active theme registry item not found');
+  const handleVersionChange = (newVersion: string) => {
+    const currentPkg = spmActivePackages[currentDomain] || registry[currentDomain]?.defaultPackage || '';
+    if (!currentPkg) return;
 
-      const manifestUrl = typeof chrome !== 'undefined' && chrome.runtime 
-        ? chrome.runtime.getURL(selected.manifestPath) 
-        : `/${selected.manifestPath}`;
-        
-      const response = await fetch(`${manifestUrl}?t=${Date.now()}`);
-      if (!response.ok) throw new Error('Failed to load theme manifest');
-      const manifest = await response.json();
-
-      const baseVars = manifest.theme?.cssVariables || {};
-
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        chrome.storage.local.get(['spm_installed_themes', 'spm_theme_overrides'], (res) => {
-          const installed = res.spm_installed_themes || {};
-          installed[activeThemeId] = manifest;
-
-          const overrides = res.spm_theme_overrides?.[currentDomain] || {};
-          const mergedVars = { ...baseVars, ...overrides };
-          setThemeVars(mergedVars);
-
-          chrome.storage.local.set({ spm_installed_themes: installed }, reloadTab);
-        });
-      } else {
-        setThemeVars(baseVars);
+    const domainVersions = spmPinnedVersions[currentDomain] || {};
+    const nextPinnedVers = {
+      ...spmPinnedVersions,
+      [currentDomain]: {
+        ...domainVersions,
+        [currentPkg]: newVersion
       }
-    } catch (err) {
-      console.error('[SPM Popup] Error force reloading theme manifest:', err);
-    } finally {
-      setLoading(false);
+    };
+    setSpmPinnedVersions(nextPinnedVers);
+
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({
+        spm_pinned_versions: nextPinnedVers,
+        [`spm_pinned_version:${currentDomain}`]: newVersion
+      }, reloadTab);
     }
   };
+
+  const toggleDevMode = () => {
+    const isDevMode = !!spmDevModeHosts[currentDomain];
+    const nextDevHosts = { ...spmDevModeHosts, [currentDomain]: !isDevMode };
+    setSpmDevModeHosts(nextDevHosts);
+
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({
+        spm_dev_mode_hosts: nextDevHosts,
+        spm_dev_mode: nextDevHosts
+      }, reloadTab);
+    }
+  };
+
+  const openDevLoader = () => {
+    if (!currentDomain || activeTabId === undefined) return;
+    // Store context so devloader.html knows which domain/tab to target
+    chrome.storage.local.set({
+      spm_devloader_domain: currentDomain,
+      spm_devloader_tab_id: activeTabId,
+    }, () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('devloader.html') });
+    });
+  };
+
 
   const handleColorChange = (key: string, value: string) => {
     const next = { ...themeVars, [key]: value };
@@ -191,10 +210,12 @@ function Popup() {
 
   const resetColors = () => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['spm_installed_themes', 'spm_theme_overrides'], (res) => {
+      chrome.storage.local.get(['spm_theme_overrides'], (res) => {
+        const activePkg = spmActivePackages[currentDomain] || registry[currentDomain]?.defaultPackage || '';
+        const pkgInfo = registry[currentDomain]?.packages?.[activePkg];
         let baseVars: Record<string, string> = {};
-        if (activeThemeId && res.spm_installed_themes?.[activeThemeId]?.theme?.cssVariables) {
-          baseVars = { ...res.spm_installed_themes[activeThemeId].theme.cssVariables };
+        if (pkgInfo && pkgInfo.theme?.cssVariables) {
+          baseVars = { ...pkgInfo.theme.cssVariables };
         }
         setThemeVars(baseVars);
         
@@ -207,7 +228,22 @@ function Popup() {
     }
   };
 
-  const matchingThemes = themesList.filter(t => t.domain === currentDomain);
+  const isSupportedDomain = !!registry[currentDomain];
+  const domainConfig = registry[currentDomain];
+  const packages = domainConfig?.packages || {};
+  const packageKeys = Object.keys(packages);
+  const activePackageId = spmActivePackages[currentDomain] || domainConfig?.defaultPackage || '';
+  const pkgInfo = packages[activePackageId];
+  const versionHistory = pkgInfo?.history || [];
+  const pinnedVersion = spmPinnedVersions[currentDomain]?.[activePackageId] || pkgInfo?.activeVersion || '';
+  const isDevMode = !!spmDevModeHosts[currentDomain];
+
+  const devDraftParsed = (() => {
+    if (!devDraftManifestRaw) return null;
+    try { return JSON.parse(devDraftManifestRaw); } catch { return null; }
+  })();
+  const devDraftLabel = devDraftParsed?.theme?.label || devDraftParsed?.name || 'Local Draft';
+  const devDraftVersion = devDraftParsed?.version || '—';
 
   return (
     <div className="flex flex-col min-h-[460px] font-sans select-none bg-black text-[#d4d4d4]" style={{ width: '320px' }}>
@@ -257,46 +293,102 @@ function Popup() {
 
         {/* Tab: Theme */}
         {activeTab === 'theme' && currentDomain && (
-          <div className="flex flex-col gap-3 p-4">
-            <div>
-              <label className="text-[11px] font-semibold text-zinc-400">Layout Theme</label>
-              <select
-                disabled={loading || !globalEnabled}
-                value={activeThemeId}
-                onChange={e => handleInstallTheme(e.target.value)}
-                className="w-full mt-1.5 bg-black border border-[#333333] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500 disabled:opacity-50"
+          <div className="flex flex-col gap-4 p-4">
+            
+            {/* Registry Info & Package Selection — hidden when dev draft is loaded */}
+            {!isDevMode && isSupportedDomain && (
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-zinc-400">Active Package</label>
+                  <select
+                    disabled={!globalEnabled}
+                    value={activePackageId}
+                    onChange={e => handlePackageChange(e.target.value)}
+                    className="w-full mt-1.5 bg-black border border-[#333333] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500 disabled:opacity-50"
+                  >
+                    {packageKeys.map(pkgId => (
+                      <option key={pkgId} value={pkgId}>
+                        {packages[pkgId].displayName || pkgId}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {activePackageId && (
+                  <div>
+                    <label className="text-[11px] font-semibold text-zinc-400">Package Version</label>
+                    <select
+                      disabled={!globalEnabled}
+                      value={pinnedVersion}
+                      onChange={e => handleVersionChange(e.target.value)}
+                      className="w-full mt-1.5 bg-black border border-[#333333] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500 disabled:opacity-50"
+                    >
+                      {versionHistory.map((entry: any) => (
+                        <option key={entry.version} value={entry.version}>
+                          v{entry.version} ({entry.ref}) - {entry.date}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!isDevMode && !isSupportedDomain && (
+              <div className="bg-[#111111] border border-[#333333] rounded-lg p-3 text-[11px] text-zinc-400 text-center">
+                This domain is not supported by the GitOps registry.
+              </div>
+            )}
+
+            {/* Dev mode loaded draft info */}
+            {isDevMode && devDraftManifestRaw && (
+              <div className="bg-[#111111] border border-[#333333] rounded p-3 flex flex-col gap-1">
+                <div className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Active Draft</div>
+                <div className="text-xs text-white font-semibold">{devDraftLabel}</div>
+                <div className="text-[11px] text-zinc-400">v{devDraftVersion}</div>
+                {devDraftCssRaw && (
+                  <div className="text-[10px] text-zinc-600 mt-1">{devDraftCssRaw.length} bytes CSS</div>
+                )}
+              </div>
+            )}
+
+            {isDevMode && !devDraftManifestRaw && (
+              <div className="bg-[#111111] border border-[#333333] rounded p-3 text-[11px] text-zinc-500 text-center">
+                No draft loaded. Select a package folder below.
+              </div>
+            )}
+
+            {/* Dev Mode Toggle */}
+            <div className="flex items-center justify-between border-t border-[#222222] pt-3">
+              <div>
+                <div className="text-xs font-semibold text-white">Developer Mode</div>
+                <div className="text-[10px] text-zinc-500">Local draft bypass</div>
+              </div>
+              <button
+                onClick={toggleDevMode}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${isDevMode ? 'bg-[#7c6af5]' : 'bg-[#333333]'}`}
               >
-                <option value="">Legacy View (Disabled)</option>
-                {matchingThemes.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}</option>
-                ))}
-              </select>
-              {loading && (
-                <div className="text-[11px] text-zinc-500 mt-1.5">Downloading theme…</div>
-              )}
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full transition-transform duration-200 ${isDevMode ? 'translate-x-4 bg-white' : 'translate-x-0.5 bg-zinc-500'}`}
+                />
+              </button>
             </div>
 
-            {activeThemeId && (
-              <>
-                <div className="bg-[#111111] border border-[#333333] rounded-lg p-3 text-[11px] text-zinc-400">
-                  <div className="font-semibold text-white text-xs mb-1">{matchingThemes.find(t => t.id === activeThemeId)?.name}</div>
-                  <div>{matchingThemes.find(t => t.id === activeThemeId)?.description}</div>
-                </div>
-                
+            {/* Dev Mode folder loader */}
+            {isDevMode && (
+              <div className="flex flex-col gap-2 border-t border-[#222222] pt-3">
                 <button
-                  disabled={loading}
-                  onClick={handleForceReloadTheme}
-                  className="w-full py-2 text-xs font-semibold text-white bg-[#1a1a1a] border border-[#333333] hover:bg-[#2a2a2a] transition rounded flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  onClick={openDevLoader}
+                  className="w-full py-2 text-xs font-semibold text-white bg-[#1a1a1a] border border-[#333333] hover:bg-[#2a2a2a] transition rounded"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3-3 3 3m-3-3v12" />
-                  </svg>
-                  Force Reload Theme
+                  Load Package Folder
                 </button>
-              </>
+              </div>
             )}
+
           </div>
         )}
+
 
         {/* Tab: Colors */}
         {activeTab === 'colors' && (
