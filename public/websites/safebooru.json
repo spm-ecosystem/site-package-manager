@@ -234,6 +234,43 @@
           }
         }
       ]
+    },
+    {
+      "containerSelector": "#content:has(table.highlightable)",
+      "layoutComponent": "UiTableListPage",
+      "urlPattern": "page=wiki&s=list",
+      "props": {
+        "pageTitle": "Wiki Pages",
+        "height": "calc(100vh - 78px)"
+      },
+      "preserve": {
+        "sidebarSlot": "div.sidebar"
+      },
+      "children": [
+        {
+          "name": "tableRows",
+          "selector": "table.highlightable tr:has(td)",
+          "propsMap": {
+            "iconUrl": "td:nth-child(1) img | attr:src",
+            "iconLink": "td:nth-child(1) a | attr:href",
+            "title": "td:nth-child(2) a | text",
+            "titleUrl": "td:nth-child(2) a | attr:href",
+            "lastUpdatedText": "td:nth-child(2) span | text",
+            "lastUpdatedUser": "td:nth-child(2) span a | text",
+            "lastUpdatedUserUrl": "td:nth-child(2) span a | attr:href",
+            "version": "td:nth-child(3) h3 | text"
+          }
+        },
+        {
+          "name": "pageLinks",
+          "selector": "#paginator .pagination a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
     }
   ]
 }
