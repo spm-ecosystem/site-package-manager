@@ -239,9 +239,9 @@ export function UiModernGridPage({
             }
 
             .spm-modern-grid-main {
-              display: block !important;
-              columns: var(--spm-mobile-columns);
-              column-gap: var(--spm-mobile-gap);
+              display: grid !important;
+              grid-template-columns: repeat(var(--spm-mobile-columns), minmax(0, 1fr));
+              gap: var(--spm-mobile-gap);
               padding: var(--spm-mobile-padding) !important;
               overflow-y: auto;
               background: var(--spm-bg-primary);
@@ -249,8 +249,8 @@ export function UiModernGridPage({
 
             .spm-modern-grid-main .spm-image-card {
               width: 100% !important;
-              display: inline-flex !important;
-              margin: 0 0 var(--spm-mobile-gap);
+              display: flex !important;
+              margin: 0 !important;
               border: 0 !important;
               border-radius: 8px !important;
               background: var(--spm-bg-secondary) !important;
