@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { UiImageCard } from './UiImageCard';
 import { UiPaginationBar } from './UiPaginationBar';
 
@@ -17,7 +18,18 @@ interface UiModernGridPageProps {
   pageTitle: string;
   items: GridItem[];
   pageLinks?: PageLink[];
+  sidebarHtml?: string;
   height?: string;
+  sidebarWidth?: string;
+  hideSidebarOnMobile?: boolean;
+  mobileBreakpoint?: number;
+  mobileColumns?: number;
+  mobileGap?: string;
+  mobilePadding?: string;
+  mobileCardAspectRatio?: string;
+  mobileHeaderSticky?: boolean;
+  mobileShowHeader?: boolean;
+  mobileShowPagination?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -26,15 +38,42 @@ export function UiModernGridPage({
   pageTitle,
   items,
   pageLinks,
+  sidebarHtml,
   height = '100vh',
+  sidebarWidth = '220px',
+  hideSidebarOnMobile = true,
+  mobileBreakpoint = 720,
+  mobileColumns = 2,
+  mobileGap = '8px',
+  mobilePadding = '8px',
+  mobileCardAspectRatio = '1 / 1.28',
+  mobileHeaderSticky = true,
+  mobileShowHeader = true,
+  mobileShowPagination = true,
   className = '',
   style = {},
 }: UiModernGridPageProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${mobileBreakpoint}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, [mobileBreakpoint]);
+
+  const showSidebar = !(isMobile && hideSidebarOnMobile);
+  const showHeader = !isMobile || mobileShowHeader;
+  const showPagination = !isMobile || mobileShowPagination;
+
   return (
     <div
-      className={className}
+      className={`spm-modern-grid-page ${className}`.trim()}
+      data-hide-sidebar-on-mobile={hideSidebarOnMobile ? 'true' : 'false'}
       style={{
         display: 'flex',
+        width: '100%',
         height,
         background: 'var(--spm-bg-primary)',
         color: 'var(--spm-text-primary)',
@@ -43,50 +82,188 @@ export function UiModernGridPage({
         ...style,
       }}
     >
+      <style>
+        {`
+          .spm-modern-grid-page {
+            --spm-image-card-width: 160px;
+            --spm-mobile-columns: ${mobileColumns};
+            --spm-mobile-gap: ${mobileGap};
+            --spm-mobile-padding: ${mobilePadding};
+            --spm-mobile-card-aspect-ratio: ${mobileCardAspectRatio};
+          }
+
+          .spm-modern-grid-sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: var(--spm-border) transparent;
+          }
+
+          .spm-modern-grid-main {
+            scrollbar-width: thin;
+            scrollbar-color: var(--spm-border) transparent;
+          }
+
+          .spm-image-card {
+            break-inside: avoid;
+          }
+
+          @media (max-width: ${mobileBreakpoint}px) {
+            .spm-modern-grid-page {
+              --spm-image-card-width: 100%;
+              height: 100vh !important;
+              min-height: 100vh;
+              background: var(--spm-bg-primary) !important;
+            }
+
+            .spm-modern-grid-page[data-hide-sidebar-on-mobile="true"] .spm-modern-grid-sidebar {
+              display: none !important;
+            }
+
+            .spm-modern-grid-content {
+              width: 100%;
+              height: 100%;
+              flex: 1 1 100% !important;
+            }
+
+            .spm-modern-grid-header {
+              position: ${mobileHeaderSticky ? 'sti' + 'cky' : 'relative'};
+              top: 0;
+              z-index: 5;
+              padding: 10px 10px 8px !important;
+              gap: 8px !important;
+              background: var(--spm-bg-primary);
+              backdrop-filter: blur(12px);
+            }
+
+            .spm-modern-grid-title {
+              width: 100%;
+              font-size: 18px !important;
+              line-height: 1.2;
+            }
+
+            .spm-modern-grid-pagination {
+              width: 100%;
+              overflow-x: auto;
+              flex-wrap: nowrap !important;
+              padding-bottom: 2px;
+              scrollbar-width: none;
+            }
+
+            .spm-modern-grid-pagination::-webkit-scrollbar {
+              display: none;
+            }
+
+            .spm-modern-grid-main {
+              display: block !important;
+              columns: var(--spm-mobile-columns);
+              column-gap: var(--spm-mobile-gap);
+              padding: var(--spm-mobile-padding) !important;
+              overflow-y: auto;
+              background: var(--spm-bg-primary);
+            }
+
+            .spm-modern-grid-main .spm-image-card {
+              width: 100% !important;
+              display: inline-flex !important;
+              margin: 0 0 var(--spm-mobile-gap);
+              border: 0 !important;
+              border-radius: 8px !important;
+              background: var(--spm-bg-secondary) !important;
+              transform: none !important;
+              vertical-align: top;
+            }
+
+            .spm-modern-grid-main .spm-image-card-media {
+              aspect-ratio: var(--spm-mobile-card-aspect-ratio) !important;
+              background: var(--spm-bg-tertiary) !important;
+            }
+
+            .spm-modern-grid-main .spm-image-card img {
+              object-fit: cover !important;
+            }
+
+            .spm-modern-grid-main .spm-image-card-caption {
+              padding: 6px 2px 2px !important;
+              border-top: 0 !important;
+              background: var(--spm-bg-primary) !important;
+            }
+
+            .spm-modern-grid-main .spm-image-card-caption p {
+              font-size: 10px !important;
+              color: var(--spm-text-primary) !important;
+              white-space: normal !important;
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
+            }
+          }
+
+          @media (max-width: 360px) {
+            .spm-modern-grid-main {
+              column-gap: 6px;
+              padding: 6px !important;
+            }
+
+            .spm-modern-grid-main .spm-image-card {
+              margin-bottom: 6px;
+            }
+          }
+        `}
+      </style>
+
       {/* Sidebar slot — legacy nodes reparented here */}
       <aside
         id="sidebarSlot-container"
+        className="spm-modern-grid-sidebar"
         style={{
-          width: '220px',
+          display: showSidebar ? 'block' : 'none',
+          width: sidebarWidth,
           flexShrink: 0,
           borderRight: '1px solid var(--spm-border)',
           background: 'var(--spm-bg-secondary)',
           padding: '16px',
           overflowY: 'auto',
         }}
+        dangerouslySetInnerHTML={sidebarHtml ? { __html: sidebarHtml } : undefined}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
+      <div className="spm-modern-grid-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
         {/* Header */}
-        <header
-          style={{
-            padding: '16px 24px',
-            borderBottom: '1px solid var(--spm-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
-          <h1
+        {showHeader && (
+          <header
+            className="spm-modern-grid-header"
             style={{
-              margin: 0,
-              fontSize: '20px',
-              fontWeight: 700,
-              color: 'var(--spm-text-primary)',
-              letterSpacing: '-0.02em',
-              flexShrink: 0,
+              padding: '16px 24px',
+              borderBottom: '1px solid var(--spm-border)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
             }}
           >
-            {pageTitle || 'Gallery'}
-          </h1>
+            <h1
+              className="spm-modern-grid-title"
+              style={{
+                margin: 0,
+                fontSize: '20px',
+                fontWeight: 700,
+                color: 'var(--spm-text-primary)',
+                letterSpacing: 0,
+                flexShrink: 0,
+              }}
+            >
+              {pageTitle || 'Gallery'}
+            </h1>
 
-          <UiPaginationBar pageLinks={pageLinks} />
-        </header>
+            {showPagination && (
+              <UiPaginationBar pageLinks={pageLinks} className="spm-modern-grid-pagination" />
+            )}
+          </header>
+        )}
 
         {/* Grid */}
         <main
+          className="spm-modern-grid-main"
           style={{
             padding: '24px',
             display: 'flex',
