@@ -26,14 +26,14 @@ export const ThemeSidebar: React.FC<ThemeSidebarProps> = ({
       <div 
         onDragOver={(e) => {
           e.preventDefault();
-          e.currentTarget.classList.add('border-purple-500', 'bg-purple-500/5');
+          e.currentTarget.classList.add('border-[#16a34a]', 'bg-[#0f381f]');
         }}
         onDragLeave={(e) => {
-          e.currentTarget.classList.remove('border-purple-500', 'bg-purple-500/5');
+          e.currentTarget.classList.remove('border-[#16a34a]', 'bg-[#0f381f]');
         }}
         onDrop={(e) => {
           e.preventDefault();
-          e.currentTarget.classList.remove('border-purple-500', 'bg-purple-500/5');
+          e.currentTarget.classList.remove('border-[#16a34a]', 'bg-[#0f381f]');
           const selector = e.dataTransfer.getData('text/plain');
           const tagName = e.dataTransfer.getData('spm/element-tag');
           const id = e.dataTransfer.getData('spm/element-id');
@@ -43,9 +43,9 @@ export const ThemeSidebar: React.FC<ThemeSidebarProps> = ({
             onElementDrop({ selector, tagName, id, classes });
           }
         }}
-        className="border-2 border-dashed border-[#333333] rounded-lg p-5 text-center transition hover:border-purple-500/50 bg-zinc-950/40 cursor-grab flex flex-col items-center justify-center gap-1.5 group shrink-0"
+        className="border-2 border-dashed border-[#333333] rounded-lg p-5 text-center transition hover:border-[#16a34a]/50 bg-zinc-950/40 cursor-grab flex flex-col items-center justify-center gap-1.5 group shrink-0"
       >
-        <div className="text-zinc-500 group-hover:text-purple-400 transition text-base">✨</div>
+        <div className="text-zinc-500 group-hover:text-[#16a34a] transition text-base"></div>
         <div className="text-xs font-semibold text-zinc-400 group-hover:text-white transition">Drag & Drop Builder</div>
         <p className="text-[10px] text-zinc-500 leading-snug">Drag elements from Legacy View and drop here to convert them into components</p>
       </div>
