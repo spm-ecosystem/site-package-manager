@@ -30,5 +30,14 @@ export function extractValue(element: Element, queryRule: string): string | null
     return href || null;
   }
 
+  if (extractor === 'selector') {
+    let spmId = targetEl.getAttribute('data-spm-id');
+    if (!spmId) {
+      spmId = 'spm-id-' + Math.random().toString(36).substring(2, 9);
+      targetEl.setAttribute('data-spm-id', spmId);
+    }
+    return `[data-spm-id="${spmId}"]`;
+  }
+
   return null;
 }

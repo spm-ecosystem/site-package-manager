@@ -169,7 +169,8 @@
           "scope": "document",
           "propsMap": {
             "label": "self | text",
-            "url": "self | hrefOrOnclick"
+            "url": "self | hrefOrOnclick",
+            "targetSelector": "self | selector"
           }
         }
       ]
