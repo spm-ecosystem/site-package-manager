@@ -625,6 +625,9 @@ video {
 .min-h-\[460px\] {
   min-height: 460px;
 }
+.min-h-screen {
+  min-height: 100vh;
+}
 .w-3\.5 {
   width: 0.875rem;
 }
@@ -660,6 +663,9 @@ video {
 }
 .max-w-md {
   max-width: 28rem;
+}
+.max-w-sm {
+  max-width: 24rem;
 }
 .flex-1 {
   flex: 1 1 0%;
@@ -736,6 +742,9 @@ video {
 }
 .gap-4 {
   gap: 1rem;
+}
+.gap-5 {
+  gap: 1.25rem;
 }
 .overflow-auto {
   overflow: auto;
@@ -922,6 +931,9 @@ video {
 }
 .p-6 {
   padding: 1.5rem;
+}
+.p-8 {
+  padding: 2rem;
 }
 .px-1 {
   padding-left: 0.25rem;

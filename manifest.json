@@ -21,5 +21,8 @@
   },
   "options_page": "sandbox.html",
   "permissions": ["storage", "activeTab", "tabs"],
-  "host_permissions": ["*://*/*"]
+  "host_permissions": ["*://*/*"],
+  "web_accessible_resources": [
+    { "resources": ["devloader.html"], "matches": ["<all_urls>"] }
+  ]
 }
