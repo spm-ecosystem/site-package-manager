@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { extractValue } from './engine';
 import { COMPONENT_REGISTRY } from '../components/registry';
+import { UiToastContainer } from '../components/dedicated/UiToast';
 
 export interface ChildrenConfig {
   name: string;
@@ -33,6 +34,7 @@ export interface SiteManifest {
   theme?: {
     cssVariables?: Record<string, string>;
     customStyles?: string;
+    noticeSelector?: string;
   };
   components?: ComponentConfig[];
   reconstructs?: ReconstructConfig[];
@@ -133,6 +135,93 @@ function extractChildren(
 export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string) {
   // Helper queries targeting scoped parent
   const rootDoc = rootContext instanceof Document ? rootContext : document;
+
+  // Inject window.alert / window.confirm main-world interceptor
+  const interceptorId = 'spm-main-world-interceptor';
+  if (!rootDoc.getElementById(interceptorId)) {
+    const script = rootDoc.createElement('script');
+    script.id = interceptorId;
+    script.textContent = `
+      (function() {
+        const originalAlert = window.alert;
+        window.alert = function(msg) {
+          window.dispatchEvent(new CustomEvent('spm-show-toast', { 
+            detail: { message: String(msg), type: 'info' } 
+          }));
+        };
+        const originalConfirm = window.confirm;
+        window.confirm = function(msg) {
+          window.dispatchEvent(new CustomEvent('spm-show-toast', { 
+            detail: { message: String(msg), type: 'warning' } 
+          }));
+          return originalConfirm(msg);
+        };
+      })();
+    `;
+    const parent = rootDoc.head || rootDoc.documentElement;
+    parent.appendChild(script);
+  }
+
+  // Mount global Toast root for notifications
+  const toastHostId = 'spm-global-toast-host';
+  if (!rootDoc.getElementById(toastHostId) && rootDoc.body) {
+    const toastHost = rootDoc.createElement('div');
+    toastHost.id = toastHostId;
+    toastHost.style.position = 'fixed';
+    toastHost.style.top = '0';
+    toastHost.style.right = '0';
+    toastHost.style.zIndex = '999999';
+    toastHost.style.pointerEvents = 'none';
+
+    rootDoc.body.appendChild(toastHost);
+
+    const shadowRoot = toastHost.attachShadow({ mode: 'open' });
+    const styleTag = rootDoc.createElement('style');
+    styleTag.textContent = stylesText;
+    shadowRoot.appendChild(styleTag);
+
+    if (manifest.theme?.cssVariables) {
+      applyTheme(shadowRoot, manifest.theme.cssVariables);
+    }
+
+    const toastRoot = rootDoc.createElement('div');
+    shadowRoot.appendChild(toastRoot);
+    createRoot(toastRoot).render(<UiToastContainer />);
+  }
+
+  // Observe legacy notice element for modifications
+  const noticeSelector = manifest.theme?.noticeSelector || '#notice';
+  const noticeEl = rootContext.querySelector(noticeSelector);
+  if (noticeEl) {
+    const showToast = (text: string) => {
+      window.dispatchEvent(new CustomEvent('spm-show-toast', {
+        detail: { message: text, type: 'info' }
+      }));
+    };
+
+    // Show initial text if the notice is visible
+    const initialText = noticeEl.textContent?.trim();
+    const isInitiallyVisible = (noticeEl as HTMLElement).style.display !== 'none' && noticeEl.getBoundingClientRect().height > 0;
+    if (initialText && isInitiallyVisible) {
+      showToast(initialText);
+    }
+
+    const observer = new MutationObserver(() => {
+      const text = noticeEl.textContent?.trim();
+      const isVisible = (noticeEl as HTMLElement).style.display !== 'none' && noticeEl.getBoundingClientRect().height > 0;
+      if (text && isVisible) {
+        showToast(text);
+      }
+    });
+
+    observer.observe(noticeEl, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    });
+  }
 
   // 1. Process Reconstruction array
   if (manifest.reconstructs && manifest.reconstructs.length > 0) {
