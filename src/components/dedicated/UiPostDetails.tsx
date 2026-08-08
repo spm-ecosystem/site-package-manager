@@ -109,6 +109,7 @@ export function UiPostDetails({
 
   return (
     <div
+      className="spm-post-details-container"
       style={{
         display: 'flex',
         minHeight: 'calc(100vh - 76px)',
@@ -117,8 +118,37 @@ export function UiPostDetails({
         fontFamily: 'system-ui, sans-serif',
       }}
     >
+      <style>{`
+        @media (max-width: 720px) {
+          .spm-post-details-container {
+            flex-direction: column !important;
+            overflow-y: auto !important;
+            height: auto !important;
+            min-height: 100vh !important;
+          }
+          .spm-post-details-aside {
+            width: 100% !important;
+            border-right: none !important;
+            border-top: 1px solid var(--spm-border) !important;
+            order: 2 !important;
+            flex-shrink: 0 !important;
+            overflow-y: visible !important;
+            background: var(--spm-bg-secondary) !important;
+            padding: 16px !important;
+          }
+          .spm-post-details-main {
+            width: 100% !important;
+            padding: 16px !important;
+            order: 1 !important;
+            flex-shrink: 0 !important;
+            overflow-y: visible !important;
+          }
+        }
+      `}</style>
+
       {/* Sidebar: Configurable Search, Tags & Statistics */}
       <aside
+        className="spm-post-details-aside"
         style={{
           width: '260px',
           flexShrink: 0,
@@ -186,6 +216,7 @@ export function UiPostDetails({
 
       {/* Main Image View & Dynamic Buttons */}
       <main
+        className="spm-post-details-main"
         style={{
           flex: 1,
           display: 'flex',

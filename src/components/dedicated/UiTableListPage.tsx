@@ -41,6 +41,8 @@ export function UiTableListPage({
 }: UiTableListPageProps) {
   const [rows, setRows] = React.useState(tableRows);
   const [loadingMore, setLoadingMore] = React.useState(false);
+  const prevLink = pageLinks?.find(link => link.label === '<' || link.label === '‹' || link.label.toLowerCase().includes('prev') || link.label.toLowerCase().includes('previous'));
+  const nextLink = pageLinks?.find(link => link.label === '>' || link.label === '›' || link.label.toLowerCase().includes('next'));
   const mainRef = React.useRef<HTMLElement>(null);
 
   React.useEffect(() => {
@@ -317,6 +319,77 @@ export function UiTableListPage({
           )}
         </main>
       </div>
+
+      {!onLoadMore && pageLinks && pageLinks.length > 0 && (prevLink || nextLink) && (
+        <div
+          className="spm-floating-pagination"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'rgba(26, 26, 26, 0.85)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid var(--spm-border)',
+            borderRadius: '24px',
+            padding: '6px 12px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          }}
+        >
+          {prevLink && (
+            <a
+              href={prevLink.url}
+              style={{
+                color: 'var(--spm-text-primary)',
+                fontSize: '12px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                padding: '6px 12px',
+                borderRadius: '16px',
+                transition: 'background 0.2s, color 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.color = 'var(--spm-accent)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--spm-text-primary)';
+              }}
+            >
+              ← Prev
+            </a>
+          )}
+          {prevLink && nextLink && <div style={{ width: '1px', height: '16px', background: 'var(--spm-border)' }} />}
+          {nextLink && (
+            <a
+              href={nextLink.url}
+              style={{
+                color: 'var(--spm-text-primary)',
+                fontSize: '12px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                padding: '6px 12px',
+                borderRadius: '16px',
+                transition: 'background 0.2s, color 0.2s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.color = 'var(--spm-accent)';
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = 'var(--spm-text-primary)';
+              }}
+            >
+              Next →
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }
