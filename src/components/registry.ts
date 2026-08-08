@@ -11,6 +11,7 @@ import { UiImageViewer } from './dedicated/UiImageViewer';
 import { UiScrollPanel } from './dedicated/UiScrollPanel';
 import { UiSplitLayout } from './dedicated/UiSplitLayout';
 import { UiCommentListPage } from './dedicated/UiCommentListPage';
+import { UiTableListPage } from './dedicated/UiTableListPage';
 import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink, UiScrollBox } from './primitives/LayoutPrimitives';
 
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
@@ -26,6 +27,7 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiScrollPanel,
   UiSplitLayout,
   UiCommentListPage,
+  UiTableListPage,
   UiBox,
   UiFlexRow,
   UiFlexColumn,
@@ -59,5 +61,6 @@ export const DEDICATED_COMPONENTS = [
   'UiImageViewer',
   'UiScrollPanel',
   'UiSplitLayout',
-  'UiCommentListPage'
+  'UiCommentListPage',
+  'UiTableListPage'
 ];
