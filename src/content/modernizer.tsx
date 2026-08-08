@@ -77,6 +77,11 @@ export function applyThemeGlobally(variables: Record<string, string>, customStyl
       overflow-x: hidden !important;
     }
 
+    body.spm-reconstructed {
+      overflow: hidden !important;
+      height: 100vh !important;
+    }
+
     a {
       color: var(--spm-text-muted);
       text-decoration: none;
@@ -149,6 +154,9 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
         // Hide legacy layout container
         (container as HTMLElement).style.display = 'none';
+
+        // Add scroll containment marker to body
+        rootDoc.body.classList.add('spm-reconstructed');
 
         // Setup Modern Shadow DOM Root Host
         const host = rootDoc.createElement('div');
