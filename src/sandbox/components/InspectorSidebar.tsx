@@ -26,6 +26,7 @@ interface InspectorSidebarProps {
     textPrimary: string;
     customStyles: string;
   }>>;
+  // Theme states
   theme: {
     bgPrimary: string;
     bgSecondary: string;
@@ -37,6 +38,86 @@ interface InspectorSidebarProps {
   selectedComponentConfig: any | null;
   setSelectedComponentConfig: (config: any | null) => void;
 }
+
+const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<string, string> }> = {
+  UiImageCard: {
+    props: ['imageUrl', 'linkUrl', 'title', 'id'],
+    placeholders: {
+      imageUrl: 'img | attr:src',
+      linkUrl: 'a | attr:href',
+      title: 'img | attr:title',
+      id: 'self | attr:id'
+    }
+  },
+  UiModernGridPage: {
+    props: ['pageTitle'],
+    placeholders: {
+      pageTitle: 'h2 | text'
+    }
+  },
+  UiNavHeader: {
+    props: ['siteName', 'logoUrl'],
+    placeholders: {
+      siteName: 'h1 | text',
+      logoUrl: 'img | attr:src'
+    }
+  },
+  UiPostDetails: {
+    props: ['imageUrl', 'title', 'statisticsHtml'],
+    placeholders: {
+      imageUrl: 'img | attr:src',
+      title: 'h2 | text',
+      statisticsHtml: '.sidebar | html'
+    }
+  },
+  UiTagBadge: {
+    props: ['label', 'url', 'count', 'type'],
+    placeholders: {
+      label: 'a | text',
+      url: 'a | attr:href',
+      count: '.count | text',
+      type: 'value:primary'
+    }
+  },
+  UiSearchBar: {
+    props: ['placeholder', 'actionUrl', 'queryParamName'],
+    placeholders: {
+      placeholder: 'input | attr:placeholder',
+      actionUrl: 'form | attr:action',
+      queryParamName: 'input | attr:name'
+    }
+  },
+  UiPaginationBar: {
+    props: ['currentPage', 'totalPages', 'prevUrl', 'nextUrl'],
+    placeholders: {
+      currentPage: '.current | text',
+      totalPages: '.total | text',
+      prevUrl: 'a.prev | attr:href',
+      nextUrl: 'a.next | attr:href'
+    }
+  },
+  UiText: {
+    props: ['value'],
+    placeholders: {
+      value: 'self | text'
+    }
+  },
+  UiImage: {
+    props: ['src', 'alt', 'title'],
+    placeholders: {
+      src: 'self | attr:src',
+      alt: 'self | attr:alt',
+      title: 'self | attr:title'
+    }
+  },
+  UiLink: {
+    props: ['href', 'text'],
+    placeholders: {
+      href: 'self | attr:href',
+      text: 'self | text'
+    }
+  }
+};
 
 export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
   inspectedElement,
@@ -54,6 +135,15 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
   selectedComponentConfig,
   setSelectedComponentConfig
 }) => {
+  // Resolve component schema props merged with active custom properties
+  const componentSchema = selectedComponentConfig ? COMPONENT_SCHEMAS[selectedComponentConfig.name] : null;
+  const allPropsKeys = selectedComponentConfig
+    ? Array.from(new Set([
+        ...(componentSchema?.props || []),
+        ...Object.keys(selectedComponentConfig.config.propsMap || {})
+      ]))
+    : [];
+
   return (
     <aside className="w-80 border-r border-[#333333] bg-[#111111] p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
       
@@ -87,40 +177,49 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
           <div className="flex flex-col gap-2.5">
             <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Props Mapping</div>
             
-            {Object.keys(selectedComponentConfig.config.propsMap || {}).length === 0 ? (
+            {allPropsKeys.length === 0 ? (
               <div className="text-[10px] text-zinc-500 italic">No customizable properties in map.</div>
             ) : (
-              Object.entries(selectedComponentConfig.config.propsMap || {}).map(([propName, rule]) => (
-                <div key={propName} className="flex flex-col gap-1">
-                  <label className="text-[10px] text-zinc-300 font-semibold">{propName}</label>
-                  <input
-                    type="text"
-                    value={rule as string}
-                    onChange={(e) => {
-                      try {
-                        const parsed = JSON.parse(jsonString);
-                        const list = selectedComponentConfig.type === 'reconstruct' ? parsed.reconstructs : parsed.components;
-                        const matching = list.find((c: any) => 
-                          (c.selector === selectedComponentConfig.selector || c.containerSelector === selectedComponentConfig.selector)
-                        );
-                        if (matching) {
-                          matching.propsMap = matching.propsMap || {};
-                          matching.propsMap[propName] = e.target.value;
-                          setJsonString(JSON.stringify(parsed, null, 2));
-                          
-                          // Sync local sidebar state to maintain cursor focus
-                          setSelectedComponentConfig({
-                            ...selectedComponentConfig,
-                            config: matching
-                          });
-                        }
-                      } catch (err) {}
-                    }}
-                    className="w-full bg-black border border-zinc-800 focus:border-purple-500 rounded px-2.5 py-1 text-xs text-white font-mono focus:outline-none transition"
-                    placeholder="self | text or selector"
-                  />
-                </div>
-              ))
+              allPropsKeys.map((propName) => {
+                const rule = selectedComponentConfig.config.propsMap?.[propName] || '';
+                const placeholder = componentSchema?.placeholders?.[propName] || 'self | text';
+                return (
+                  <div key={propName} className="flex flex-col gap-1">
+                    <label className="text-[10px] text-zinc-300 font-semibold">{propName}</label>
+                    <input
+                      type="text"
+                      value={rule}
+                      onChange={(e) => {
+                        try {
+                          const parsed = JSON.parse(jsonString);
+                          const list = selectedComponentConfig.type === 'reconstruct' ? parsed.reconstructs : parsed.components;
+                          const matching = list.find((c: any) => 
+                            (c.selector === selectedComponentConfig.selector || c.containerSelector === selectedComponentConfig.selector)
+                          );
+                          if (matching) {
+                            matching.propsMap = matching.propsMap || {};
+                            const val = e.target.value;
+                            if (val.trim() === '') {
+                              delete matching.propsMap[propName];
+                            } else {
+                              matching.propsMap[propName] = val;
+                            }
+                            setJsonString(JSON.stringify(parsed, null, 2));
+                            
+                            // Sync local sidebar state to maintain cursor focus
+                            setSelectedComponentConfig({
+                              ...selectedComponentConfig,
+                              config: matching
+                            });
+                          }
+                        } catch (err) {}
+                      }}
+                      className="w-full bg-black border border-zinc-800 focus:border-purple-500 rounded px-2.5 py-1 text-xs text-white font-mono focus:outline-none transition"
+                      placeholder={placeholder}
+                    />
+                  </div>
+                );
+              })
             )}
           </div>
 
