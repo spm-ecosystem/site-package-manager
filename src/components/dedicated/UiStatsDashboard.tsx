@@ -1,10 +1,15 @@
 import React from 'react';
 
 interface StatItem {
-  place: string;
+  place?: string;
   amount: string;
   name: string;
-  profileUrl: string;
+  profileUrl?: string;
+}
+
+interface StatSection {
+  title: string;
+  items: StatItem[];
 }
 
 interface NavLink {
@@ -16,25 +21,17 @@ interface UiStatsDashboardProps {
   pageTitle?: string;
   dateRangeText?: string;
   navLinks?: NavLink[];
-  taggers?: StatItem[];
-  commenters?: StatItem[];
-  forumPosters?: StatItem[];
-  imagePosters?: StatItem[];
-  noteEditors?: StatItem[];
+  sections?: StatSection[];
   height?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
 export function UiStatsDashboard({
-  pageTitle = 'Booru Statistics',
+  pageTitle = 'Statistics',
   dateRangeText = 'All time',
   navLinks = [],
-  taggers = [],
-  commenters = [],
-  forumPosters = [],
-  imagePosters = [],
-  noteEditors = [],
+  sections = [],
   height = '100vh',
   className = '',
   style = {},
@@ -101,21 +98,27 @@ export function UiStatsDashboard({
                   >
                     {item.place || (idx + 1)}
                   </span>
-                  <a
-                    href={item.profileUrl || '#'}
-                    style={{
-                      color: 'var(--spm-text-primary)',
-                      fontWeight: 500,
-                      textDecoration: 'none',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--spm-accent)')}
-                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--spm-text-primary)')}
-                  >
-                    {item.name || 'Anonymous'}
-                  </a>
+                  {item.profileUrl ? (
+                    <a
+                      href={item.profileUrl}
+                      style={{
+                        color: 'var(--spm-text-primary)',
+                        fontWeight: 500,
+                        textDecoration: 'none',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.color = 'var(--spm-accent)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--spm-text-primary)')}
+                    >
+                      {item.name || 'Anonymous'}
+                    </a>
+                  ) : (
+                    <span style={{ color: 'var(--spm-text-primary)', fontWeight: 500 }}>
+                      {item.name || 'Anonymous'}
+                    </span>
+                  )}
                 </div>
                 <span
                   style={{
@@ -205,11 +208,11 @@ export function UiStatsDashboard({
         }}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
-          {renderStatCard('Top Taggers', taggers)}
-          {renderStatCard('Top Commenters', commenters)}
-          {renderStatCard('Top Forum Posters', forumPosters)}
-          {renderStatCard('Top Image Posters', imagePosters)}
-          {renderStatCard('Top Note Editors', noteEditors)}
+          {sections.map((section, idx) => (
+            <React.Fragment key={idx}>
+              {renderStatCard(section.title, section.items)}
+            </React.Fragment>
+          ))}
         </div>
       </main>
     </div>
