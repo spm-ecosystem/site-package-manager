@@ -20,12 +20,9 @@
     "default_popup": "index.html"
   },
   "options_page": "sandbox.html",
-  "permissions": ["storage", "activeTab"],
+  "permissions": ["storage", "activeTab", "tabs"],
   "host_permissions": ["*://*/*"],
   "web_accessible_resources": [
-    {
-      "resources": ["websites/*"],
-      "matches": ["<all_urls>"]
-    }
+    { "resources": ["devloader.html"], "matches": ["<all_urls>"] }
   ]
 }

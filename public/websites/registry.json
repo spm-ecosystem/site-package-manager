@@ -1,9 +1,0 @@
-[
-  {
-    "id": "safebooru-modern-theme",
-    "name": "Obsidian Theme",
-    "description": "Modern dark layout for Safebooru images grid.",
-    "domain": "safebooru.org",
-    "manifestPath": "websites/safebooru.json"
-  }
-]

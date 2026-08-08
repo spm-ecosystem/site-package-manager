@@ -60,38 +60,34 @@ extension/
 ├── manifest.json                    # Chrome MV3 manifest
 ├── index.html                       # Popup entry point
 ├── sandbox.html                     # Visual Sandbox IDE
+├── registry.json                    # Root GitOps registry index of available themes
+├── scripts/
+│   ├── build-registry.js            # Auto-generates src/components/registry.ts & copies registry.json
+│   └── compile-css.js               # Compiles content.css files using Tailwind + PostCSS
 ├── public/
 │   └── websites/
-│       ├── registry.json            # Index of available themes
-│       └── safebooru.json           # Example theme manifest
+│       └── safebooru.org/           # Website domain folder
+│           └── obsidian-dark/       # Theme package folder
+│               ├── manifest.json    # Theme configuration manifest
+│               ├── content.css      # Custom Tailwind styling tokens
+│               └── style.css        # Compiled static stylesheet (Vite-copied)
 ├── src/
 │   ├── content/
-│   │   ├── index.tsx                # Extension entry point
-│   │   ├── modernizer.tsx           # Core reconstruction engine
-│   │   ├── engine.ts                # extractValue: selector/rule parser
-│   │   └── content.css              # Base styles injected in Shadow DOM
+│   │   ├── index.iife.tsx           # Content script entry point (resolves dynamic themes)
+│   │   ├── interceptor.iife.ts      # Page-world prompt interception
+│   │   ├── modernizer.tsx           # Core reconstruction engine & fetch cache fallbacks
+│   │   └── engine.ts                # Selector / data-attribute extraction parser
 │   ├── popup/
-│   │   └── index.tsx                # Popup React UI
+│   │   └── index.tsx                # Popup React UI (supports dev folder load & rollback versioning)
 │   ├── sandbox/
 │   │   ├── index.tsx                # Sandbox IDE entry
-│   │   ├── sandboxEngine.tsx        # Sandbox preview renderer
-│   │   └── components/
-│   │       └── InspectorSidebar.tsx # Component properties inspector
+│   │   └── ...
 │   └── components/
-│       ├── registry.ts              # Component registry (all components)
+│       ├── registry.ts              # Component registry (AUTO-GENERATED)
 │       ├── primitives/
-│       │   └── LayoutPrimitives.tsx # Box, Grid, Text, Image, Link…
+│       │   └── LayoutPrimitives.tsx # Primitive flex/grid elements
 │       └── dedicated/
-│           ├── UiHeroLanding.tsx    # Landing page hero section
-│           ├── UiImageCard.tsx      # Single image card
-│           ├── UiImageViewer.tsx    # Full-height image viewer
-│           ├── UiModernGridPage.tsx # Image gallery with sidebar slots
-│           ├── UiNavHeader.tsx      # Site header with primary/secondary nav
-│           ├── UiPaginationBar.tsx  # Page navigation links
-│           ├── UiScrollPanel.tsx    # Scrollable sidebar panel
-│           ├── UiSearchBar.tsx      # Search input with URL submit
-│           ├── UiSplitLayout.tsx    # Two-column full-height layout shell
-│           └── UiTagBadge.tsx       # Tag pill with count
+│           └── ...                  # Reusable UI component templates
 └── tests/
     └── engine.test.ts               # Unit tests for extractValue
 ```
@@ -420,19 +416,9 @@ Click the SPM icon in Chrome's toolbar:
 
 ### Adding a New Site Theme
 
-1. Create `public/websites/<sitename>.json` following the [Manifest Schema](#manifest-schema)
-2. Add a registry entry in `public/websites/registry.json`:
-   ```json
-   {
-     "id": "my-theme",
-     "name": "My Site",
-     "description": "Modern theme for mysite.com",
-     "domain": "mysite.com",
-     "manifestPath": "websites/mysite.json"
-   }
-   ```
-3. Add the domain to `content_scripts.matches` in `manifest.json`
-4. Run `npm run build`
+To add support for a new site or create a new theme package under an existing site domain, please refer to the detailed **[Theme Development Guide](file:///home/watashi/Projects/extension/public/websites/README.md)**.
+
+---
 
 ### Creating a New Component
 
@@ -472,24 +458,12 @@ export function UiMyComponent({
 }
 ```
 
-Then register it:
+### Auto-Registration
+You do **not** need to edit `src/components/registry.ts` manually! 
+During compilation, the pre-build script `scripts/build-registry.js` scans all components under `src/components/` and packages them automatically. Simply write your component file, run `npm run build`, and it will be ready to be used in manifests.
 
-```ts
-// src/components/registry.ts
-import { UiMyComponent } from './dedicated/UiMyComponent';
-
-export const COMPONENT_REGISTRY = {
-  // ...existing
-  UiMyComponent,
-};
-
-export const DEDICATED_COMPONENTS = [
-  // ...existing
-  'UiMyComponent',
-];
-```
-
-And add its schema to `InspectorSidebar.tsx`:
+To add its schema to the Sandbox IDE:
+Open `src/sandbox/components/InspectorSidebar.tsx` and configure:
 
 ```ts
 UiMyComponent: {
