@@ -101,7 +101,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
   // 1. Process Reconstruction array
   if (manifest.reconstructs && manifest.reconstructs.length > 0) {
     for (const reconConfig of manifest.reconstructs) {
-      const { containerSelector, layoutComponent, propsMap, mediaQuery, preserve, children } = reconConfig;
+      const { containerSelector, layoutComponent, propsMap, props: staticProps, mediaQuery, preserve, children } = reconConfig;
 
       // Media query responsiveness check
       if (mediaQuery && !window.matchMedia(mediaQuery).matches) {
@@ -184,7 +184,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         const Component = COMPONENT_REGISTRY[layoutComponent];
         if (Component) {
           const root = createRoot(rootContainer);
-          root.render(<Component {...pageProps} {...childrenLists} />);
+          root.render(<Component {...(staticProps || {})} {...pageProps} {...childrenLists} />);
 
           // Execute DOM reparenting in microtask loop once React finishes mounting layout
           setTimeout(() => {
