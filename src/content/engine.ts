@@ -21,5 +21,14 @@ export function extractValue(element: Element, queryRule: string): string | null
     return targetEl.innerHTML;
   }
 
+  if (extractor === 'hrefOrOnclick') {
+    const href = targetEl.getAttribute('href');
+    if (href && href !== '#' && !href.startsWith('javascript:')) return href;
+    const onclick = targetEl.getAttribute('onclick') || '';
+    const match = onclick.match(/(?:document|window)\.location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/i) || onclick.match(/document\.location\s*=\s*['"]([^'"]+)['"]/i);
+    if (match) return match[1];
+    return href || null;
+  }
+
   return null;
 }

@@ -29,4 +29,11 @@ describe('extractValue engine helper', () => {
     const result = extractValue(div, 'p | text');
     expect(result).toBeNull();
   });
+
+  it('should extract URL from onclick if href is #', () => {
+    const div = document.createElement('div');
+    div.innerHTML = '<a href="#" onclick="document.location=\'index.php?id=123\'; return false;">Link</a>';
+    const result = extractValue(div, 'a | hrefOrOnclick');
+    expect(result).toBe('index.php?id=123');
+  });
 });
