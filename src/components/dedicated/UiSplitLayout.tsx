@@ -72,6 +72,7 @@ export function UiSplitLayout({
 
   const panel = (
     <UiScrollPanel
+      className="spm-scroll-panel"
       tags={tags}
       buttons={sidebarButtons}
       statisticsHtml={statisticsHtml}
@@ -84,7 +85,10 @@ export function UiSplitLayout({
   );
 
   const viewer = (
-    <div style={{ flex: 1, height: '100%', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+    <div
+      className="spm-image-viewer-container"
+      style={{ flex: 1, height: '100%', overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}
+    >
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <UiImageViewer
           src={image?.src}
@@ -165,7 +169,7 @@ export function UiSplitLayout({
 
   return (
     <div
-      className={className}
+      className={`spm-split-layout ${className}`.trim()}
       style={{
         display: 'flex',
         flexDirection: sidebarSide === 'left' ? 'row' : 'row-reverse',
@@ -178,6 +182,30 @@ export function UiSplitLayout({
         ...style,
       }}
     >
+      <style>{`
+        @media (max-width: 720px) {
+          .spm-split-layout {
+            flex-direction: column-reverse !important;
+            overflow-y: auto !important;
+            height: 100% !important;
+            width: 100% !important;
+          }
+          .spm-split-layout .spm-scroll-panel {
+            width: 100% !important;
+            height: auto !important;
+            border-right: none !important;
+            border-left: none !important;
+            border-top: 1px solid var(--spm-border) !important;
+            flex-shrink: 0 !important;
+            overflow-y: visible !important;
+          }
+          .spm-split-layout .spm-image-viewer-container {
+            width: 100% !important;
+            height: 60vh !important;
+            flex-shrink: 0 !important;
+          }
+        }
+      `}</style>
       {panel}
       {viewer}
     </div>
