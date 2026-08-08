@@ -6,6 +6,7 @@ import { UiPostDetails } from './dedicated/UiPostDetails';
 import { UiTagBadge } from './dedicated/UiTagBadge';
 import { UiSearchBar } from './dedicated/UiSearchBar';
 import { UiPaginationBar } from './dedicated/UiPaginationBar';
+import { UiHeroLanding } from './dedicated/UiHeroLanding';
 import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from './primitives/LayoutPrimitives';
 
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
@@ -16,6 +17,7 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiTagBadge,
   UiSearchBar,
   UiPaginationBar,
+  UiHeroLanding,
   UiBox,
   UiFlexRow,
   UiFlexColumn,
@@ -42,5 +44,6 @@ export const DEDICATED_COMPONENTS = [
   'UiPostDetails',
   'UiTagBadge',
   'UiSearchBar',
-  'UiPaginationBar'
+  'UiPaginationBar',
+  'UiHeroLanding'
 ];

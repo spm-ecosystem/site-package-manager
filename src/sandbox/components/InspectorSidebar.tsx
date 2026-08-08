@@ -116,6 +116,20 @@ const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<
       href: 'self | attr:href',
       text: 'self | text'
     }
+  },
+  UiHeroLanding: {
+    props: ['siteName', 'logoUrl', 'tagline', 'subtext', 'ctaLabel', 'ctaUrl', 'searchPlaceholder', 'searchSubmitUrl', 'searchParamName'],
+    placeholders: {
+      siteName: 'img[alt] | attr:alt',
+      logoUrl: 'img | attr:src',
+      tagline: 'value:Anime picture search engine',
+      subtext: 'value:Browse millions of safe anime illustrations.',
+      ctaLabel: 'value:Browse Gallery',
+      ctaUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
+      searchPlaceholder: 'value:Search tags…',
+      searchSubmitUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
+      searchParamName: 'value:tags'
+    }
   }
 };
 
