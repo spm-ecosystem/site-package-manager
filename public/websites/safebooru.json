@@ -188,7 +188,7 @@
       "children": [
         {
           "name": "threads",
-          "selector": "#content > div.post",
+          "selector": "#comment-list > div.post",
           "propsMap": {
             "id": "self | attr:id",
             "thumbnailUrl": ".col1 img | attr:src",
