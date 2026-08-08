@@ -13,7 +13,7 @@ function createEditorWrapper(
   const wrapper = document.createElement('div');
   wrapper.className = 'spm-modern-wrapper';
   wrapper.style.position = 'relative';
-  wrapper.style.border = '1px dashed rgba(168, 85, 247, 0.4)';
+  wrapper.style.border = '1px dashed rgba(255, 255, 255, 0.08)';
   wrapper.style.borderRadius = '6px';
   wrapper.style.padding = '4px';
   wrapper.style.margin = '12px 0';
@@ -35,7 +35,7 @@ function createEditorWrapper(
   label.textContent = componentName;
   label.style.fontSize = '9px';
   label.style.fontWeight = 'bold';
-  label.style.background = '#8b5cf6'; // Purple-500
+  label.style.background = '#111111';
   label.style.color = 'white';
   label.style.padding = '2px 6px';
   label.style.borderRadius = '3px 3px 0 0';
@@ -44,9 +44,9 @@ function createEditorWrapper(
 
   // 4. Delete Action Button
   const deleteBtn = document.createElement('button');
-  deleteBtn.innerHTML = '🗑️';
-  deleteBtn.style.background = '#ef4444';
-  deleteBtn.style.border = 'none';
+  deleteBtn.textContent = 'Del';
+  deleteBtn.style.background = '#111111';
+  deleteBtn.style.border = '1px solid rgba(255,255,255,0.1)';
   deleteBtn.style.color = 'white';
   deleteBtn.style.fontSize = '10px';
   deleteBtn.style.cursor = 'pointer';
@@ -65,9 +65,9 @@ function createEditorWrapper(
 
   // 4b. Edit/Configure Action Button
   const editBtn = document.createElement('button');
-  editBtn.innerHTML = '✏️';
-  editBtn.style.background = '#8b5cf6'; // Violet-500
-  editBtn.style.border = 'none';
+  editBtn.textContent = 'Edit';
+  editBtn.style.background = '#111111';
+  editBtn.style.border = '1px solid rgba(255,255,255,0.1)';
   editBtn.style.color = 'white';
   editBtn.style.fontSize = '10px';
   editBtn.style.cursor = 'pointer';
@@ -151,16 +151,16 @@ export function runSandboxEngine(container: HTMLElement, manifest: any): number 
   const editorStyles = document.createElement('style');
   editorStyles.textContent = `
     .spm-modern-wrapper:hover {
-      border-color: #8b5cf6 !important;
-      box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+      border-color: #16a34a !important;
+      box-shadow: 0 0 12px rgba(22, 163, 74, 0.2);
     }
     .spm-modern-wrapper:hover .spm-wrapper-header {
       display: flex !important;
     }
     .spm-resizable-host::-webkit-resizer {
       border: 3px solid transparent;
-      border-bottom-color: #8b5cf6;
-      border-right-color: #8b5cf6;
+      border-bottom-color: #16a34a;
+      border-right-color: #16a34a;
       cursor: ew-resize;
     }
   `;

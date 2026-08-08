@@ -45,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           Export JSON
         </button>
-        <span className={`text-[11px] border px-3 py-1 rounded font-medium ${wsStatus === 'Connected' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+        <span className={`text-[11px] border px-3 py-1 rounded font-medium ${wsStatus === 'Connected' ? 'bg-[#0f381f] text-[#16a34a] border-[#16a34a]/20' : 'bg-[#111111] text-zinc-400 border-zinc-700'}`}>
           Dev Server: {wsStatus}
         </span>
       </div>

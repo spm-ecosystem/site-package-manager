@@ -151,21 +151,19 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
       {selectedComponentConfig ? (
         <div className="border-b border-[#333333] pb-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1">
-              <span className="text-purple-400">✨</span> Component Settings
-            </div>
-            <button 
-              onClick={() => setSelectedComponentConfig(null)}
-              className="text-[10px] text-zinc-500 hover:text-white bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded transition"
-            >
-              Close ✕
-            </button>
+              <div className="text-xs font-bold text-white uppercase tracking-wider">Component Settings</div>
+              <button 
+                onClick={() => setSelectedComponentConfig(null)}
+                className="text-[10px] text-zinc-500 hover:text-white bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded transition"
+              >
+                Close
+              </button>
           </div>
 
           <div className="bg-zinc-950 border border-zinc-800 rounded p-3 flex flex-col gap-2 font-mono text-[10px]">
             <div className="flex justify-between">
               <span className="text-zinc-500">Component:</span>
-              <span className="text-purple-400 font-bold">{selectedComponentConfig.name}</span>
+              <span className="text-zinc-200 font-bold">{selectedComponentConfig.name}</span>
             </div>
             <div className="flex flex-col gap-1 mt-1">
               <span className="text-zinc-500">Selector:</span>
@@ -214,7 +212,7 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                           }
                         } catch (err) {}
                       }}
-                      className="w-full bg-black border border-zinc-800 focus:border-purple-500 rounded px-2.5 py-1 text-xs text-white font-mono focus:outline-none transition"
+                      className="w-full bg-black border border-zinc-800 focus:border-[#16a34a] rounded px-2.5 py-1 text-xs text-white font-mono focus:outline-none transition"
                       placeholder={placeholder}
                     />
                   </div>
@@ -238,9 +236,9 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                   setSelectedComponentConfig(null);
                 } catch (e) {}
               }}
-              className="w-full py-1.5 rounded text-[10px] font-bold bg-red-950/20 hover:bg-red-900 border border-red-900/30 hover:border-red-600 text-red-300 transition"
+              className="w-full py-1.5 rounded text-[10px] font-bold bg-[#111111] hover:bg-[#1c1c1c] border border-[#333333] text-zinc-200 transition"
             >
-              🗑️ Delete Component Configuration
+              Delete Component Configuration
             </button>
           </div>
         </div>
@@ -250,7 +248,7 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
           <div className="bg-zinc-950 border border-zinc-800 rounded p-3 flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-zinc-400">Tag</span>
-              <span className="font-mono text-purple-400 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded">{inspectedElement.tagName}</span>
+              <span className="font-mono text-zinc-200 bg-[#111111] border border-zinc-800 px-1.5 py-0.5 rounded">{inspectedElement.tagName}</span>
             </div>
             {inspectedElement.id && (
               <div className="flex items-center justify-between text-xs">
@@ -276,7 +274,7 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                     <button 
                       key={i}
                       onClick={() => setActiveSelector(sel)}
-                      className={`text-left font-mono text-[10px] p-1 border rounded truncate transition ${activeSelector === sel ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-black border-[#222222] text-zinc-400 hover:border-zinc-600'}`}
+                      className={`text-left font-mono text-[10px] p-1 border rounded truncate transition ${activeSelector === sel ? 'bg-[#0f381f] border-[#16a34a] text-[#16a34a]' : 'bg-black border-[#222222] text-zinc-400 hover:border-zinc-600'}`}
                     >
                       {sel}
                     </button>
@@ -302,25 +300,23 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
 
             {/* Dynamic extraction parser helper box */}
             <div className="mt-2.5 bg-[#1a1a1a] border border-zinc-800 rounded p-2.5 text-[9px] text-zinc-400 leading-snug flex flex-col gap-1.5">
-              <span className="font-bold text-zinc-300 flex items-center gap-1">
-                <span>💡</span> Extraction Mapping Guide:
-              </span>
+              <span className="font-bold text-zinc-300">Extraction Mapping Guide:</span>
               <div className="text-[9px]">
-                To extract text from this node: <code className="text-purple-400 font-mono font-semibold">self | text</code>
+                To extract text from this node: <code className="text-[#16a34a] font-mono font-semibold">self | text</code>
               </div>
               {inspectedElement.attributes.src && (
                 <div className="text-[9px]">
-                  To extract image source: <code className="text-purple-400 font-mono font-semibold">img | attr:src</code>
+                  To extract image source: <code className="text-[#16a34a] font-mono font-semibold">img | attr:src</code>
                 </div>
               )}
               {inspectedElement.attributes.href && (
                 <div className="text-[9px]">
-                  To extract link address: <code className="text-purple-400 font-mono font-semibold">a | attr:href</code>
+                  To extract link address: <code className="text-[#16a34a] font-mono font-semibold">a | attr:href</code>
                 </div>
               )}
               {inspectedElement.attributes.alt && (
                 <div className="text-[9px]">
-                  To extract alt text: <code className="text-purple-400 font-mono font-semibold">img | attr:alt</code>
+                  To extract alt text: <code className="text-[#16a34a] font-mono font-semibold">img | attr:alt</code>
                 </div>
               )}
             </div>
@@ -336,11 +332,11 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                   e.dataTransfer.setData('spm/element-classes', inspectedElement.classes.join(' '));
                   e.dataTransfer.effectAllowed = 'copy';
                 }}
-                className="border border-purple-500/20 hover:border-purple-500/40 rounded bg-purple-500/5 hover:bg-purple-500/10 p-2.5 text-center cursor-grab transition flex items-center justify-center gap-2 group shrink-0"
+                className="border border-[#16a34a]/20 hover:border-[#16a34a]/40 rounded bg-[#0f381f]/70 hover:bg-[#163f26]/80 p-2.5 text-center cursor-grab transition flex items-center justify-center gap-2 group shrink-0"
                 title="Drag this handle to the builder zone on the left"
               >
-                <span className="text-purple-400 group-hover:scale-110 transition text-xs">🫳</span>
-                <span className="text-[10px] font-semibold text-zinc-300 group-hover:text-white">Drag Handle (Drag to Builder)</span>
+                <span className="text-[#16a34a] group-hover:scale-110 transition text-xs"></span>
+                <span className="text-[10px] font-semibold text-zinc-300 group-hover:text-white">Drag Handle</span>
               </div>
 
               <button
@@ -352,9 +348,9 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
                     classes: inspectedElement.classes.join(' ')
                   });
                 }}
-                className="w-full py-1.5 rounded text-[10px] font-semibold bg-purple-500 hover:bg-purple-600 text-white shadow shadow-purple-500/10 transition"
+                className="w-full py-1.5 rounded text-[10px] font-semibold bg-[#16a34a] hover:bg-[#115e33] text-white shadow shadow-black/20 transition"
               >
-                Transform Element...
+                Transform Element
               </button>
             </div>
           </div>

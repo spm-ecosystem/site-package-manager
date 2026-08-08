@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import '../content/content.css';
+import './sandbox.css';
 
 // Modular Imports
 import { Header } from './components/Header';
@@ -36,6 +36,22 @@ function SandboxApp() {
     accent: '#ffffff',
     textPrimary: '#ffffff',
     customStyles: '/* Add your CSS overrides here */\n.sidebar { padding: 0 !important; }'
+  };
+
+  const safeTargetOrigin = () => {
+    try {
+      return new URL(targetUrl).origin;
+    } catch {
+      return 'https://example.com';
+    }
+  };
+
+  const safeTargetHostname = () => {
+    try {
+      return new URL(targetUrl).hostname;
+    } catch {
+      return 'example.com';
+    }
   };
   const savedJsonString = localStorage.getItem('spm_sandbox_json_string') || '';
 
@@ -82,7 +98,7 @@ function SandboxApp() {
 
   // Default initial manifest configuration (pure blueprint layout)
   const defaultManifest = {
-    targetUrl: new URL(targetUrl).origin + "/*",
+    targetUrl: safeTargetOrigin() + "/*",
     version: "1.0.0",
     theme: {
       label: "Custom Theme",
@@ -111,7 +127,7 @@ function SandboxApp() {
     if (!jsonString) return;
     try {
       const parsed = JSON.parse(jsonString);
-      parsed.targetUrl = new URL(targetUrl).origin + "/*";
+      parsed.targetUrl = safeTargetOrigin() + "/*";
       if (parsed.theme) {
         parsed.theme.cssVariables = {
           ...parsed.theme.cssVariables,
@@ -199,15 +215,15 @@ function SandboxApp() {
     const shadow = legacyExplorerRef.current.shadowRoot || legacyExplorerRef.current.attachShadow({ mode: 'open' });
     const absoluteHtml = makeUrlsAbsolute(rawHtml, targetUrl);
 
-    const baseTag = `<base href="${new URL(targetUrl).origin}">`;
+    const baseTag = `<base href="${safeTargetOrigin()}">`;
     shadow.innerHTML = `
       ${baseTag}
       <style>
         .spm-selected-element {
-          outline: 2.5px solid #3b82f6 !important;
+          outline: 2.5px solid #16a34a !important;
           outline-offset: -2.5px !important;
-          box-shadow: 0 0 12px rgba(59, 130, 246, 0.6) !important;
-          background-color: rgba(59, 130, 246, 0.04) !important;
+          box-shadow: 0 0 12px rgba(22, 163, 74, 0.25) !important;
+          background-color: rgba(22, 163, 74, 0.06) !important;
         }
       </style>
       <div class="sandbox-fetched-content" style="width:100%; height:100%; overflow:auto;">
@@ -404,16 +420,16 @@ function SandboxApp() {
           const infoBar = document.createElement('div');
           infoBar.style.padding = '12px 16px';
           infoBar.style.margin = '0 0 16px 0';
-          infoBar.style.backgroundColor = 'rgba(59, 130, 246, 0.08)';
-          infoBar.style.border = '1px solid rgba(59, 130, 246, 0.2)';
+          infoBar.style.backgroundColor = 'rgba(22, 163, 74, 0.06)';
+          infoBar.style.border = '1px solid rgba(22, 163, 74, 0.18)';
           infoBar.style.borderRadius = '6px';
-          infoBar.style.color = '#93c5fd';
+          infoBar.style.color = '#e7e7e7';
           infoBar.style.fontSize = '12px';
           infoBar.style.fontFamily = 'system-ui, sans-serif';
           infoBar.style.lineHeight = '1.5';
           infoBar.innerHTML = `
-            <strong>ℹ️ No elements matched your JSON selectors.</strong><br/>
-            The active configuration (selectors like <code>#post-list</code> or <code>#header</code>) did not match any nodes on <code>${new URL(targetUrl).hostname}</code>. 
+            <strong>No elements matched your JSON selectors.</strong><br/>
+            The active configuration (selectors like <code>#post-list</code> or <code>#header</code>) did not match any nodes on <code>${safeTargetHostname()}</code>. 
             Use <strong>Legacy View (Inspector)</strong> to click elements, inspect their classes, and update your JSON selectors in the editor.
           `;
           previewRoot.insertBefore(infoBar, previewRoot.firstChild);
@@ -424,7 +440,7 @@ function SandboxApp() {
       setJsonError(true);
       const shadow = previewContainerRef.current.shadowRoot || previewContainerRef.current.attachShadow({ mode: 'open' });
       shadow.innerHTML = `
-        <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
+        <div style="padding: 24px; color: #f8f8f8; background-color: #111111; border: 1px solid #333333; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
           <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Live Preview Compilation Error</h4>
           <p style="margin: 0; font-size: 12px; line-height: 1.5;">
             Check your JSON config syntax and layout properties.
@@ -445,7 +461,7 @@ function SandboxApp() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString);
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `${new URL(targetUrl).hostname}.json`);
+    downloadAnchor.setAttribute("download", `${safeTargetHostname()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -655,10 +671,10 @@ function SandboxApp() {
       {/* Drag & Drop Convert Component Modal */}
       {dropModalOpen && draggedElementInfo && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-[#111111] border border-purple-500/30 rounded-lg max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
+          <div className="bg-[#111111] border border-[#333333] rounded-lg max-w-md w-full p-6 shadow-2xl flex flex-col gap-4">
             <div>
-              <h3 className="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
-                <span>✨</span> Convert Element into Component
+              <h3 className="text-sm font-bold text-white tracking-tight">
+                Convert Element into Component
               </h3>
               <p className="text-[11px] text-zinc-500 mt-1">
                 Map target DOM node to a SPM React component. We will append this to your JSON manifest configuration.
@@ -668,7 +684,7 @@ function SandboxApp() {
             <div className="bg-zinc-950 border border-zinc-800 rounded p-3 flex flex-col gap-2 font-mono text-[10px] text-zinc-400">
               <div className="flex justify-between">
                 <span>Tag:</span>
-                <span className="text-purple-400 font-semibold">{draggedElementInfo.tagName}</span>
+                <span className="text-[#16a34a] font-semibold">{draggedElementInfo.tagName}</span>
               </div>
               <div className="flex justify-between">
                 <span>Selector:</span>
@@ -681,7 +697,7 @@ function SandboxApp() {
               <select
                 value={selectedMappingComponent}
                 onChange={(e) => setSelectedMappingComponent(e.target.value)}
-                className="w-full bg-black border border-[#333333] hover:border-zinc-600 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500 transition"
+                className="w-full bg-black border border-[#333333] hover:border-zinc-600 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#16a34a] transition"
               >
                 <option value="UiImageCard">UiImageCard (Single card element)</option>
                 <option value="UiModernGridPage">UiModernGridPage (Gallery Layout page)</option>
@@ -703,7 +719,7 @@ function SandboxApp() {
               </button>
               <button
                 onClick={executeTransformation}
-                className="px-4 py-1.5 rounded text-xs font-semibold bg-purple-500 text-white hover:bg-purple-600 shadow-md shadow-purple-500/20 transition animate-pulse-subtle"
+                className="px-4 py-1.5 rounded text-xs font-semibold bg-[#16a34a] text-white hover:bg-[#115e33] shadow-md shadow-black/20 transition"
               >
                 Transform Element
               </button>
