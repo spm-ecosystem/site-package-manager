@@ -125,12 +125,12 @@
       ]
     },
     {
-      "containerSelector": "div.content:has(#image)",
+      "containerSelector": "#post-view",
       "layoutComponent": "UiPostDetails",
       "propsMap": {
         "imageUrl": "#image | attr:src",
-        "title": "#image | attr:title",
-        "statisticsHtml": "#tag-sidebar ul:last-child | html"
+        "title": "#image | attr:alt",
+        "statisticsHtml": "#stats ul | html"
       },
       "props": {
         "showSearch": true,
@@ -140,23 +140,23 @@
       },
       "children": [
         {
+          "name": "tags",
+          "selector": "#tag-sidebar li.tag",
+          "scope": "document",
+          "propsMap": {
+            "name": "a:nth-child(2) | text",
+            "count": "span.tag-count | text",
+            "type": "self | attr:class",
+            "url": "a:nth-child(2) | attr:href"
+          }
+        },
+        {
           "name": "buttons",
-          "selector": "#tag-sidebar .related-posts a, #image-list a, #related-posts a, .sidebar-list:last-child a",
+          "selector": ".link-list a",
           "scope": "document",
           "propsMap": {
             "label": "self | text",
             "url": "self | attr:href"
-          }
-        },
-        {
-          "name": "tags",
-          "selector": "#tag-sidebar li",
-          "scope": "document",
-          "propsMap": {
-            "name": "a:nth-child(2) | text",
-            "count": "span | text",
-            "type": "self | attr:class",
-            "url": "a:nth-child(2) | attr:href"
           }
         }
       ]
