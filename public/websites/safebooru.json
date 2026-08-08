@@ -176,7 +176,7 @@
       ]
     },
     {
-      "containerSelector": "#content > #comments",
+      "containerSelector": "#content:has(#comment-list)",
       "layoutComponent": "UiCommentListPage",
       "props": {
         "pageTitle": "Comments",

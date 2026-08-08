@@ -281,6 +281,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
         const Component = COMPONENT_REGISTRY[layoutComponent];
         if (Component) {
+          console.log('[SPM Engine] Reconstructing:', layoutComponent, { staticProps, pageProps, childrenLists });
           const root = createRoot(rootContainer);
           root.render(<Component {...(staticProps || {})} {...pageProps} {...childrenLists} />);
 
