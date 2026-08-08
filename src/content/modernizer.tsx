@@ -149,14 +149,23 @@ function getNextPageUrl(context: Document | HTMLElement, config?: InfiniteScroll
   for (const el of Array.from(elements)) {
     const text = el.textContent?.trim();
     const href = el.getAttribute('href');
+    const alt = el.getAttribute('alt')?.toLowerCase();
+    const title = el.getAttribute('title')?.toLowerCase();
+    const rel = el.getAttribute('rel')?.toLowerCase();
+    
     if (!href) continue;
+
+    // Direct attribute indicators for "next page"
+    if (alt === 'next' || title === 'next' || rel === 'next' || alt === 'next page') {
+      return href;
+    }
 
     if (config.nextPageText) {
       if (text === config.nextPageText) {
         return href;
       }
     } else {
-      // Default: take the first one
+      // Default: take the first matched link
       return href;
     }
   }

@@ -247,6 +247,8 @@ export function UiModernGridPage({
               height: 100vh !important;
               min-height: 100vh;
               background: var(--spm-bg-primary) !important;
+              overflow-x: hidden !important;
+              width: 100vw !important;
             }
 
             .spm-modern-grid-page[data-hide-sidebar-on-mobile="true"] .spm-modern-grid-sidebar {
@@ -257,6 +259,9 @@ export function UiModernGridPage({
               width: 100%;
               height: 100%;
               flex: 1 1 100% !important;
+              min-width: 0 !important;
+              max-width: 100% !important;
+              overflow-x: hidden !important;
             }
 
             .spm-modern-grid-header {
@@ -293,6 +298,7 @@ export function UiModernGridPage({
               gap: var(--spm-mobile-gap);
               padding: var(--spm-mobile-padding) !important;
               overflow-y: auto;
+              overflow-x: hidden !important;
               background: var(--spm-bg-primary);
             }
 
