@@ -1,3 +1,4 @@
+import React from 'react';
 import { UiImageViewer } from './UiImageViewer';
 import { UiScrollPanel } from './UiScrollPanel';
 import { triggerProxyClick } from '../../content/engine';
@@ -61,6 +62,16 @@ export function UiSplitLayout({
   style = {},
 }: UiSplitLayoutProps) {
   const image = imageSlot[0];
+  const [isMobile, setIsMobile] = React.useState(false);
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const media = window.matchMedia('(max-width: 720px)');
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   const imgLabels = ['previous', 'next', 'original image'];
   const imageButtons = splitButtons
@@ -81,6 +92,7 @@ export function UiSplitLayout({
       searchSubmitUrl={searchSubmitUrl}
       searchParamName={searchParamName}
       width={sidebarWidth}
+      onClose={() => setDrawerOpen(false)}
     />
   );
 
@@ -170,6 +182,7 @@ export function UiSplitLayout({
   return (
     <div
       className={`spm-split-layout ${className}`.trim()}
+      data-drawer-open={drawerOpen ? 'true' : 'false'}
       style={{
         display: 'flex',
         flexDirection: sidebarSide === 'left' ? 'row' : 'row-reverse',
@@ -185,29 +198,97 @@ export function UiSplitLayout({
       <style>{`
         @media (max-width: 720px) {
           .spm-split-layout {
-            flex-direction: column-reverse !important;
-            overflow-y: auto !important;
             height: 100% !important;
             width: 100% !important;
           }
-          .spm-split-layout .spm-scroll-panel {
-            width: 100% !important;
-            height: auto !important;
+          .spm-split-layout[data-drawer-open="true"] .spm-scroll-panel {
+            display: flex !important;
+            flex-direction: column !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 280px !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8) !important;
+            transform: translateX(0) !important;
+            transition: transform 0.3s ease !important;
+            background: rgba(20, 20, 20, 0.98) !important;
+            backdrop-filter: blur(16px) !important;
+            border-right: 1px solid var(--spm-border) !important;
+            padding: 20px !important;
+          }
+          .spm-split-layout[data-drawer-open="false"] .spm-scroll-panel {
+            display: flex !important;
+            flex-direction: column !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 280px !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            transform: translateX(-100%) !important;
+            transition: transform 0.3s ease !important;
+            pointer-events: none !important;
             border-right: none !important;
-            border-left: none !important;
-            border-top: 1px solid var(--spm-border) !important;
-            flex-shrink: 0 !important;
-            overflow-y: visible !important;
+            padding: 20px !important;
           }
           .spm-split-layout .spm-image-viewer-container {
             width: 100% !important;
-            height: 60vh !important;
+            height: 100% !important;
             flex-shrink: 0 !important;
           }
         }
       `}</style>
       {panel}
       {viewer}
+
+      {isMobile && drawerOpen && (
+        <div
+          onClick={() => setDrawerOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 99990,
+          }}
+        />
+      )}
+
+      {isMobile && (
+        <button
+          onClick={() => setDrawerOpen(prev => !prev)}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '24px',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'var(--spm-accent)',
+            color: 'var(--spm-accent-fg)',
+            border: 'none',
+            borderRadius: '20px',
+            padding: '10px 16px',
+            fontSize: '12px',
+            fontWeight: 700,
+            boxShadow: '0 4px 16px rgba(124, 106, 245, 0.4)',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          Search & Tags
+        </button>
+      )}
     </div>
   );
 }
