@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { UiImageCard } from './UiImageCard';
 import { UiPaginationBar } from './UiPaginationBar';
+import { UiSearchBar } from './UiSearchBar';
+import { UiTagBadge } from './UiTagBadge';
 
 interface GridItem {
   imageUrl: string;
@@ -14,11 +16,24 @@ interface PageLink {
   url: string;
 }
 
+interface TagItem {
+  name: string;
+  count?: string | number;
+  type: string;
+  url: string;
+}
+
 interface UiModernGridPageProps {
   pageTitle: string;
   items: GridItem[];
   pageLinks?: PageLink[];
   sidebarHtml?: string;
+  tags?: TagItem[];
+  showSearch?: boolean;
+  searchPlaceholder?: string;
+  searchSubmitUrl?: string;
+  searchParamName?: string;
+  searchDefaultValue?: string;
   height?: string;
   sidebarWidth?: string;
   hideSidebarOnMobile?: boolean;
@@ -39,6 +54,12 @@ export function UiModernGridPage({
   items,
   pageLinks,
   sidebarHtml,
+  tags = [],
+  showSearch = true,
+  searchPlaceholder = 'Search tags…',
+  searchSubmitUrl = '',
+  searchParamName = 'tags',
+  searchDefaultValue = '',
   height = '100vh',
   sidebarWidth = '220px',
   hideSidebarOnMobile = true,
@@ -66,6 +87,45 @@ export function UiModernGridPage({
   const showSidebar = !(isMobile && hideSidebarOnMobile);
   const showHeader = !isMobile || mobileShowHeader;
   const showPagination = !isMobile || mobileShowPagination;
+
+  // Group tags by matching type strings dynamically
+  const copyrightTags = tags.filter(t => t.type && t.type.includes('copyright'));
+  const characterTags = tags.filter(t => t.type && t.type.includes('character'));
+  const artistTags = tags.filter(t => t.type && t.type.includes('artist'));
+  const generalTags = tags.filter(t => {
+    const type = t.type || '';
+    return type.includes('general') || (!type.includes('copyright') && !type.includes('character') && !type.includes('artist') && !type.includes('metadata') && !type.includes('meta'));
+  });
+  const metaTags = tags.filter(t => t.type && (t.type.includes('metadata') || t.type.includes('meta')));
+
+  const renderTagGroup = (title: string, groupTags: TagItem[]) => {
+    if (groupTags.length === 0) return null;
+    return (
+      <div style={{ marginBottom: '20px' }}>
+        <h3
+          style={{
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            color: 'var(--spm-text-muted)',
+            margin: '0 0 10px 0',
+          }}
+        >
+          {title}
+        </h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {groupTags.map((tag, i) => (
+            <UiTagBadge
+              key={i}
+              label={tag.name}
+              count={tag.count}
+              href={tag.url}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -210,7 +270,7 @@ export function UiModernGridPage({
         `}
       </style>
 
-      {/* Sidebar slot — legacy nodes reparented here */}
+      {/* Sidebar slot — legacy nodes reparented here OR structured render */}
       <aside
         id="sidebarSlot-container"
         className="spm-modern-grid-sidebar"
@@ -222,9 +282,33 @@ export function UiModernGridPage({
           background: 'var(--spm-bg-secondary)',
           padding: '16px',
           overflowY: 'auto',
+          boxSizing: 'border-box',
         }}
         dangerouslySetInnerHTML={sidebarHtml ? { __html: sidebarHtml } : undefined}
-      />
+      >
+        {!sidebarHtml && (
+          <>
+            {showSearch && searchSubmitUrl && (
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--spm-text-muted)', margin: '0 0 10px 0' }}>
+                  Search
+                </h3>
+                <UiSearchBar
+                  placeholder={searchPlaceholder}
+                  submitUrl={searchSubmitUrl}
+                  queryParamName={searchParamName}
+                  defaultValue={searchDefaultValue}
+                />
+              </div>
+            )}
+            {renderTagGroup('Artists', artistTags)}
+            {renderTagGroup('Copyrights', copyrightTags)}
+            {renderTagGroup('Characters', characterTags)}
+            {renderTagGroup('General Tags', generalTags)}
+            {renderTagGroup('Meta', metaTags)}
+          </>
+        )}
+      </aside>
 
       <div className="spm-modern-grid-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
         {/* Header */}
