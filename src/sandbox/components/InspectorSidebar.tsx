@@ -118,6 +118,16 @@ const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<
       text: 'self | text'
     }
   },
+  UiScrollBox: {
+    props: ['height', 'maxHeight', 'overflow', 'overflowX', 'overflowY'],
+    placeholders: {
+      height: 'value:100%',
+      maxHeight: 'value:400px',
+      overflow: 'value:auto',
+      overflowX: 'value:hidden',
+      overflowY: 'value:auto'
+    }
+  },
   UiHeroLanding: {
     props: ['siteName', 'logoUrl', 'tagline', 'subtext', 'ctaLabel', 'ctaUrl', 'searchPlaceholder', 'searchSubmitUrl', 'searchParamName'],
     placeholders: {
@@ -163,6 +173,13 @@ const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<
       alt: 'img | attr:alt',
       fit: 'value:contain',
       background: 'value:var(--spm-bg-primary)'
+    }
+  },
+  UiCommentListPage: {
+    props: ['pageTitle', 'height'],
+    placeholders: {
+      pageTitle: 'value:Comments',
+      height: 'value:calc(100vh - 78px)'
     }
   }
 };

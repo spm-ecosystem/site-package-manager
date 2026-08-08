@@ -10,7 +10,8 @@ import { UiHeroLanding } from './dedicated/UiHeroLanding';
 import { UiImageViewer } from './dedicated/UiImageViewer';
 import { UiScrollPanel } from './dedicated/UiScrollPanel';
 import { UiSplitLayout } from './dedicated/UiSplitLayout';
-import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink } from './primitives/LayoutPrimitives';
+import { UiCommentListPage } from './dedicated/UiCommentListPage';
+import { UiBox, UiFlexRow, UiFlexColumn, UiGrid, UiText, UiImage, UiLink, UiScrollBox } from './primitives/LayoutPrimitives';
 
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiImageCard,
@@ -24,13 +25,15 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiImageViewer,
   UiScrollPanel,
   UiSplitLayout,
+  UiCommentListPage,
   UiBox,
   UiFlexRow,
   UiFlexColumn,
   UiGrid,
   UiText,
   UiImage,
-  UiLink
+  UiLink,
+  UiScrollBox
 };
 
 export const PRIMITIVE_COMPONENTS = [
@@ -40,7 +43,8 @@ export const PRIMITIVE_COMPONENTS = [
   'UiFlexColumn',
   'UiText',
   'UiImage',
-  'UiLink'
+  'UiLink',
+  'UiScrollBox'
 ];
 
 export const DEDICATED_COMPONENTS = [
@@ -54,5 +58,6 @@ export const DEDICATED_COMPONENTS = [
   'UiHeroLanding',
   'UiImageViewer',
   'UiScrollPanel',
-  'UiSplitLayout'
+  'UiSplitLayout',
+  'UiCommentListPage'
 ];

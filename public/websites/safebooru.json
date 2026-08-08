@@ -173,6 +173,62 @@
           }
         }
       ]
+    },
+    {
+      "containerSelector": "#content:has(.response-list)",
+      "layoutComponent": "UiCommentListPage",
+      "props": {
+        "pageTitle": "Comments",
+        "height": "calc(100vh - 78px)"
+      },
+      "preserve": {
+        "sidebarSlot": "div.sidebar"
+      },
+      "children": [
+        {
+          "name": "threads",
+          "selector": "#content > div.post",
+          "propsMap": {
+            "id": "self | attr:id",
+            "thumbnailUrl": ".col1 img | attr:src",
+            "postUrl": ".col1 a | attr:href",
+            "postDate": ".col2 span.info:nth-child(1) | text",
+            "postUser": ".col2 span.info:nth-child(2) | text",
+            "postRating": ".col2 span.info:nth-child(3) | text",
+            "postScore": ".col2 span.info:nth-child(4) | text"
+          },
+          "children": [
+            {
+              "name": "tags",
+              "selector": ".col2 .tags span",
+              "propsMap": {
+                "label": "a | text",
+                "url": "a | attr:href",
+                "type": "self | attr:class"
+              }
+            },
+            {
+              "name": "comments",
+              "selector": ".response-list div.post",
+              "propsMap": {
+                "author": ".author h6 a | text",
+                "authorUrl": ".author h6 a | attr:href",
+                "date": ".author span.date | text",
+                "body": ".content .body | text"
+              }
+            }
+          ]
+        },
+        {
+          "name": "pageLinks",
+          "selector": "#paginator a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
     }
   ]
 }
