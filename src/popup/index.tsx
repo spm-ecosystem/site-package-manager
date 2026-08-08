@@ -36,7 +36,7 @@ function Popup() {
   const [devDraftManifestRaw, setDevDraftManifestRaw] = useState<string>('');
   const [devDraftCssRaw, setDevDraftCssRaw] = useState<string>('');
   
-  const folderInputRef = useRef<HTMLInputElement>(null);
+  // folderInputRef removed — file picker now opens in a dedicated tab (devloader.html)
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -183,42 +183,41 @@ function Popup() {
     }
   };
 
-  const triggerFolderPicker = () => folderInputRef.current?.click();
+  const openDevLoader = () => {
+    if (!currentDomain || activeTabId === undefined) return;
+    // Store context so devloader.html knows which domain/tab to target
+    chrome.storage.local.set({
+      spm_devloader_domain: currentDomain,
+      spm_devloader_tab_id: activeTabId,
+    }, () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('devloader.html') });
+    });
+  };
 
   const handleFolderSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Legacy inline handler kept for non-Linux fallback — primary path is openDevLoader
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     let manifestText = '';
     let cssText = '';
-
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const name = file.name.toLowerCase();
       if (name === 'manifest.json') manifestText = await file.text();
       if (name === 'style.css') cssText = await file.text();
     }
-
-    if (!manifestText) {
-      alert('No manifest.json found in the selected folder.');
-      return;
-    }
+    if (!manifestText) { alert('No manifest.json found.'); return; }
     try {
-      const parsed = JSON.parse(manifestText);
-      if (typeof parsed !== 'object' || parsed === null) throw new Error('manifest.json is not a valid JSON object');
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        const updateObj: Record<string, any> = {};
-        updateObj[`dev-draft-manifest:${currentDomain}`] = manifestText;
-        updateObj[`dev-draft-css:${currentDomain}`] = cssText;
-        chrome.storage.local.set(updateObj, () => {
-          setDevDraftManifestRaw(manifestText);
-          setDevDraftCssRaw(cssText);
-          if (activeTabId !== undefined) chrome.tabs.reload(activeTabId);
-        });
-      }
-    } catch (err) {
-      alert(`Error: ${(err as Error).message}`);
-    }
+      JSON.parse(manifestText);
+      const updateObj: Record<string, any> = {};
+      updateObj[`dev-draft-manifest:${currentDomain}`] = manifestText;
+      updateObj[`dev-draft-css:${currentDomain}`] = cssText;
+      chrome.storage.local.set(updateObj, () => {
+        setDevDraftManifestRaw(manifestText);
+        setDevDraftCssRaw(cssText);
+        if (activeTabId !== undefined) chrome.tabs.reload(activeTabId);
+      });
+    } catch { alert('Invalid manifest.json'); }
     e.target.value = '';
   };
 
@@ -405,19 +404,11 @@ function Popup() {
             {isDevMode && (
               <div className="flex flex-col gap-2 border-t border-[#222222] pt-3">
                 <button
-                  onClick={triggerFolderPicker}
+                  onClick={openDevLoader}
                   className="w-full py-2 text-xs font-semibold text-white bg-[#1a1a1a] border border-[#333333] hover:bg-[#2a2a2a] transition rounded"
                 >
                   Load Package Folder
                 </button>
-                <input
-                  type="file"
-                  ref={folderInputRef}
-                  style={{ display: 'none' }}
-                  multiple
-                  onChange={handleFolderSelect}
-                  {...{ webkitdirectory: '', directory: '' } as any}
-                />
               </div>
             )}
 
