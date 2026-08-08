@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 interface NavLink {
   label: string;
   url: string;
@@ -10,6 +12,8 @@ interface UiNavHeaderProps {
   primaryLinks?: NavLink[];
   secondaryLinks?: NavLink[];
   layout?: 'standard' | 'stacked' | 'minimal';
+  hideOnMobile?: boolean;
+  mobileBreakpoint?: number;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -34,11 +38,24 @@ export function UiNavHeader({
   primaryLinks = [],
   secondaryLinks = [],
   layout = 'standard',
+  hideOnMobile = false,
+  mobileBreakpoint = 720,
   className = '',
   style = {},
 }: UiNavHeaderProps) {
+  const [isMobile, setIsMobile] = useState(false);
   const isMinimal = layout === 'minimal';
   const isStacked = layout === 'stacked';
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${mobileBreakpoint}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, [mobileBreakpoint]);
+
+  if (hideOnMobile && isMobile) return null;
 
   return (
     <header

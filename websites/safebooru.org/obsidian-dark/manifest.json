@@ -1,6 +1,6 @@
 {
   "targetUrl": "*://safebooru.org/*",
-  "version": "1.12.0",
+  "version": "1.14.0",
   "theme": {
     "label": "Obsidian",
     "cssVariables": {
@@ -15,37 +15,45 @@
       "--spm-border": "#333333",
       "--spm-radius": "10px"
     },
-    "customStyles": ".sidebar { padding: 0 !important; background: transparent !important; }\n.sidebar h5 { font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; color: var(--spm-text-muted) !important; margin: 16px 0 8px 0 !important; }\n.sidebar ul { list-style: none !important; padding: 0 !important; margin: 0 !important; display: flex !important; flex-direction: column !important; gap: 4px !important; }\n.sidebar li { font-size: 12px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; }\n.sidebar li a { color: var(--spm-text-primary) !important; text-decoration: none !important; }\n.sidebar li a:hover { color: var(--spm-accent) !important; }\n.sidebar li span { color: var(--spm-text-muted) !important; }"
+    "customStyles": "#notice, #long-notice, #has-mail-notice, #safe-image-notice { display: none !important; }"
   },
   "components": [
     {
       "name": "UiNavHeader",
-      "selector": "#header",
+      "selector": "#header, #navbar, header, .navbar, #topbar",
       "action": "replace",
       "propsMap": {
         "siteName": "#site-title a | text",
         "logoUrl": "#site-title img | attr:src"
       },
-      "children": [
-        {
-          "name": "primaryLinks",
-          "selector": "#navbar a",
-          "scope": "document",
-          "propsMap": {
-            "label": "self | text",
-            "url": "self | attr:href"
-          }
-        },
-        {
-          "name": "secondaryLinks",
-          "selector": "#subnavbar a",
-          "scope": "document",
-          "propsMap": {
-            "label": "self | text",
-            "url": "self | attr:href"
-          }
-        }
-      ]
+      "props": {
+        "className": "safebooru-site-nav",
+        "logoHref": "https://safebooru.org/",
+        "primaryLinks": [
+          { "label": "My Account", "url": "https://safebooru.org/index.php?page=account&s=home" },
+          { "label": "Posts", "url": "https://safebooru.org/index.php?page=post&s=list&tags=all" },
+          { "label": "Comments", "url": "https://safebooru.org/index.php?page=comment&s=list" },
+          { "label": "Wiki", "url": "https://safebooru.org/index.php?page=wiki&s=list" },
+          { "label": "Aliases", "url": "https://safebooru.org/index.php?page=alias&s=list" },
+          { "label": "Artists", "url": "https://safebooru.org/index.php?page=artist&s=list" },
+          { "label": "Tags", "url": "https://safebooru.org/index.php?page=tags&s=list" },
+          { "label": "Pools", "url": "https://safebooru.org/index.php?page=pool&s=list" },
+          { "label": "Forum", "url": "https://safebooru.org/index.php?page=forum&s=list" },
+          { "label": "Stats", "url": "https://safebooru.org/index.php?page=stats" },
+          { "label": "Help", "url": "https://safebooru.org/index.php?page=help" }
+        ],
+        "secondaryLinks": [
+          { "label": "Video", "url": "https://safebooru.org/index.php?page=post&s=list&tags=video" },
+          { "label": "Upload", "url": "https://safebooru.org/index.php?page=post&s=add" },
+          { "label": "My Favorites", "url": "https://safebooru.org/index.php?page=favorites&s=view" },
+          { "label": "Random", "url": "https://safebooru.org/index.php?page=post&s=random" },
+          { "label": "Contact Us", "url": "https://safebooru.org/index.php?page=contact" },
+          { "label": "DMCA", "url": "https://safebooru.org/index.php?page=dmca" },
+          { "label": "About", "url": "https://safebooru.org/index.php?page=about" },
+          { "label": "Help", "url": "https://safebooru.org/index.php?page=help&topic=post" },
+          { "label": "TOS", "url": "https://safebooru.org/index.php?page=tos" }
+        ]
+      }
     },
     {
       "name": "UiNavHeader",
@@ -54,7 +62,7 @@
     },
     {
       "name": "UiSearchBar",
-      "selector": "#tag-sidebar form, .sidebar form",
+      "selector": "#tag-sidebar form, .tag-search form, .sidebar form",
       "action": "replace",
       "propsMap": {
         "defaultValue": "input[name='tags'] | attr:value"
@@ -79,8 +87,8 @@
         "tagline": "Anime picture search engine",
         "subtext": "Browse millions of safe anime illustrations, updated hourly.",
         "ctaLabel": "Browse Gallery",
-        "ctaUrl": "https://safebooru.org/index.php?page=post&s=list",
-        "searchPlaceholder": "Search tags… (e.g. blue_hair 1girl)",
+        "ctaUrl": "https://safebooru.org/index.php?page=post&s=list&tags=all",
+        "searchPlaceholder": "Search tags... (e.g. blue_hair 1girl)",
         "searchSubmitUrl": "https://safebooru.org/index.php?page=post&s=list",
         "searchParamName": "tags"
       },
@@ -100,18 +108,27 @@
       "layoutComponent": "UiModernGridPage",
       "urlPattern": "page=post&s=list",
       "propsMap": {
-        "pageTitle": "h2 | text"
+        "sidebarHtml": ".sidebar | html"
       },
       "props": {
-        "height": "calc(100vh - 78px)"
-      },
-      "preserve": {
-        "sidebarSlot": "div.sidebar"
+        "className": "safebooru-gallery",
+        "pageTitle": "Gallery",
+        "height": "calc(100vh - 78px)",
+        "sidebarWidth": "220px",
+        "hideSidebarOnMobile": true,
+        "mobileBreakpoint": 720,
+        "mobileColumns": 2,
+        "mobileGap": "8px",
+        "mobilePadding": "8px",
+        "mobileCardAspectRatio": "1 / 1.28",
+        "mobileHeaderSticky": true,
+        "mobileShowHeader": true,
+        "mobileShowPagination": true
       },
       "children": [
         {
           "name": "items",
-          "selector": ".thumb",
+          "selector": "#post-list .thumb",
           "propsMap": {
             "imageUrl": "img | attr:src",
             "linkUrl": "a | attr:href",
@@ -121,7 +138,7 @@
         },
         {
           "name": "pageLinks",
-          "selector": ".pagination a",
+          "selector": "#paginator .pagination a",
           "propsMap": {
             "label": "self | text",
             "url": "self | attr:href"
@@ -137,12 +154,12 @@
         "statisticsHtml": "#stats ul | html"
       },
       "props": {
-        "sidebarWidth": "280px",
+        "sidebarWidth": "300px",
         "sidebarSide": "left",
         "imageFit": "contain",
         "height": "calc(100vh - 78px)",
         "showSearch": true,
-        "searchPlaceholder": "Search tags…",
+        "searchPlaceholder": "Search tags...",
         "searchSubmitUrl": "https://safebooru.org/index.php?page=post&s=list",
         "searchParamName": "tags"
       },
@@ -157,13 +174,13 @@
         },
         {
           "name": "tags",
-          "selector": "#tag-sidebar li.tag",
+          "selector": "#tag-sidebar li[class*='tag-type-']",
           "scope": "document",
           "propsMap": {
-            "name": "a:nth-child(2) | text",
+            "name": "a[href*='page=post'][href*='tags='] | text",
             "count": "span.tag-count | text",
             "type": "self | attr:class",
-            "url": "a:nth-child(2) | attr:href"
+            "url": "a[href*='page=post'][href*='tags='] | attr:href"
           }
         },
         {
@@ -187,7 +204,7 @@
         "height": "calc(100vh - 78px)"
       },
       "preserve": {
-        "sidebarSlot": "div.sidebar"
+        "sidebarSlot": ".sidebar"
       },
       "children": [
         {
@@ -226,7 +243,7 @@
         },
         {
           "name": "pageLinks",
-          "selector": "#paginator a",
+          "selector": "#paginator .pagination a",
           "scope": "document",
           "propsMap": {
             "label": "self | text",
@@ -244,7 +261,7 @@
         "height": "calc(100vh - 78px)"
       },
       "preserve": {
-        "sidebarSlot": "div.sidebar"
+        "sidebarSlot": ".sidebar"
       },
       "children": [
         {

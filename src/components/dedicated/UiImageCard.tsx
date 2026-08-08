@@ -36,11 +36,11 @@ export function UiImageCard({
     <a
       id={id}
       href={linkUrl}
-      className={className}
+      className={`spm-image-card ${className}`.trim()}
       style={{
         display: 'flex',
         flexDirection: 'column',
-        width,
+        width: `var(--spm-image-card-width, ${width})`,
         borderRadius: 'var(--spm-radius)',
         overflow: 'hidden',
         border: '1px solid var(--spm-border)',
@@ -60,6 +60,7 @@ export function UiImageCard({
       }}
     >
       <div
+        className="spm-image-card-media"
         style={{
           width: '100%',
           aspectRatio: calculatedRatio,
@@ -81,6 +82,7 @@ export function UiImageCard({
       </div>
       {showTitle && (
         <div
+          className="spm-image-card-caption"
           style={{
             padding: '8px',
             borderTop: '1px solid var(--spm-border)',

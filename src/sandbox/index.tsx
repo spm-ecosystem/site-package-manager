@@ -33,6 +33,9 @@ interface CaptureDomResponse {
   error?: string;
 }
 
+const CAPTURE_TIMEOUT_MS = 7000;
+const FETCH_TIMEOUT_MS = 10000;
+
 
 function SandboxApp() {
   const savedTargetUrl = localStorage.getItem('spm_sandbox_target_url') || 'https://example.com';
@@ -77,6 +80,7 @@ function SandboxApp() {
   const [jsonString, setJsonString] = useState<string>(savedJsonString);
   const [jsonError, setJsonError] = useState<boolean>(false);
   const [rawHtml, setRawHtml] = useState<string>(savedRawHtml);
+  const [captureStatus, setCaptureStatus] = useState<string>('Idle');
   const [selectedComponentConfig, setSelectedComponentConfig] = useState<any | null>(null);
 
   // Drag & Drop Modal states
@@ -326,6 +330,101 @@ function SandboxApp() {
     return htmlText.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
   };
 
+  const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
+    let timeoutId: number | undefined;
+
+    const timeoutPromise = new Promise<never>((_resolve, reject) => {
+      timeoutId = window.setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timeoutId) window.clearTimeout(timeoutId);
+    }
+  };
+
+  const fetchTextWithTimeout = async (url: string, timeoutMs: number): Promise<Response> => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      return await fetch(url, {
+        method: 'GET',
+        signal: controller.signal
+      });
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  };
+
+  const captureTabWithScripting = async (tabId: number): Promise<CaptureDomResponse | null> => {
+    if (typeof chrome === 'undefined' || !chrome.scripting) return null;
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: async () => {
+        const waitForDomToSettle = (timeoutMs = 4000, idleMs = 700) => {
+          return new Promise<void>((resolve) => {
+            if (!document.body) {
+              resolve();
+              return;
+            }
+
+            let lastMutation = Date.now();
+            const startedAt = Date.now();
+            const observer = new MutationObserver(() => {
+              lastMutation = Date.now();
+            });
+
+            observer.observe(document.documentElement, {
+              attributes: true,
+              childList: true,
+              subtree: true,
+              characterData: true
+            });
+
+            const interval = window.setInterval(() => {
+              const now = Date.now();
+              const isIdle = now - lastMutation >= idleMs;
+              const timedOut = now - startedAt >= timeoutMs;
+
+              if (isIdle || timedOut) {
+                window.clearInterval(interval);
+                observer.disconnect();
+                resolve();
+              }
+            }, 150);
+          });
+        };
+
+        if (document.readyState === 'loading') {
+          await new Promise<void>((resolve) => {
+            document.addEventListener('DOMContentLoaded', () => resolve(), { once: true });
+          });
+        }
+
+        await waitForDomToSettle();
+
+        const clone = document.documentElement.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll('script, #spm-global-theme-styles, #spm-global-toast-host').forEach((el) => el.remove());
+        clone.querySelectorAll('[data-spm-id]').forEach((el) => el.removeAttribute('data-spm-id'));
+
+        const doctype = document.doctype
+          ? `<!DOCTYPE ${document.doctype.name}>`
+          : '<!DOCTYPE html>';
+
+        return {
+          ok: true,
+          html: `${doctype}\n${clone.outerHTML}`,
+          url: window.location.href
+        };
+      }
+    });
+
+    return (results[0]?.result as CaptureDomResponse | undefined) || null;
+  };
+
   const tabMatchScore = (tabUrl: string | undefined, desiredUrl: string) => {
     if (!tabUrl) return 0;
 
@@ -347,19 +446,28 @@ function SandboxApp() {
   const captureOpenTabHtml = async (): Promise<string | null> => {
     if (typeof chrome === 'undefined' || !chrome.tabs) return null;
 
+    setCaptureStatus('Looking for a matching open tab...');
     const tabs = await chrome.tabs.query({});
     const matchingTabs = tabs
       .map((tab) => ({ tab, score: tabMatchScore(tab.url, targetUrl) }))
       .filter(({ tab, score }) => Boolean(tab.id) && score > 0)
       .sort((a, b) => b.score - a.score);
 
+    if (matchingTabs.length === 0) {
+      setCaptureStatus('No matching open tab found. Trying HTML fetch...');
+      return null;
+    }
+
     for (const { tab } of matchingTabs) {
       if (!tab.id) continue;
 
       try {
-        const response = await chrome.tabs.sendMessage(tab.id, {
-          type: 'SPM_SANDBOX_CAPTURE_DOM'
-        }) as CaptureDomResponse;
+        setCaptureStatus(`Capturing rendered DOM from ${tab.url || 'open tab'}...`);
+        const response = await withTimeout(
+          chrome.tabs.sendMessage(tab.id, { type: 'SPM_SANDBOX_CAPTURE_DOM' }) as Promise<CaptureDomResponse>,
+          CAPTURE_TIMEOUT_MS,
+          'Rendered tab capture'
+        );
 
         if (response?.ok && response.html) {
           if (response.url && response.url !== targetUrl) {
@@ -368,10 +476,37 @@ function SandboxApp() {
           }
 
           console.log('[SPM Sandbox] Captured rendered DOM from open tab:', response.url || tab.url);
+          setCaptureStatus(`Captured rendered DOM from ${response.url || tab.url}`);
           return response.html;
+        }
+
+        if (response?.error) {
+          console.warn('[SPM Sandbox] Tab capture responded with error:', response.error);
         }
       } catch (err) {
         console.warn('[SPM Sandbox] Could not capture DOM from tab:', tab.url, err);
+      }
+
+      try {
+        setCaptureStatus(`Injecting DOM capture into ${tab.url || 'open tab'}...`);
+        const response = await withTimeout(
+          captureTabWithScripting(tab.id),
+          CAPTURE_TIMEOUT_MS,
+          'Injected rendered tab capture'
+        );
+
+        if (response?.ok && response.html) {
+          if (response.url && response.url !== targetUrl) {
+            setUrlInput(response.url);
+            setTargetUrl(response.url);
+          }
+
+          console.log('[SPM Sandbox] Captured rendered DOM by script injection:', response.url || tab.url);
+          setCaptureStatus(`Captured rendered DOM from ${response.url || tab.url}`);
+          return response.html;
+        }
+      } catch (err) {
+        console.warn('[SPM Sandbox] Could not inject DOM capture into tab:', tab.url, err);
       }
     }
 
@@ -381,6 +516,7 @@ function SandboxApp() {
   const fetchHtmlDump = async () => {
     let htmlText = '';
     let fetched = false;
+    setCaptureStatus('Starting capture...');
 
     // 1. Prefer an already-rendered open tab. This handles SPA pages whose DOM is
     // created after JavaScript runs, including authenticated screens.
@@ -397,10 +533,12 @@ function SandboxApp() {
     // 2. Direct browser context fetch
     try {
       if (!fetched) {
-        const response = await fetch(targetUrl, { method: 'GET' });
+        setCaptureStatus('No rendered DOM captured. Trying direct HTML fetch...');
+        const response = await fetchTextWithTimeout(targetUrl, FETCH_TIMEOUT_MS);
         if (response.ok) {
           htmlText = await response.text();
           fetched = true;
+          setCaptureStatus('Loaded HTML via direct fetch.');
         }
       }
     } catch (directErr) {
@@ -410,11 +548,13 @@ function SandboxApp() {
     // 3. Local CORS bypass proxy fetch fallback
     if (!fetched) {
       try {
+        setCaptureStatus('Trying local proxy HTML fetch...');
         const proxyUrl = `http://localhost:8080/fetch?url=${encodeURIComponent(targetUrl)}`;
-        const response = await fetch(proxyUrl, { method: 'GET' });
+        const response = await fetchTextWithTimeout(proxyUrl, FETCH_TIMEOUT_MS);
         if (response.ok) {
           htmlText = await response.text();
           fetched = true;
+          setCaptureStatus('Loaded HTML via local proxy.');
         } else {
           throw new Error(`Proxy returned status ${response.status}`);
         }
@@ -429,16 +569,15 @@ function SandboxApp() {
       localStorage.setItem('spm_sandbox_raw_html', htmlText);
       setRawHtml(htmlText);
     } else {
-      if (!rawHtml) {
-        setRawHtml(`
-          <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
-            <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Unable to fetch target page</h4>
-            <p style="margin: 0; font-size: 12px; line-height: 1.5;">
-              Could not fetch <code>${targetUrl}</code>. Make sure the local dev-server proxy is running (<code>npm run dev-server</code>) and CORS policies allow connections.
-            </p>
-          </div>
-        `);
-      }
+      setCaptureStatus('Capture failed. Open or reload the target page tab, then click Capture again.');
+      setRawHtml(`
+        <div style="padding: 24px; color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; font-family: system-ui, sans-serif; margin: 16px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">Unable to capture target page</h4>
+          <p style="margin: 0; font-size: 12px; line-height: 1.5;">
+            Could not capture rendered DOM or fetch HTML for <code>${targetUrl}</code>. Open the page in a normal tab, reload that tab after updating the extension, wait for the site content to appear, then click <strong>Capture</strong> again.
+          </p>
+        </div>
+      `);
     }
   };
 
@@ -696,7 +835,10 @@ function SandboxApp() {
             {/* Legacy View Panel */}
             <div className={`flex-1 flex flex-col overflow-hidden ${viewMode === 'legacy' ? 'block' : 'hidden'}`}>
               <div className="flex items-center justify-between mb-2">
-                <div className="text-xs font-bold text-zinc-500 uppercase">Legacy DOM Explorer</div>
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="text-xs font-bold text-zinc-500 uppercase shrink-0">Legacy DOM Explorer</div>
+                  <div className="text-[11px] text-zinc-500 truncate">{captureStatus}</div>
+                </div>
                 {activeSelector && (
                   <div className="text-[11px] font-mono bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded text-white truncate max-w-[400px]">
                     Inspecting: {activeSelector}
