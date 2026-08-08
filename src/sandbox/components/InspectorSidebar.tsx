@@ -136,9 +136,9 @@ const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<
       tagline: 'value:Anime picture search engine',
       subtext: 'value:Browse millions of safe anime illustrations.',
       ctaLabel: 'value:Browse Gallery',
-      ctaUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
+      ctaUrl: 'value:/index.php?page=post&s=list',
       searchPlaceholder: 'value:Search tags…',
-      searchSubmitUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
+      searchSubmitUrl: 'value:/index.php?page=post&s=list',
       searchParamName: 'value:tags'
     }
   },
@@ -152,7 +152,7 @@ const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<
       splitButtons: 'value:true',
       showSearch: 'value:true',
       searchPlaceholder: 'value:Search tags…',
-      searchSubmitUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
+      searchSubmitUrl: 'value:/index.php?page=post&s=list',
       searchParamName: 'value:tags'
     }
   },
@@ -162,7 +162,7 @@ const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<
       width: 'value:280px',
       showSearch: 'value:true',
       searchPlaceholder: 'value:Search tags…',
-      searchSubmitUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
+      searchSubmitUrl: 'value:/index.php?page=post&s=list',
       searchParamName: 'value:tags'
     }
   },
