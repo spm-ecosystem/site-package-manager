@@ -160,10 +160,12 @@
           "selector": "#tag-sidebar li",
           "scope": "document",
           "propsMap": {
-            "name": "a:nth-child(2) | text",
+            "name": "a:last-of-type | text",
             "count": "span.tag-count | text",
             "type": "self | attr:class",
-            "url": "a:nth-child(2) | attr:href"
+            "url": "a:last-of-type | attr:href",
+            "addUrl": "a:nth-of-type(2) | attr:href",
+            "removeUrl": "a:nth-of-type(3) | attr:href"
           }
         }
       ]
@@ -206,10 +208,10 @@
           "selector": "#tag-sidebar li[class*='tag-type-']",
           "scope": "document",
           "propsMap": {
-            "name": "a[href*='page=post'][href*='tags='] | text",
+            "name": "a:last-of-type | text",
             "count": "span.tag-count | text",
             "type": "self | attr:class",
-            "url": "a[href*='page=post'][href*='tags='] | attr:href"
+            "url": "a:last-of-type | attr:href"
           }
         },
         {
