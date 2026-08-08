@@ -50,9 +50,10 @@ const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<
     }
   },
   UiModernGridPage: {
-    props: ['pageTitle'],
+    props: ['pageTitle', 'height'],
     placeholders: {
-      pageTitle: 'h2 | text'
+      pageTitle: 'h2 | text',
+      height: 'value:calc(100vh - 78px)'
     }
   },
   UiNavHeader: {
@@ -129,6 +130,39 @@ const COMPONENT_SCHEMAS: Record<string, { props: string[]; placeholders: Record<
       searchPlaceholder: 'value:Search tags…',
       searchSubmitUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
       searchParamName: 'value:tags'
+    }
+  },
+  UiSplitLayout: {
+    props: ['sidebarWidth', 'sidebarSide', 'imageFit', 'height', 'splitButtons', 'showSearch', 'searchPlaceholder', 'searchSubmitUrl', 'searchParamName'],
+    placeholders: {
+      sidebarWidth: 'value:280px',
+      sidebarSide: 'value:left',
+      imageFit: 'value:contain',
+      height: 'value:calc(100vh - 78px)',
+      splitButtons: 'value:true',
+      showSearch: 'value:true',
+      searchPlaceholder: 'value:Search tags…',
+      searchSubmitUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
+      searchParamName: 'value:tags'
+    }
+  },
+  UiScrollPanel: {
+    props: ['width', 'showSearch', 'searchPlaceholder', 'searchSubmitUrl', 'searchParamName'],
+    placeholders: {
+      width: 'value:280px',
+      showSearch: 'value:true',
+      searchPlaceholder: 'value:Search tags…',
+      searchSubmitUrl: 'value:https://safebooru.org/index.php?page=post&s=list',
+      searchParamName: 'value:tags'
+    }
+  },
+  UiImageViewer: {
+    props: ['src', 'alt', 'fit', 'background'],
+    placeholders: {
+      src: 'img | attr:src',
+      alt: 'img | attr:alt',
+      fit: 'value:contain',
+      background: 'value:var(--spm-bg-primary)'
     }
   }
 };
