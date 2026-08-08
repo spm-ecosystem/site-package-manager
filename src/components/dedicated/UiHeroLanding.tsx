@@ -1,61 +1,41 @@
+import { UiSearchBar } from './UiSearchBar';
+
 interface NavLink {
   label: string;
   url: string;
 }
 
 interface UiHeroLandingProps {
-  // Identity
   siteName?: string;
   logoUrl?: string;
   logoHref?: string;
-  // Hero copy
   tagline?: string;
   subtext?: string;
-  // CTA
   ctaLabel?: string;
   ctaUrl?: string;
-  // Search (delegates to UiSearchBar behaviour inline)
   searchPlaceholder?: string;
   searchSubmitUrl?: string;
   searchParamName?: string;
-  // Nav links displayed as pills below CTA
   primaryLinks?: NavLink[];
-  // Layout overrides
   className?: string;
   style?: React.CSSProperties;
 }
 
-import { useState } from 'react';
-
 export function UiHeroLanding({
-  siteName = 'Site',
+  siteName,
   logoUrl,
   logoHref = '/',
   tagline,
   subtext,
-  ctaLabel = 'Browse',
-  ctaUrl = '/',
-  searchPlaceholder = 'Search…',
-  searchSubmitUrl = '/',
-  searchParamName = 'q',
+  ctaLabel,
+  ctaUrl,
+  searchPlaceholder,
+  searchSubmitUrl,
+  searchParamName,
   primaryLinks = [],
   className = '',
   style = {},
 }: UiHeroLandingProps) {
-  const [query, setQuery] = useState('');
-  const [focused, setFocused] = useState(false);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const url = new URL(searchSubmitUrl, window.location.href);
-      url.searchParams.set(searchParamName, query);
-      window.location.href = url.toString();
-    } catch {
-      // noop
-    }
-  };
-
   return (
     <div
       className={className}
@@ -74,36 +54,31 @@ export function UiHeroLanding({
       }}
     >
       {/* Logo / Site name */}
-      <a
-        href={logoHref}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '10px',
-          textDecoration: 'none',
-          marginBottom: '24px',
-        }}
-      >
-        {logoUrl && (
-          <img
-            src={logoUrl}
-            alt={siteName}
-            style={{ maxWidth: '320px', width: '100%', height: 'auto', display: 'block' }}
-          />
-        )}
-        {!logoUrl && (
-          <span
-            style={{
-              fontSize: '42px',
-              fontWeight: 900,
-              color: 'var(--spm-text-primary)',
-              letterSpacing: '-0.03em',
-            }}
-          >
-            {siteName}
-          </span>
-        )}
-      </a>
+      {(logoUrl || siteName) && (
+        <a
+          href={logoHref}
+          style={{ display: 'inline-block', marginBottom: '24px', textDecoration: 'none' }}
+        >
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={siteName}
+              style={{ maxWidth: '320px', width: '100%', height: 'auto', display: 'block' }}
+            />
+          ) : (
+            <span
+              style={{
+                fontSize: '42px',
+                fontWeight: 900,
+                color: 'var(--spm-text-primary)',
+                letterSpacing: '-0.03em',
+              }}
+            >
+              {siteName}
+            </span>
+          )}
+        </a>
+      )}
 
       {/* Tagline */}
       {tagline && (
@@ -125,7 +100,7 @@ export function UiHeroLanding({
       {subtext && (
         <p
           style={{
-            margin: '0 0 36px 0',
+            margin: '0 0 32px 0',
             fontSize: '14px',
             color: 'var(--spm-text-muted)',
             textAlign: 'center',
@@ -137,93 +112,15 @@ export function UiHeroLanding({
         </p>
       )}
 
-      {/* Search bar — same visual style as UiSearchBar */}
-      <form
-        onSubmit={handleSearch}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          width: '100%',
-          maxWidth: '520px',
-          marginBottom: '16px',
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'var(--spm-bg-secondary)',
-            border: `1px solid ${focused ? 'var(--spm-accent)' : 'var(--spm-border)'}`,
-            borderRadius: 'var(--spm-radius)',
-            padding: '0 10px',
-            transition: 'border-color 0.15s',
-          }}
-        >
-          {/* Search icon */}
-          <button
-            type="submit"
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: 0,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              color: focused ? 'var(--spm-accent)' : 'var(--spm-text-muted)',
-              transition: 'color 0.15s',
-              flexShrink: 0,
-            }}
-            aria-label="Search"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.35-4.35" />
-            </svg>
-          </button>
-
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder={searchPlaceholder}
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'var(--spm-text-primary)',
-              fontSize: '13px',
-              padding: '12px 0',
-              fontFamily: 'inherit',
-              minWidth: 0,
-            }}
-          />
-
-          {query && (
-            <button
-              type="button"
-              onClick={() => setQuery('')}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--spm-text-muted)',
-                padding: 0,
-                lineHeight: 1,
-                fontSize: '11px',
-                flexShrink: 0,
-              }}
-              aria-label="Clear"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </form>
+      {/* Search bar — reuses UiSearchBar so behaviour is identical */}
+      {searchSubmitUrl && (
+        <UiSearchBar
+          placeholder={searchPlaceholder}
+          submitUrl={searchSubmitUrl}
+          queryParamName={searchParamName}
+          style={{ maxWidth: '520px', marginBottom: '16px' }}
+        />
+      )}
 
       {/* CTA button */}
       {ctaUrl && ctaLabel && (
@@ -232,7 +129,6 @@ export function UiHeroLanding({
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '6px',
             padding: '9px 22px',
             borderRadius: 'var(--spm-radius)',
             background: 'transparent',
@@ -242,7 +138,7 @@ export function UiHeroLanding({
             fontWeight: 600,
             textDecoration: 'none',
             transition: 'border-color 0.15s, color 0.15s, background 0.15s',
-            marginBottom: '40px',
+            marginBottom: primaryLinks.length > 0 ? '32px' : '0',
           }}
           onMouseEnter={e => {
             const el = e.currentTarget as HTMLAnchorElement;
@@ -261,7 +157,7 @@ export function UiHeroLanding({
         </a>
       )}
 
-      {/* Nav links as pills */}
+      {/* Nav links — data comes entirely from JSON children */}
       {primaryLinks.length > 0 && (
         <nav
           style={{
@@ -269,7 +165,7 @@ export function UiHeroLanding({
             flexWrap: 'wrap',
             gap: '8px',
             justifyContent: 'center',
-            maxWidth: '540px',
+            maxWidth: '560px',
           }}
         >
           {primaryLinks.map((link, i) => (
