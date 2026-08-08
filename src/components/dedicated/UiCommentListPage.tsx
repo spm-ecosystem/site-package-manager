@@ -175,45 +175,56 @@ export function UiCommentCard({ thread }: UiCommentCardProps) {
 
         {/* Associated tags list */}
         {thread.tags && thread.tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
             {thread.tags.map((tag, tagIdx) => {
               const isArtist = tag.type.includes('artist');
               const isChar = tag.type.includes('character');
               const isCopy = tag.type.includes('copyright');
               const isMeta = tag.type.includes('metadata');
-              const badgeColor = isArtist
-                ? '#ef4444'
+              const dotColor = isArtist
+                ? '#ef4444' // red
                 : isChar
-                ? '#10b981'
+                ? '#10b981' // green
                 : isCopy
-                ? '#a855f7'
+                ? '#a855f7' // purple
                 : isMeta
-                ? '#f59e0b'
-                : 'var(--spm-text-muted)';
+                ? '#f59e0b' // orange
+                : '#9ca3af'; // gray/general
               return (
                 <a
                   key={tagIdx}
                   href={tag.url}
                   style={{
-                    fontSize: '9px',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    background: 'var(--spm-bg-tertiary)',
-                    color: badgeColor,
-                    border: '1px solid var(--spm-border)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    fontSize: '11px',
+                    padding: '4px 10px',
+                    borderRadius: '16px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    color: 'var(--spm-text-muted)',
                     textDecoration: 'none',
                     fontWeight: 500,
-                    transition: 'border-color 0.15s, background 0.15s',
+                    transition: 'background 0.15s, color 0.15s, transform 0.1s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = badgeColor;
-                    e.currentTarget.style.background = 'var(--spm-bg-primary)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.color = 'var(--spm-text-primary)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--spm-border)';
-                    e.currentTarget.style.background = 'var(--spm-bg-tertiary)';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                    e.currentTarget.style.color = 'var(--spm-text-muted)';
                   }}
                 >
+                  <span
+                    style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: dotColor,
+                      marginRight: '6px',
+                      flexShrink: 0,
+                    }}
+                  />
                   {tag.label}
                 </a>
               );
