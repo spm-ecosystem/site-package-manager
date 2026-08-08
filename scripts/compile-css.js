@@ -29,7 +29,17 @@ async function compileCss() {
   const cssFiles = findCssFiles(WEBSITES_DIR);
   console.log(`[Compile CSS] Found ${cssFiles.length} CSS file(s) to compile.`);
 
-  const processor = postcss([tailwindcss, autoprefixer]);
+  const processor = postcss([
+    tailwindcss({
+      content: [
+        "./index.html",
+        "./src/**/*.{js,ts,jsx,tsx}",
+        "./public/websites/**/*.json",
+        "./public/websites/**/*.tsx"
+      ]
+    }),
+    autoprefixer
+  ]);
 
   for (const cssFile of cssFiles) {
     try {
