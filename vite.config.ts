@@ -8,4 +8,7 @@ export default defineConfig({
     react(),
     crx({ manifest }),
   ],
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production')
+  }
 });
