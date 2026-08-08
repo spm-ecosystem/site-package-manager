@@ -36,4 +36,13 @@ describe('extractValue engine helper', () => {
     const result = extractValue(div, 'a | hrefOrOnclick');
     expect(result).toBe('index.php?id=123');
   });
+
+  it('should generate a selector string and assign data-spm-id to targetEl', () => {
+    const div = document.createElement('div');
+    div.innerHTML = '<span>Test</span>';
+    const result = extractValue(div, 'span | selector');
+    expect(result).toMatch(/^\[data-spm-id="spm-id-[a-z0-9]+"\]$/);
+    const span = div.querySelector('span');
+    expect(span?.getAttribute('data-spm-id')).toBeTruthy();
+  });
 });

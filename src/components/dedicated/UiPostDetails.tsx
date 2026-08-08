@@ -11,6 +11,7 @@ interface TagItem {
 interface GenericButtonItem {
   label: string;
   url: string;
+  targetSelector?: string;
   iconSvg?: string; // Optional raw SVG path/code passed from manifest
 }
 
@@ -185,7 +186,14 @@ export function UiPostDetails({
               return (
                 <a
                   key={i}
-                  href={btn.url}
+                  href={btn.url || '#'}
+                  onClick={e => {
+                    if (btn.targetSelector) {
+                      e.preventDefault();
+                      const el = document.querySelector(btn.targetSelector);
+                      if (el) (el as HTMLElement).click();
+                    }
+                  }}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
