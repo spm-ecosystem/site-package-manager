@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import '../popup/index.css';
+import '../content/content.css';
 
 type Status = 'idle' | 'loading' | 'success' | 'error';
 
@@ -13,7 +13,6 @@ function DevLoader() {
   const [targetTabId, setTargetTabId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    // Read target domain from storage (set by popup before opening this tab)
     chrome.storage.local.get(['spm_devloader_domain', 'spm_devloader_tab_id'], (res) => {
       if (res.spm_devloader_domain) setDomain(res.spm_devloader_domain);
       if (res.spm_devloader_tab_id) setTargetTabId(res.spm_devloader_tab_id);
@@ -63,18 +62,16 @@ function DevLoader() {
         }
         setDraftLabel(`${label} v${version}`);
         setStatus('success');
-        setMessage(`Draft saved. Reloading tab...`);
+        setMessage('Reloading tab...');
 
-        // Reload the target tab and close this tab
+        const doClose = () => setTimeout(() => window.close(), 800);
+
         if (targetTabId !== undefined) {
-          chrome.tabs.reload(targetTabId, {}, () => {
-            setTimeout(() => window.close(), 800);
-          });
+          chrome.tabs.reload(targetTabId, {}, doClose);
         } else {
-          // Fallback: try to find a tab with this domain
           chrome.tabs.query({ url: `*://${domain}/*` }, (tabs) => {
-            if (tabs[0]?.id) chrome.tabs.reload(tabs[0].id, {}, () => setTimeout(() => window.close(), 800));
-            else setTimeout(() => window.close(), 1500);
+            if (tabs[0]?.id) chrome.tabs.reload(tabs[0].id, {}, doClose);
+            else doClose();
           });
         }
       });
@@ -92,9 +89,7 @@ function DevLoader() {
         <div className="flex flex-col gap-1">
           <div className="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Site Package Manager</div>
           <h1 className="text-base font-bold text-white">Load Package Folder</h1>
-          {domain && (
-            <div className="text-xs text-zinc-500 font-mono">{domain}</div>
-          )}
+          {domain && <div className="text-xs text-zinc-500 font-mono">{domain}</div>}
         </div>
 
         {status === 'idle' && (
