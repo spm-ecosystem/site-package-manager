@@ -136,31 +136,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
   // Helper queries targeting scoped parent
   const rootDoc = rootContext instanceof Document ? rootContext : document;
 
-  // Inject window.alert / window.confirm main-world interceptor
-  const interceptorId = 'spm-main-world-interceptor';
-  if (!rootDoc.getElementById(interceptorId)) {
-    const script = rootDoc.createElement('script');
-    script.id = interceptorId;
-    script.textContent = `
-      (function() {
-        const originalAlert = window.alert;
-        window.alert = function(msg) {
-          window.dispatchEvent(new CustomEvent('spm-show-toast', { 
-            detail: { message: String(msg), type: 'info' } 
-          }));
-        };
-        const originalConfirm = window.confirm;
-        window.confirm = function(msg) {
-          window.dispatchEvent(new CustomEvent('spm-show-toast', { 
-            detail: { message: String(msg), type: 'warning' } 
-          }));
-          return originalConfirm(msg);
-        };
-      })();
-    `;
-    const parent = rootDoc.head || rootDoc.documentElement;
-    parent.appendChild(script);
-  }
+
 
   // Mount global Toast root for notifications
   const toastHostId = 'spm-global-toast-host';
