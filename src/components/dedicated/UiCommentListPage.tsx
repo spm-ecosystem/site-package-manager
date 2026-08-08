@@ -108,7 +108,7 @@ export function UiCommentCard({ thread }: UiCommentCardProps) {
         borderRadius: 'var(--spm-radius)',
         padding: '20px',
         boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-        minHeight: '140px',
+        height: 'auto',
       }}
     >
       {/* Thumbnail Column */}
@@ -139,7 +139,7 @@ export function UiCommentCard({ thread }: UiCommentCardProps) {
       </div>
 
       {/* Details, Comments & Tags Column */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         {/* Post details header */}
         <div
           style={{
@@ -150,6 +150,7 @@ export function UiCommentCard({ thread }: UiCommentCardProps) {
             color: 'var(--spm-text-muted)',
             borderBottom: '1px solid var(--spm-border)',
             paddingBottom: '8px',
+            marginBottom: '14px',
           }}
         >
           <span>
@@ -167,7 +168,7 @@ export function UiCommentCard({ thread }: UiCommentCardProps) {
         </div>
 
         {/* Comment replies sub-list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
           {(thread.comments || []).map((cmt, idx) => (
             <UiCommentReply key={idx} comment={cmt} />
           ))}
@@ -175,7 +176,7 @@ export function UiCommentCard({ thread }: UiCommentCardProps) {
 
         {/* Associated tags list */}
         {thread.tags && thread.tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {thread.tags.map((tag, tagIdx) => {
               const isArtist = tag.type.includes('artist');
               const isChar = tag.type.includes('character');
