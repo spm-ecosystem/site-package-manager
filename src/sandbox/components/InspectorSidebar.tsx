@@ -186,6 +186,46 @@ export const InspectorSidebar: React.FC<InspectorSidebarProps> = ({
               </div>
             )}
 
+            {/* Captured Attributes list */}
+            {Object.keys(inspectedElement.attributes || {}).length > 0 && (
+              <div className="mt-1.5">
+                <span className="text-[11px] font-semibold text-zinc-400 block mb-1">Captured Attributes</span>
+                <div className="flex flex-col gap-1 max-h-[120px] overflow-y-auto">
+                  {Object.entries(inspectedElement.attributes).map(([key, val]) => (
+                    <div key={key} className="flex items-center justify-between font-mono text-[9px] bg-black/40 border border-zinc-900 rounded p-1">
+                      <span className="text-zinc-500 font-semibold">{key}:</span>
+                      <span className="text-emerald-400 truncate max-w-[140px]" title={val}>{val}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Dynamic extraction parser helper box */}
+            <div className="mt-2.5 bg-[#1a1a1a] border border-zinc-800 rounded p-2.5 text-[9px] text-zinc-400 leading-snug flex flex-col gap-1.5">
+              <span className="font-bold text-zinc-300 flex items-center gap-1">
+                <span>💡</span> Extraction Mapping Guide:
+              </span>
+              <div className="text-[9px]">
+                To extract text from this node: <code className="text-purple-400 font-mono font-semibold">self | text</code>
+              </div>
+              {inspectedElement.attributes.src && (
+                <div className="text-[9px]">
+                  To extract image source: <code className="text-purple-400 font-mono font-semibold">img | attr:src</code>
+                </div>
+              )}
+              {inspectedElement.attributes.href && (
+                <div className="text-[9px]">
+                  To extract link address: <code className="text-purple-400 font-mono font-semibold">a | attr:href</code>
+                </div>
+              )}
+              {inspectedElement.attributes.alt && (
+                <div className="text-[9px]">
+                  To extract alt text: <code className="text-purple-400 font-mono font-semibold">img | attr:alt</code>
+                </div>
+              )}
+            </div>
+
             {/* Auxiliary Drag Handle & Quick Actions */}
             <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-zinc-800/80">
               <div 
