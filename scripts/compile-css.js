@@ -8,7 +8,7 @@ import autoprefixer from 'autoprefixer';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const WEBSITES_DIR = path.join(__dirname, '../public/websites');
+const WEBSITES_DIR = path.join(__dirname, '../websites');
 
 // Recursively find all content.css files under the websites directory
 function findCssFiles(dir, fileList = []) {
@@ -34,8 +34,8 @@ async function compileCss() {
       content: [
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
-        "./public/websites/**/*.json",
-        "./public/websites/**/*.tsx"
+        "./websites/**/*.json",
+        "./websites/**/*.tsx"
       ]
     }),
     autoprefixer
