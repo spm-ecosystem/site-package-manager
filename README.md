@@ -1,6 +1,6 @@
 # Site Package Manager (SPM)
 
-A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Shadow DOM - without touching the original site's code. Configure site reconstructions declaratively through `.json` theme files, and design them visually in the built-in Sandbox IDE.
+A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Shadow DOM — without touching the original site's code. Configure reconstructions declaratively through `.json` manifest files and design them visually in the built-in Sandbox IDE.
 
 ---
 
@@ -9,20 +9,21 @@ A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Sh
 - [How It Works](#how-it-works)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
-- [Theme Files (`websites/`)](#theme-files-websites)
-  - [Manifest Schema](#manifest-schema)
+- [Manifest Schema](#manifest-schema)
+  - [Theme](#theme)
+  - [Components](#components)
+  - [Reconstructs](#reconstructs)
   - [Prop Mapping Rules](#prop-mapping-rules)
   - [Preservation Slots](#preservation-slots)
-  - [Responsive Breakpoints](#responsive-breakpoints)
 - [Component System](#component-system)
   - [Primitives](#primitives)
   - [Dedicated Components](#dedicated-components)
-- [Extension Popup](#extension-popup)
+  - [Component Contracts (Props)](#component-contracts-props)
 - [Visual Sandbox IDE](#visual-sandbox-ide)
-- [Dev Server (Hot Reload)](#dev-server-hot-reload)
+- [Extension Popup](#extension-popup)
 - [Contributing](#contributing)
   - [Adding a New Site Theme](#adding-a-new-site-theme)
-  - [Creating a New Dedicated Component](#creating-a-new-dedicated-component)
+  - [Creating a New Component](#creating-a-new-component)
   - [Running Tests](#running-tests)
   - [Code Style](#code-style)
 
@@ -36,15 +37,19 @@ Legacy Site HTML
       ▼
 Content Script (src/content/index.tsx)
   ├── Reads active theme manifest from chrome.storage.local
-  ├── Extracts data from legacy DOM using selector rules
-  ├── Hides legacy container
-  ├── Mounts Shadow DOM host (CSS fully isolated)
-  ├── Renders React component tree inside Shadow Root
-  └── Reparents preserved legacy nodes (pagination, sidebar)
-        into named slots inside the new React layout
+  ├── Applies CSS variables and customStyles to the main document
+  ├── Processes "components" array → replaces / hides individual elements
+  ├── Processes "reconstructs" array → replaces full page sections:
+  │     ├── Extracts data via propsMap (from the container's DOM)
+  │     ├── Extracts props statically from the "props" key
+  │     ├── Extracts named children arrays from "children" selectors
+  │     ├── Hides the legacy container
+  │     ├── Mounts a Shadow DOM host (fully isolated CSS)
+  │     └── Renders the React component with all merged props
+  └── Reparents "preserve" nodes into named slots inside the Shadow DOM
 ```
 
-The entire pipeline is driven by `.json` manifest files - no React code changes needed to support a new site.
+The entire pipeline is data-driven. No React code changes are needed to support a new site.
 
 ---
 
@@ -52,31 +57,43 @@ The entire pipeline is driven by `.json` manifest files - no React code changes 
 
 ```
 extension/
-├── manifest.json                  # Chrome MV3 extension manifest
-├── index.html                     # Popup entry point
-├── sandbox.html                   # Visual Sandbox IDE (options page)
-├── scripts/
-│   └── dev-server.js              # Local WebSocket hot-reload server
+├── manifest.json                    # Chrome MV3 manifest
+├── index.html                       # Popup entry point
+├── sandbox.html                     # Visual Sandbox IDE
+├── public/
+│   └── websites/
+│       ├── registry.json            # Index of available themes
+│       └── safebooru.json           # Example theme manifest
 ├── src/
 │   ├── content/
-│   │   ├── index.tsx              # Engine: orchestrates injection pipeline
-│   │   ├── engine.ts              # extractValue: selector/rule parser
-│   │   └── content.css            # Tailwind CSS (injected inline in Shadow DOM)
+│   │   ├── index.tsx                # Extension entry point
+│   │   ├── modernizer.tsx           # Core reconstruction engine
+│   │   ├── engine.ts                # extractValue: selector/rule parser
+│   │   └── content.css              # Base styles injected in Shadow DOM
 │   ├── popup/
-│   │   └── index.tsx              # Popup React UI (theme selector + toggle)
+│   │   └── index.tsx                # Popup React UI
 │   ├── sandbox/
-│   │   └── index.tsx              # Visual Sandbox IDE (DOM inspector + canvas)
+│   │   ├── index.tsx                # Sandbox IDE entry
+│   │   ├── sandboxEngine.tsx        # Sandbox preview renderer
+│   │   └── components/
+│   │       └── InspectorSidebar.tsx # Component properties inspector
 │   └── components/
+│       ├── registry.ts              # Component registry (all components)
 │       ├── primitives/
-│       │   └── LayoutPrimitives.tsx   # Generic building blocks (Box, Grid, Text…)
+│       │   └── LayoutPrimitives.tsx # Box, Grid, Text, Image, Link…
 │       └── dedicated/
-│           ├── UiImageCard.tsx        # Pre-built image card component
-│           └── UiModernGridPage.tsx   # Pre-built image gallery page layout
-├── websites/
-│   ├── registry.json              # Index of available themes (mocked remote)
-│   └── safebooru.json             # Safebooru theme manifest (example)
+│           ├── UiHeroLanding.tsx    # Landing page hero section
+│           ├── UiImageCard.tsx      # Single image card
+│           ├── UiImageViewer.tsx    # Full-height image viewer
+│           ├── UiModernGridPage.tsx # Image gallery with sidebar slots
+│           ├── UiNavHeader.tsx      # Site header with primary/secondary nav
+│           ├── UiPaginationBar.tsx  # Page navigation links
+│           ├── UiScrollPanel.tsx    # Scrollable sidebar panel
+│           ├── UiSearchBar.tsx      # Search input with URL submit
+│           ├── UiSplitLayout.tsx    # Two-column full-height layout shell
+│           └── UiTagBadge.tsx       # Tag pill with count
 └── tests/
-    └── engine.test.ts             # Unit tests for extractValue engine
+    └── engine.test.ts               # Unit tests for extractValue
 ```
 
 ---
@@ -86,237 +103,316 @@ extension/
 **Requirements:** Node.js 18+, npm 9+, Chrome 114+.
 
 ```bash
-# Install dependencies
-npm install
-
-# Build the extension
-npm run build
-
-# Run tests
-npm run test
-
-# Start the hot-reload dev server (for theme authoring)
-npm run dev-server
+npm install      # install dependencies
+npm run build    # build the extension → dist/
+npm run test     # run unit tests
 ```
 
-**Loading in Chrome:**
+**Load in Chrome:**
 1. Open `chrome://extensions`
 2. Enable **Developer Mode**
-3. Click **Load unpacked** and select the `dist/` folder
-4. Navigate to any supported site (e.g. `safebooru.org`) and click the extension icon to activate a theme
+3. Click **Load unpacked** → select `dist/`
+4. Visit a supported site and click the extension icon to activate a theme
 
 ---
 
-## Theme Files (`websites/`)
+## Manifest Schema
 
-Each `.json` file in `websites/` represents a theme package for a specific site. The engine reads the active theme from `chrome.storage.local` (set via the popup) and executes the reconstruction pipeline.
-
-### Manifest Schema
+Every `.json` in `public/websites/` is a theme manifest. Full structure:
 
 ```json
 {
   "targetUrl": "*://example.com/*",
   "version": "1.0.0",
-  "theme": {
-    "cssVariables": {
-      "--bg-color": "#000000",
-      "--text-color": "#ffffff"
-    },
-    "customStyles": ".legacy-class { display: none !important; }"
-  },
-  "components": [
-    {
-      "name": "UiSearchBar",
-      "selector": ".legacy-search",
-      "action": "replace",
-      "propsMap": {
-        "defaultValue": "input | attr:value"
-      },
-      "props": {
-        "placeholder": "Search...",
-        "submitUrl": "https://example.com/search",
-        "queryParamName": "q"
-      }
-    }
-  ],
-  "reconstructs": [
-    {
-      "containerSelector": "#content",
-      "layoutComponent": "UiPostDetails",
-      "propsMap": {
-        "imageUrl": "#image-tag | attr:src"
-      },
-      "props": {
-        "showSearch": true,
-        "searchSubmitUrl": "https://example.com/search"
-      },
-      "children": [
-        {
-          "name": "buttons",
-          "selector": ".action-links a",
-          "propsMap": {
-            "label": "self | text",
-            "url": "self | attr:href"
-          }
-        }
-      ]
-    }
-  ]
+  "theme": { ... },
+  "components": [ ... ],
+  "reconstructs": [ ... ]
 }
 ```
 
-| Field | Type | Description |
-|---|---|---|
-| `targetUrl` | `string` | Chrome match pattern for which pages to activate |
-| `theme.cssVariables` | `object` | CSS custom properties injected in the Shadow Root `:host` |
-| `theme.customStyles` | `string?` | Optional CSS string injected globally in the main document page to reset/style legacy pages |
-| `reconstructs` | `array` | List of reconstruction blocks (one per container) |
-| `containerSelector` | `string` | CSS selector of the legacy container to replace |
-| `layoutComponent` | `string` | Name of the React component to render (must be in registry) |
-| `mediaQuery` | `string?` | Optional: only applies this block if the media query matches |
-| `propsMap` | `object` | Maps React prop names to extraction rules |
-| `preserve` | `object?` | Named slots: legacy nodes to reparent into the new layout |
-| `children` | `array` | Child element collections extracted from the container |
+### Theme
+
+```json
+"theme": {
+  "label": "Dark",
+  "cssVariables": {
+    "--spm-bg-primary":    "#000000",
+    "--spm-bg-secondary":  "#111111",
+    "--spm-bg-tertiary":   "#222222",
+    "--spm-text-primary":  "#ffffff",
+    "--spm-text-muted":    "#a1a1aa",
+    "--spm-accent":        "#7c6af5",
+    "--spm-accent-hover":  "#9d8fff",
+    "--spm-accent-fg":     "#ffffff",
+    "--spm-border":        "#333333",
+    "--spm-radius":        "10px"
+  },
+  "customStyles": ".legacy-sidebar { display: none !important; }"
+}
+```
+
+All components use exclusively `var(--spm-*)` variables. Changing these variables changes the entire theme with no component edits needed.
+
+### Components
+
+The `components` array replaces or hides **individual elements** on the page.
+
+```json
+"components": [
+  {
+    "name": "UiSearchBar",
+    "selector": "#search-form",
+    "action": "replace",
+    "propsMap": {
+      "defaultValue": "input[name='q'] | attr:value"
+    },
+    "props": {
+      "placeholder": "Search…",
+      "submitUrl": "https://example.com/search",
+      "queryParamName": "q"
+    }
+  },
+  {
+    "name": "UiNavHeader",
+    "selector": "#subnavbar",
+    "action": "hide"
+  }
+]
+```
+
+| Field | Description |
+|---|---|
+| `name` | Component name (must exist in registry) |
+| `selector` | CSS selector of the legacy element to target |
+| `action` | `"replace"` — inject the component, `"hide"` — `display:none` |
+| `propsMap` | Prop values extracted live from the DOM at injection time |
+| `props` | Static prop values set directly in the JSON |
+| `children` | Named arrays of child elements to extract (same format as reconstructs) |
+
+### Reconstructs
+
+The `reconstructs` array replaces **entire page sections** with a React component inside a Shadow DOM.
+
+```json
+"reconstructs": [
+  {
+    "containerSelector": "#post-view",
+    "layoutComponent": "UiSplitLayout",
+    "propsMap": {
+      "statisticsHtml": "#stats ul | html"
+    },
+    "props": {
+      "sidebarWidth": "280px",
+      "sidebarSide": "left",
+      "imageFit": "contain",
+      "showSearch": true,
+      "searchSubmitUrl": "https://example.com/search",
+      "searchParamName": "tags"
+    },
+    "preserve": {
+      "sidebarSlot": "div.sidebar"
+    },
+    "mediaQuery": "(min-width: 768px)",
+    "children": [
+      {
+        "name": "imageSlot",
+        "selector": "#image",
+        "propsMap": {
+          "src": "self | attr:src",
+          "alt": "self | attr:alt"
+        }
+      },
+      {
+        "name": "tags",
+        "selector": "#tag-sidebar li.tag",
+        "scope": "document",
+        "propsMap": {
+          "name": "a:nth-child(2) | text",
+          "count": "span.tag-count | text",
+          "type": "self | attr:class",
+          "url":  "a:nth-child(2) | attr:href"
+        }
+      },
+      {
+        "name": "buttons",
+        "selector": ".link-list a",
+        "scope": "document",
+        "propsMap": {
+          "label": "self | text",
+          "url":   "self | attr:href"
+        }
+      }
+    ]
+  }
+]
+```
+
+| Field | Description |
+|---|---|
+| `containerSelector` | CSS selector of the legacy container to replace |
+| `layoutComponent` | Name of the React layout component (must exist in registry) |
+| `propsMap` | Props extracted from inside the container at injection time |
+| `props` | Static props passed directly — **supports all component props** |
+| `preserve` | Named slots: legacy nodes reparented into the React layout (see below) |
+| `mediaQuery` | Optional: only apply if this media query matches |
+| `children` | Named arrays of child elements. Each becomes a prop array on the component. |
+| `children[].scope` | `"document"` to query the full document instead of just the container |
+
+> **Prop merge order:** `props` (static) → `propsMap` (dynamic) → `children` (arrays).  
+> Dynamic values always override static ones.
 
 ### Prop Mapping Rules
 
 Rules follow the format `"selector | operation"`:
 
-| Rule | Example | Description |
+| Rule | Example | Result |
 |---|---|---|
-| `selector \| text` | `"h2 \| text"` | Text content of first matching child |
-| `selector \| attr:name` | `"img \| attr:src"` | Attribute value of first matching child |
-| `selector \| html` | `"div.stats \| html"` | HTML content of first matching child |
-| `self \| attr:name` | `"self \| attr:id"` | Attribute on the element itself |
-| `self \| text` | `"self \| text"` | Text content on the element itself |
+| `selector \| text` | `"h2 \| text"` | Text content of the first matching descendant |
+| `selector \| attr:name` | `"img \| attr:src"` | Attribute value of first matching descendant |
+| `selector \| html` | `"ul \| html"` | Inner HTML of first matching descendant |
+| `self \| text` | `"self \| text"` | Text content of the element itself |
+| `self \| attr:name` | `"self \| attr:class"` | Attribute of the element itself |
 
 ### Preservation Slots
 
-The `preserve` map allows keeping original legacy nodes (e.g. pagination, sidebar) alive inside the new React layout. The engine:
+`preserve` maps slot names to CSS selectors. The engine extracts those nodes before hiding the container and reparents them into a `<div id="{slotName}-container">` inside the Shadow DOM after React mounts.
 
-1. Extracts matching elements from the legacy container **before** hiding it
-2. After React mounts, appends each node into a `<div id="{slotName}-container">` inside the Shadow DOM
-
-To receive a preserved node, the layout component must render an element with the matching ID:
+The layout component must render a matching container element:
 
 ```tsx
-// In UiModernGridPage.tsx
-<div id="paginationSlot-container"></div>
-<aside id="sidebarSlot-container"></aside>
+// In your layout component:
+<aside id="sidebarSlot-container" />
 ```
-
-### Responsive Breakpoints
-
-Add `"mediaQuery"` to any reconstruct block to restrict it to specific screen sizes:
-
-```json
-{ "mediaQuery": "(min-width: 768px)", ... }  // Desktop only
-{ "mediaQuery": "(max-width: 767px)", ... }  // Mobile only
-```
-
-Blocks whose media query doesn't match are skipped, falling back to the next matching block or the original site.
 
 ---
 
 ## Component System
 
+All components follow the same contract:
+
+- **100% CSS variable styling** — `var(--spm-*)` only, zero hardcoded colors
+- **Always accept `className` and `style`** for external overrides
+- **Conditional rendering** — sections that receive no data simply don't render
+- **Single responsibility** — each component does one thing
+
 ### Primitives
 
-Located in `src/components/primitives/LayoutPrimitives.tsx`.
-
-Generic, composable building blocks. Use these to create layouts entirely from `.json` without writing any React code.
+Generic building blocks in `src/components/primitives/LayoutPrimitives.tsx`.
 
 | Component | Renders | Key Props |
 |---|---|---|
-| `UiBox` | `<div>` | `className` |
-| `UiFlexRow` | `<div class="flex flex-row …">` | `className` |
-| `UiFlexColumn` | `<div class="flex flex-col …">` | `className` |
-| `UiGrid` | `<div class="grid …">` | `className` |
-| `UiText` | `<span>` | `className`, `content` |
-| `UiImage` | `<img>` | `className`, `src`, `alt` |
-| `UiLink` | `<a>` | `className`, `href` |
+| `UiBox` | `<div>` | standard HTML div props |
+| `UiFlexRow` | `<div>` flex row | standard HTML div props |
+| `UiFlexColumn` | `<div>` flex column | standard HTML div props |
+| `UiGrid` | `<div>` grid | standard HTML div props |
+| `UiText` | `<span>` | `content` |
+| `UiImage` | `<img>` | `src`, `alt` |
+| `UiLink` | `<a>` | `href` |
 
 ### Dedicated Components
 
-Located in `src/components/dedicated/`.
+Reusable, styled components in `src/components/dedicated/`.
 
-Pre-built, opinionated components tailored for specific UI patterns. These accept structured props extracted from the legacy DOM and render a complete, styled section.
-
-| Component | Purpose | Configurable Props |
+| Component | Purpose | Key Props |
 |---|---|---|
-| `UiImageCard` | Single image card with link and title overlay | `width`, `aspectRatio`, `imageFit`, `showTitle` |
-| `UiModernGridPage` | Full gallery page with sidebar and pagination slots | `pageTitle`, `items`, `pageLinks`, `postsPerPage` |
-| `UiNavHeader` | Logo, primary tabs and secondary link bars | `siteName`, `logoUrl`, `logoHref`, `layout` |
-| `UiSearchBar` | Compact search bar with query string parameter mapping | `placeholder`, `submitUrl`, `queryParamName` |
-| `UiPaginationBar` | URL-offset / numbered page navigation links | `pageLinks`, `paramName` |
-| `UiPostDetails` | Modern booru-style image page (grouped tags + image frame) | `imageUrl`, `tags`, `statisticsHtml`, `buttons` (generic action button items list) |
+| `UiNavHeader` | Site navigation header | `siteName`, `logoUrl`, `logoHref`, `primaryLinks`, `secondaryLinks`, `layout` |
+| `UiHeroLanding` | Full-viewport landing page hero | `siteName`, `logoUrl`, `logoHref`, `tagline`, `subtext`, `ctaLabel`, `ctaUrl`, `searchSubmitUrl`, `searchParamName`, `primaryLinks` |
+| `UiSearchBar` | Search input field | `placeholder`, `defaultValue`, `submitUrl`, `queryParamName` |
+| `UiImageCard` | Single image card with link | `imageUrl`, `linkUrl`, `title`, `id`, `width`, `aspectRatio`, `imageFit`, `showTitle` |
+| `UiTagBadge` | Tag pill with post count | `label`, `count`, `href` |
+| `UiPaginationBar` | Page navigation links | `pageLinks`, `paramName` |
+| `UiModernGridPage` | Gallery page with sidebar slot | `pageTitle`, `items`, `pageLinks` |
+| `UiImageViewer` | Full-height image that fills its container | `src`, `alt`, `fit` (`contain`\|`cover`), `background` |
+| `UiScrollPanel` | Scrollable sidebar panel with search, tags, buttons, stats | `tags`, `buttons`, `statisticsHtml`, `showSearch`, `searchSubmitUrl`, `searchParamName`, `width` |
+| `UiSplitLayout` | Two-column full-height layout shell | `imageSlot`, `tags`, `buttons`, `statisticsHtml`, `sidebarWidth`, `sidebarSide`, `imageFit`, `showSearch`, `searchSubmitUrl` |
+| `UiPostDetails` | *(legacy)* Booru post page (monolith) | — |
 
-**Configuring Generic Buttons in Reconstructs:**
+### Component Contracts (Props)
 
-Devs can dynamically configure custom buttons (e.g. for navigating posts or third-party query integrations like reverse search) by passing the `buttons` array via `children` inside the reconstruct block of `UiPostDetails`:
+#### `UiImageViewer`
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `src` | `string` | — | Image URL |
+| `alt` | `string` | `''` | Alt text |
+| `fit` | `'contain' \| 'cover'` | `'contain'` | CSS `object-fit` |
+| `background` | `string` | `var(--spm-bg-primary)` | Container background |
 
-```json
-{
-  "name": "buttons",
-  "selector": ".legacy-button-container a",
-  "propsMap": {
-    "label": "self | text",
-    "url": "self | attr:href"
-  }
-}
-```
+#### `UiScrollPanel`
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `tags` | `TagItem[]` | `[]` | Tags array (`name`, `count`, `type`, `url`) — grouped by `type` automatically |
+| `buttons` | `ButtonItem[]` | `[]` | Button array (`label`, `url`) — auto-classified into nav/primary/ghost by label keywords |
+| `statisticsHtml` | `string` | — | Raw HTML rendered in a statistics section |
+| `showSearch` | `boolean` | `false` | Show UiSearchBar at the top |
+| `searchSubmitUrl` | `string` | — | URL to submit searches to |
+| `searchParamName` | `string` | `'q'` | Query parameter name |
+| `width` | `string` | `'280px'` | Panel width |
 
-**Adding your component to the registry** - open `src/content/index.tsx` and add your import to `COMPONENT_REGISTRY`:
+#### `UiSplitLayout`
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `imageSlot` | `{src, alt}[]` | `[]` | Image data — first item is rendered via `UiImageViewer` |
+| `tags` | `TagItem[]` | `[]` | Forwarded to `UiScrollPanel` |
+| `buttons` | `ButtonItem[]` | `[]` | Forwarded to `UiScrollPanel` |
+| `statisticsHtml` | `string` | — | Forwarded to `UiScrollPanel` |
+| `sidebarWidth` | `string` | `'280px'` | Panel width |
+| `sidebarSide` | `'left' \| 'right'` | `'left'` | Panel position |
+| `imageFit` | `'contain' \| 'cover'` | `'contain'` | Forwarded to `UiImageViewer` |
+| `showSearch` | `boolean` | `false` | Show search in panel |
+| `searchSubmitUrl` | `string` | — | Search URL |
+| `searchParamName` | `string` | `'q'` | Search param name |
 
-```typescript
-import { MyNewCard } from '../components/dedicated/MyNewCard';
-
-const COMPONENT_REGISTRY = {
-  // …existing entries
-  MyNewCard,
-};
-```
-
----
-
-## Extension Popup
-
-Click the SPM icon in the Chrome toolbar to open the popup.
-
-- **Global Activation** - toggle the engine on/off for all sites. Reloads the current tab immediately.
-- **Active Site** - shows the detected domain of the current tab.
-- **Layout Theme** - dropdown listing themes available for the current domain. Selecting a theme downloads + caches the manifest and reloads the tab.
+#### `UiHeroLanding`
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `siteName` | `string` | `'Site'` | Fallback text if no logo |
+| `logoUrl` | `string` | — | Logo image URL |
+| `logoHref` | `string` | `'/'` | Logo link URL |
+| `tagline` | `string` | — | Heading below logo |
+| `subtext` | `string` | — | Subtitle paragraph |
+| `ctaLabel` | `string` | `'Browse'` | CTA button text |
+| `ctaUrl` | `string` | `'/'` | CTA button URL |
+| `searchSubmitUrl` | `string` | — | If set, renders a search bar |
+| `searchParamName` | `string` | `'q'` | Search param name |
+| `primaryLinks` | `{label, url}[]` | `[]` | Pill nav links below CTA |
 
 ---
 
 ## Visual Sandbox IDE
 
-Open **chrome://extensions → SPM → Extension options** to launch the full-screen Sandbox IDE.
+Open **chrome://extensions → SPM → Extension options** to launch the Sandbox IDE.
 
-The workspace has three panels:
+### Views
 
-| Panel | Purpose |
+| View | Purpose |
 |---|---|
-| **Left - Primitives** | Click any primitive or dedicated component to add it to the canvas |
-| **Center - Legacy Explorer** | Interactive preview of the site's original HTML. Click any element to capture its CSS selector |
-| **Center - Modern Canvas** | Visual representation of your component layout. Click a block to inspect/bind it |
-| **Right - Properties Inspector** | Edit Tailwind classes, bind captured selectors to component props |
-| **Right - JSON Output** | Live preview of the compiled manifest. Use **Export JSON** to download |
+| **Preview** | Live render of your JSON config inside an iframe. Reflects all changes in real time. |
+| **Legacy** | Interactive view of the site's original HTML. Click any element to inspect its attributes and CSS selectors. |
 
-When the Dev Server is running, the Sandbox also listens for file changes and updates the canvas in real time.
+### Panels
+
+| Panel | Location | Purpose |
+|---|---|---|
+| **Component Library** | Left | Click to add components to the canvas |
+| **Element Inspector** | Right (Legacy view) | Shows the clicked element's tag, class, attributes, and mapping suggestions |
+| **Component Settings** | Right (Preview view) | Edit the selected component's props visually |
+| **JSON Editor** | Bottom | Full manifest editor — changes sync both ways with the visual preview |
+
+### Interactive Features
+
+- **Hover** over any component in Preview to see its edit toolbar (edit ✏️, delete 🗑️)
+- **Resize** components by dragging the right edge — `width` is persisted to the JSON
+- **Click** Legacy elements to see `alt`, `src`, `href` attributes and auto-generated `propsMap` suggestions
 
 ---
 
-## Dev Server (Hot Reload)
+## Extension Popup
 
-For local theme development, run the WebSocket server alongside your editor:
+Click the SPM icon in Chrome's toolbar:
 
-```bash
-npm run dev-server
-# [SPM DEV] WebSocket Server started on ws://localhost:8080
-```
-
-Any time you save a `.json` file in `websites/`, the server broadcasts the change to the Sandbox IDE - which reloads layouts instantly without a full browser refresh.
+- **Global toggle** — enable/disable the engine for all sites
+- **Active site** — displays the current domain
+- **Theme selector** — pick and activate a theme; reloads the tab immediately
 
 ---
 
@@ -324,40 +420,86 @@ Any time you save a `.json` file in `websites/`, the server broadcasts the chang
 
 ### Adding a New Site Theme
 
-1. Create a new file `websites/<sitename>.json` following the [Manifest Schema](#manifest-schema).
-2. Add a registry entry in `websites/registry.json`:
+1. Create `public/websites/<sitename>.json` following the [Manifest Schema](#manifest-schema)
+2. Add a registry entry in `public/websites/registry.json`:
    ```json
    {
-     "id": "sitename-theme-id",
-     "name": "Theme Display Name",
-     "description": "Short description",
-     "domain": "example.com",
-     "manifestPath": "websites/sitename.json"
+     "id": "my-theme",
+     "name": "My Site",
+     "description": "Modern theme for mysite.com",
+     "domain": "mysite.com",
+     "manifestPath": "websites/mysite.json"
    }
    ```
-3. Add the site domain to `content_scripts.matches` in `manifest.json`.
-4. Build and load the extension: `npm run build`.
+3. Add the domain to `content_scripts.matches` in `manifest.json`
+4. Run `npm run build`
 
-### Creating a New Dedicated Component
+### Creating a New Component
 
-1. Create `src/components/dedicated/UiMyComponent.tsx`:
-   ```tsx
-   interface UiMyComponentProps {
-     title: string;
-     imageUrl: string;
-   }
+Components must follow the system contract:
 
-   export function UiMyComponent({ title, imageUrl }: UiMyComponentProps) {
-     return (
-       <div className="...tailwind classes...">
-         <img src={imageUrl} alt={title} />
-         <span>{title}</span>
-       </div>
-     );
-   }
-   ```
-2. Register it in `src/content/index.tsx` inside `COMPONENT_REGISTRY`.
-3. Reference it by name in your theme `.json` file via `"layoutComponent"`.
+```tsx
+// 1. Interface first — all props optional with sensible defaults
+interface UiMyComponentProps {
+  items?: { label: string; url: string }[];
+  title?: string;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+// 2. Export a named function — no default exports
+export function UiMyComponent({
+  items = [],
+  title,
+  className = '',
+  style = {},
+}: UiMyComponentProps) {
+  return (
+    <div
+      className={className}
+      style={{
+        background: 'var(--spm-bg-primary)',  // Always use CSS vars
+        color: 'var(--spm-text-primary)',
+        ...style,                              // Always spread style last
+      }}
+    >
+      {title && <h2>{title}</h2>}             {/* Conditional — no orphan markup */}
+      {items.map((item, i) => (
+        <a key={i} href={item.url}>{item.label}</a>
+      ))}
+    </div>
+  );
+}
+```
+
+Then register it:
+
+```ts
+// src/components/registry.ts
+import { UiMyComponent } from './dedicated/UiMyComponent';
+
+export const COMPONENT_REGISTRY = {
+  // ...existing
+  UiMyComponent,
+};
+
+export const DEDICATED_COMPONENTS = [
+  // ...existing
+  'UiMyComponent',
+];
+```
+
+And add its schema to `InspectorSidebar.tsx`:
+
+```ts
+UiMyComponent: {
+  props: ['title', 'items'],
+  placeholders: {
+    title: 'h1 | text',
+    items: 'ul li a | text'
+  }
+}
+```
 
 ### Running Tests
 
@@ -365,19 +507,20 @@ Any time you save a `.json` file in `websites/`, the server broadcasts the chang
 npm run test
 ```
 
-Unit tests live in `tests/`. All test files that use DOM APIs must include the following directive at the top:
+All test files that use DOM APIs must include:
 
-```typescript
+```ts
 // @vitest-environment jsdom
 ```
 
 ### Code Style
 
-- **Language**: English only - code, comments, commit messages, file names.
-- **Comments**: Minimal. Only add comments when the intent cannot be inferred from the code itself.
-- **TypeScript**: Strict mode. No unused locals or imports (`"noUnusedLocals": true`).
-- **Commits**: Use Conventional Commits format (`feat:`, `fix:`, `chore:`, `refactor:`, `style:`).
-- **Styling**: Tailwind CSS utility classes only. No inline `style` objects in component JSX except for dynamic engine resets.
+- **Language**: English — code, comments, commits, file names
+- **Colors**: CSS variables only (`var(--spm-*)`) — never hardcoded `#rgb` values
+- **Props**: Always include `className` and `style` for external override
+- **Rendering**: All component sections must be conditional on data presence
+- **Commits**: Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`)
+- **TypeScript**: Strict mode, no unused locals
 
 ---
 
