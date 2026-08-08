@@ -43,7 +43,7 @@ export function UiHeroLanding({
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, var(--spm-bg-primary) 0%, #0d0d1a 50%, #0a0a12 100%)',
+        background: 'var(--spm-bg-primary)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -54,27 +54,6 @@ export function UiHeroLanding({
         overflow: 'hidden',
       }}
     >
-      {/* Ambient glow orbs */}
-      <div style={{
-        position: 'absolute',
-        top: '15%',
-        left: '20%',
-        width: '400px',
-        height: '400px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(124,106,245,0.06) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: '20%',
-        right: '15%',
-        width: '300px',
-        height: '300px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(124,106,245,0.04) 0%, transparent 70%)',
-        pointerEvents: 'none',
-      }} />
 
       {/* Logo */}
       <div style={{ marginBottom: '32px', textAlign: 'center' }}>
@@ -87,11 +66,7 @@ export function UiHeroLanding({
                 maxWidth: '340px',
                 width: '100%',
                 height: 'auto',
-                filter: 'drop-shadow(0 0 40px rgba(124,106,245,0.4))',
-                transition: 'filter 0.3s ease',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.filter = 'drop-shadow(0 0 55px rgba(124,106,245,0.65))'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLImageElement).style.filter = 'drop-shadow(0 0 40px rgba(124,106,245,0.4))'; }}
             />
           </a>
         ) : (

@@ -4,15 +4,15 @@
   "theme": {
     "label": "Obsidian",
     "cssVariables": {
-      "--spm-bg-primary": "#0a0a0f",
-      "--spm-bg-secondary": "#111118",
-      "--spm-bg-tertiary": "#1a1a24",
-      "--spm-text-primary": "#f0f0ff",
-      "--spm-text-muted": "#7878a0",
+      "--spm-bg-primary": "#000000",
+      "--spm-bg-secondary": "#111111",
+      "--spm-bg-tertiary": "#222222",
+      "--spm-text-primary": "#ffffff",
+      "--spm-text-muted": "#a1a1aa",
       "--spm-accent": "#7c6af5",
       "--spm-accent-hover": "#9d8fff",
       "--spm-accent-fg": "#ffffff",
-      "--spm-border": "#2a2a3a",
+      "--spm-border": "#333333",
       "--spm-radius": "10px"
     },
     "customStyles": ".sidebar { padding: 0 !important; background: transparent !important; }\n.sidebar h5 { font-size: 11px !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; color: var(--spm-text-muted) !important; margin: 16px 0 8px 0 !important; }\n.sidebar ul { list-style: none !important; padding: 0 !important; margin: 0 !important; display: flex !important; flex-direction: column !important; gap: 4px !important; }\n.sidebar li { font-size: 12px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; }\n.sidebar li a { color: var(--spm-text-primary) !important; text-decoration: none !important; }\n.sidebar li a:hover { color: var(--spm-accent) !important; }\n.sidebar li span { color: var(--spm-text-muted) !important; }"
