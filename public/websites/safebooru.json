@@ -249,7 +249,7 @@
       "children": [
         {
           "name": "tableRows",
-          "selector": "table.highlightable tr:has(td)",
+          "selector": "table.highlightable tr",
           "propsMap": {
             "iconUrl": "td:nth-child(1) img | attr:src",
             "iconLink": "td:nth-child(1) a | attr:href",

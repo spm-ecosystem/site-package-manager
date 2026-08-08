@@ -94,7 +94,7 @@ export function UiTableListPage({
               ) : (
                 'System'
               )}
-              {item.lastUpdatedText.includes('(') ? (
+              {item.lastUpdatedText && item.lastUpdatedText.includes('(') ? (
                 <span> ({item.lastUpdatedText.split('(')[1]}</span>
               ) : null}
             </div>
