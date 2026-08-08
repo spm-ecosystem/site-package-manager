@@ -23,7 +23,7 @@ export interface ComponentConfig {
 export interface ReconstructConfig {
   containerSelector: string;
   layoutComponent: string;
-  propsMap: Record<string, string>;
+  propsMap?: Record<string, string>;
   props?: Record<string, any>;
   mediaQuery?: string;
   preserve?: Record<string, string>;
@@ -223,7 +223,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
       if (container) {
         // Extract properties
         const pageProps: Record<string, any> = {};
-        for (const [propName, rule] of Object.entries(propsMap)) {
+        for (const [propName, rule] of Object.entries(propsMap || {})) {
           pageProps[propName] = extractValue(container as HTMLElement, rule);
         }
 
