@@ -126,19 +126,28 @@
     },
     {
       "containerSelector": "#post-view",
-      "layoutComponent": "UiPostDetails",
+      "layoutComponent": "UiSplitLayout",
       "propsMap": {
-        "imageUrl": "#image | attr:src",
-        "title": "#image | attr:alt",
         "statisticsHtml": "#stats ul | html"
       },
       "props": {
+        "sidebarWidth": "280px",
+        "sidebarSide": "left",
+        "imageFit": "contain",
         "showSearch": true,
         "searchPlaceholder": "Search tags…",
         "searchSubmitUrl": "https://safebooru.org/index.php?page=post&s=list",
         "searchParamName": "tags"
       },
       "children": [
+        {
+          "name": "imageSlot",
+          "selector": "#image",
+          "propsMap": {
+            "src": "self | attr:src",
+            "alt": "self | attr:alt"
+          }
+        },
         {
           "name": "tags",
           "selector": "#tag-sidebar li.tag",
