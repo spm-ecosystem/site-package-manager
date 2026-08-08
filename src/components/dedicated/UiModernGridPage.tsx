@@ -298,6 +298,8 @@ export function UiModernGridPage({
             .spm-modern-grid-main {
               display: grid !important;
               grid-template-columns: repeat(${mobileColumns}, minmax(0, 1fr)) !important;
+              grid-auto-rows: min-content !important;
+              align-content: start !important;
               gap: ${mobileGap} !important;
               padding: ${mobilePadding} !important;
               overflow-y: auto;
