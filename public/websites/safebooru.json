@@ -70,6 +70,7 @@
     {
       "containerSelector": "#static-index",
       "layoutComponent": "UiHeroLanding",
+      "urlPattern": "safebooru\\.org\\/?(?:index\\.php)?$",
       "propsMap": {
         "siteName": "img[alt='Safebooru'] | attr:alt",
         "logoUrl": "img[alt='Safebooru'] | attr:src"
@@ -97,6 +98,7 @@
     {
       "containerSelector": "#post-list",
       "layoutComponent": "UiModernGridPage",
+      "urlPattern": "page=post&s=list",
       "propsMap": {
         "pageTitle": "h2 | text"
       },
@@ -130,6 +132,7 @@
     {
       "containerSelector": "#post-view",
       "layoutComponent": "UiSplitLayout",
+      "urlPattern": "page=post&s=view",
       "propsMap": {
         "statisticsHtml": "#stats ul | html"
       },
@@ -178,6 +181,7 @@
     {
       "containerSelector": "#content:has(#comment-list)",
       "layoutComponent": "UiCommentListPage",
+      "urlPattern": "page=comment&s=list",
       "props": {
         "pageTitle": "Comments",
         "height": "calc(100vh - 78px)"

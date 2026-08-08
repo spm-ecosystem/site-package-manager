@@ -26,6 +26,7 @@ export interface ReconstructConfig {
   propsMap?: Record<string, string>;
   props?: Record<string, any>;
   mediaQuery?: string;
+  urlPattern?: string;
   preserve?: Record<string, string>;
   children: ChildrenConfig[];
 }
@@ -211,7 +212,12 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
   // 1. Process Reconstruction array
   if (manifest.reconstructs && manifest.reconstructs.length > 0) {
     for (const reconConfig of manifest.reconstructs) {
-      const { containerSelector, layoutComponent, propsMap, props: staticProps, mediaQuery, preserve, children } = reconConfig;
+      const { containerSelector, layoutComponent, propsMap, props: staticProps, mediaQuery, urlPattern, preserve, children } = reconConfig;
+
+      // URL pattern check to differentiate page routes
+      if (urlPattern && !new RegExp(urlPattern, 'i').test(window.location.href)) {
+        continue;
+      }
 
       // Media query responsiveness check
       if (mediaQuery && !window.matchMedia(mediaQuery).matches) {
