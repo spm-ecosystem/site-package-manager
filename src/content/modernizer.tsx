@@ -99,6 +99,10 @@ export function applyThemeGlobally(variables: Record<string, string>, customStyl
       border: 1px solid var(--spm-border) !important;
     }
 
+    #notice, .notice {
+      display: none !important;
+    }
+
     /* Inject developer custom CSS overrides from the JSON theme manifest */
     ${customStyles}
   `;
