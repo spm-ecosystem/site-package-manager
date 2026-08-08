@@ -153,16 +153,16 @@ export function UiCommentCard({ thread }: UiCommentCardProps) {
           }}
         >
           <span>
-            <strong>Date:</strong> {thread.postDate.replace('Date', '').trim()}
+            <strong>Date:</strong> {(thread.postDate || '').replace('Date', '').trim()}
           </span>
           <span>
-            <strong>Posted by:</strong> {thread.postUser.replace('User', '').trim()}
+            <strong>Posted by:</strong> {(thread.postUser || '').replace('User', '').trim()}
           </span>
           <span>
-            <strong>Rating:</strong> {thread.postRating.replace('Rating', '').trim()}
+            <strong>Rating:</strong> {(thread.postRating || '').replace('Rating', '').trim()}
           </span>
           <span>
-            <strong>Score:</strong> {thread.postScore.replace('Score', '').trim()}
+            <strong>Score:</strong> {(thread.postScore || '').replace('Score', '').trim()}
           </span>
         </div>
 
