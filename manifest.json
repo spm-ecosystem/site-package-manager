@@ -21,11 +21,5 @@
   },
   "options_page": "sandbox.html",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": ["*://*/*"],
-  "web_accessible_resources": [
-    {
-      "resources": ["websites/*", "registry.json"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  "host_permissions": ["*://*/*"]
 }

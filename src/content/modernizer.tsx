@@ -412,84 +412,35 @@ export function normalizeGitOpsUrl(baseUrl: string, filePath: string, ref: strin
 
 export async function fetchRegistry(gitopsUrl: string) {
   const url = normalizeGitOpsUrl(gitopsUrl, 'registry.json', 'master');
-  try {
-    console.log(`[SPM] Fetching registry from remote GitOps URL: ${url}`);
-    const res = await fetch(`${url}?t=${Date.now()}`);
-    if (!res.ok) {
-      throw new Error(`Failed to fetch remote registry: ${res.statusText}`);
-    }
-    return await res.json();
-  } catch (err) {
-    console.warn(`[SPM] Remote registry fetch failed. Falling back to local bundle registry.json. Error:`, (err as Error).message);
-    if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
-      const localUrl = chrome.runtime.getURL('registry.json');
-      console.log(`[SPM] Fetching local bundle registry from: ${localUrl}`);
-      const res = await fetch(localUrl);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch local bundle registry: ${res.statusText}`);
-      }
-      return await res.json();
-    }
-    throw err;
+  console.log(`[SPM] Fetching registry from remote GitOps URL: ${url}`);
+  const res = await fetch(`${url}?t=${Date.now()}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch remote registry: ${res.statusText}`);
   }
+  return await res.json();
 }
 
 export async function fetchThemeFiles(gitopsUrl: string, domain: string, pkgDir: string, ref: string) {
-  const manifestPath = `public/websites/${domain}/${pkgDir}/manifest.json`;
-  const cssPath = `public/websites/${domain}/${pkgDir}/style.css`;
+  const manifestPath = `websites/${domain}/${pkgDir}/manifest.json`;
+  const cssPath = `websites/${domain}/${pkgDir}/style.css`;
   
   const manifestUrl = normalizeGitOpsUrl(gitopsUrl, manifestPath, ref);
   const cssUrl = normalizeGitOpsUrl(gitopsUrl, cssPath, ref);
 
   const t = Date.now();
-  let manifest: any;
-  let cssText: string;
-
-  try {
-    console.log(`[SPM] Fetching theme manifest from remote: ${manifestUrl}`);
-    const manifestRes = await fetch(`${manifestUrl}?t=${t}`);
-    if (!manifestRes.ok) {
-      throw new Error(`Failed to fetch remote manifest: ${manifestRes.statusText}`);
-    }
-    manifest = await manifestRes.json();
-  } catch (err) {
-    console.warn(`[SPM] Remote manifest fetch failed. Falling back to local bundle. Error:`, (err as Error).message);
-    if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
-      const localManifestPath = `websites/${domain}/${pkgDir}/manifest.json`;
-      const localUrl = chrome.runtime.getURL(localManifestPath);
-      console.log(`[SPM] Fetching local bundle manifest from: ${localUrl}`);
-      const res = await fetch(localUrl);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch local bundle manifest: ${res.statusText}`);
-      }
-      manifest = await res.json();
-    } else {
-      throw err;
-    }
+  console.log(`[SPM] Fetching theme manifest from remote: ${manifestUrl}`);
+  const manifestRes = await fetch(`${manifestUrl}?t=${t}`);
+  if (!manifestRes.ok) {
+    throw new Error(`Failed to fetch remote manifest from ${manifestUrl}: ${manifestRes.statusText}`);
   }
+  const manifest = await manifestRes.json();
 
-  try {
-    console.log(`[SPM] Fetching theme CSS from remote: ${cssUrl}`);
-    const cssRes = await fetch(`${cssUrl}?t=${t}`);
-    if (!cssRes.ok) {
-      throw new Error(`Failed to fetch remote CSS: ${cssRes.statusText}`);
-    }
-    cssText = await cssRes.text();
-  } catch (err) {
-    console.warn(`[SPM] Remote CSS fetch failed. Falling back to local bundle. Error:`, (err as Error).message);
-    if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
-      const localCssPath = `websites/${domain}/${pkgDir}/style.css`;
-      const localUrl = chrome.runtime.getURL(localCssPath);
-      console.log(`[SPM] Fetching local bundle CSS from: ${localUrl}`);
-      const res = await fetch(localUrl);
-      if (!res.ok) {
-        throw new Error(`Failed to fetch local bundle CSS: ${res.statusText}`);
-      }
-      cssText = await res.text();
-    } else {
-      throw err;
-    }
+  console.log(`[SPM] Fetching theme CSS from remote: ${cssUrl}`);
+  const cssRes = await fetch(`${cssUrl}?t=${t}`);
+  if (!cssRes.ok) {
+    throw new Error(`Failed to fetch remote CSS from ${cssUrl}: ${cssRes.statusText}`);
   }
+  const cssText = await cssRes.text();
 
   return { manifest, cssText };
 }

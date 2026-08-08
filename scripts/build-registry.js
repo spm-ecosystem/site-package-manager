@@ -73,10 +73,3 @@ content += `\n];\n`;
 
 fs.writeFileSync(OUTPUT_FILE, content, 'utf-8');
 console.log('Successfully generated src/components/registry.ts');
-
-const registrySrc = path.join(__dirname, '../registry.json');
-const registryDest = path.join(__dirname, '../public/registry.json');
-if (fs.existsSync(registrySrc)) {
-  fs.copyFileSync(registrySrc, registryDest);
-  console.log('Successfully copied registry.json to public/');
-}
