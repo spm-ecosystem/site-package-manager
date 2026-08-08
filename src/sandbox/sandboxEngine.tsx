@@ -55,6 +55,7 @@ function createEditorWrapper(
   deleteBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
   deleteBtn.onclick = (e) => {
     e.stopPropagation();
+    e.preventDefault();
     const hostEl = container.getRootNode() as any;
     const parentHost = hostEl?.host;
     if (parentHost && typeof parentHost.__deleteComponent === 'function') {
@@ -62,7 +63,29 @@ function createEditorWrapper(
     }
   };
 
+  // 4b. Edit/Configure Action Button
+  const editBtn = document.createElement('button');
+  editBtn.innerHTML = '✏️';
+  editBtn.style.background = '#8b5cf6'; // Violet-500
+  editBtn.style.border = 'none';
+  editBtn.style.color = 'white';
+  editBtn.style.fontSize = '10px';
+  editBtn.style.cursor = 'pointer';
+  editBtn.style.padding = '2px 5px';
+  editBtn.style.borderRadius = '3px 3px 0 0';
+  editBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+  editBtn.onclick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const hostEl = container.getRootNode() as any;
+    const parentHost = hostEl?.host;
+    if (parentHost && typeof parentHost.__selectComponent === 'function') {
+      parentHost.__selectComponent(selector, type);
+    }
+  };
+
   header.appendChild(label);
+  header.appendChild(editBtn);
   header.appendChild(deleteBtn);
   wrapper.appendChild(header);
 
@@ -106,15 +129,15 @@ function createEditorWrapper(
 
   wrapper.appendChild(host);
 
-  // Focus component in Inspector on click
+  // Intercept and block all clicks inside the component wrapper during capture phase
+  // to prevent standard web buttons/links from causing redirects in the IDE.
   wrapper.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const hostEl = container.getRootNode() as any;
-    const parentHost = hostEl?.host;
-    if (parentHost && typeof parentHost.__selectComponent === 'function') {
-      parentHost.__selectComponent(selector, type);
+    const isToolbarClick = (e.target as HTMLElement).closest('.spm-wrapper-header');
+    if (!isToolbarClick) {
+      e.stopPropagation();
+      e.preventDefault();
     }
-  });
+  }, true); // Capture phase (true) is crucial here!
 
   return { wrapper, host };
 }
