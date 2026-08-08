@@ -60,6 +60,11 @@ export function UiCommentListPage({
         ...style,
       }}
     >
+      <style>{`
+        #sidebarSlot-container:empty {
+          display: none !important;
+        }
+      `}</style>
       {/* Sidebar slot — legacy sidebar nodes reparented here */}
       <aside
         id="sidebarSlot-container"
