@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build:registry": "node scripts/build-registry.js",
+    "build:css": "node scripts/compile-css.js",
+    "build": "npm run build:registry && npm run build:css && tsc && vite build",
     "test": "vitest run",
     "dev-server": "node scripts/dev-server.cjs"
   },
