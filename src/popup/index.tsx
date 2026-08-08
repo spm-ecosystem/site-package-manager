@@ -36,7 +36,8 @@ function Popup() {
   const [devDraftManifestRaw, setDevDraftManifestRaw] = useState<string>('');
   const [devDraftCssRaw, setDevDraftCssRaw] = useState<string>('');
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const manifestInputRef = useRef<HTMLInputElement>(null);
+  const cssInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -183,62 +184,42 @@ function Popup() {
     }
   };
 
-  const triggerFilePicker = () => {
-    fileInputRef.current?.click();
-  };
+  const triggerManifestPicker = () => manifestInputRef.current?.click();
+  const triggerCssPicker = () => cssInputRef.current?.click();
 
-  const handleFolderSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    let manifestText = '';
-    let cssText = '';
-
-    let styleCss = '';
-    let fallbackCss = '';
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const name = file.name.toLowerCase();
-      if (name === 'manifest.json' || (name.endsWith('.json') && !name.includes('registry.json'))) {
-        manifestText = await file.text();
-      }
-      if (name === 'style.css') {
-        styleCss = await file.text();
-      } else if (name.endsWith('.css') && name !== 'content.css') {
-        fallbackCss = await file.text();
-      }
-    }
-    cssText = styleCss || fallbackCss;
-
-    if (!manifestText) {
-      alert('Error: No valid manifest.json found in the selected folder.');
-      return;
-    }
-
+  const saveDraftAndReload = (manifestText: string, cssText: string) => {
     try {
       const parsed = JSON.parse(manifestText);
-      if (typeof parsed !== 'object' || parsed === null) {
-        throw new Error('Manifest is not a valid JSON object');
-      }
-
+      if (typeof parsed !== 'object' || parsed === null) throw new Error('Not a valid JSON object');
       if (typeof chrome !== 'undefined' && chrome.storage) {
         const updateObj: Record<string, any> = {};
         updateObj[`dev-draft-manifest:${currentDomain}`] = manifestText;
         updateObj[`dev-draft-css:${currentDomain}`] = cssText;
-
         chrome.storage.local.set(updateObj, () => {
-          console.log('[SPM Popup] Dev draft saved successfully for:', currentDomain);
           setDevDraftManifestRaw(manifestText);
           setDevDraftCssRaw(cssText);
-          if (activeTabId !== undefined) {
-            chrome.tabs.reload(activeTabId);
-          }
+          if (activeTabId !== undefined) chrome.tabs.reload(activeTabId);
         });
       }
     } catch (err) {
       alert(`Error parsing manifest.json: ${(err as Error).message}`);
     }
+  };
+
+  const handleManifestSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    saveDraftAndReload(text, devDraftCssRaw);
+    e.target.value = '';
+  };
+
+  const handleCssSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    saveDraftAndReload(devDraftManifestRaw || '{}', text);
+    e.target.value = '';
   };
 
   const handleColorChange = (key: string, value: string) => {
@@ -395,39 +376,35 @@ function Popup() {
               </button>
             </div>
 
-            {/* Load Local Package Folder (when dev mode is active) */}
+            {/* Load Local Package Files (when dev mode is active) */}
             {isDevMode && (
               <div className="flex flex-col gap-2 border-t border-[#222222] pt-3">
+                <div className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Load Local Files</div>
                 <button
-                  onClick={triggerFilePicker}
-                  className="w-full py-2 text-xs font-semibold text-white bg-[#7c6af5] hover:bg-[#9d8fff] transition rounded flex items-center justify-center gap-1.5"
+                  onClick={triggerManifestPicker}
+                  className="w-full py-1.5 text-xs font-semibold text-white bg-[#7c6af5] hover:bg-[#9d8fff] transition rounded flex items-center justify-center gap-1.5"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                  </svg>
-                  Load Local Package Folder
+                  manifest.json {devDraftManifestRaw ? '✓' : ''}
                 </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  multiple
-                  onChange={handleFolderSelect}
-                  {...{
-                    webkitdirectory: "",
-                    directory: ""
-                  } as any}
-                />
-                
+                <button
+                  onClick={triggerCssPicker}
+                  className="w-full py-1.5 text-xs font-semibold text-white bg-[#444466] hover:bg-[#555577] transition rounded flex items-center justify-center gap-1.5"
+                >
+                  style.css {devDraftCssRaw ? '✓' : ''}
+                </button>
+                <input type="file" ref={manifestInputRef} accept=".json" style={{ display: 'none' }} onChange={handleManifestSelect} />
+                <input type="file" ref={cssInputRef} accept=".css" style={{ display: 'none' }} onChange={handleCssSelect} />
+
                 {devDraftManifestRaw && (
                   <div className="bg-[#111111] border border-[#222222] rounded p-2 text-[10px] text-zinc-500 font-mono break-all">
                     <div className="text-white font-bold mb-1">Loaded Draft:</div>
-                    Manifest size: {devDraftManifestRaw.length} bytes
-                    {devDraftCssRaw && <><br />CSS size: {devDraftCssRaw.length} bytes</>}
+                    manifest: {devDraftManifestRaw.length} bytes
+                    {devDraftCssRaw && <><br />style.css: {devDraftCssRaw.length} bytes</>}
                   </div>
                 )}
               </div>
             )}
+
 
             {isSupportedDomain && activePackageId && !isDevMode && (
               <div className="bg-[#111111] border border-[#333333] rounded-lg p-3 text-[11px] text-zinc-400">
