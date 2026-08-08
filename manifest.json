@@ -6,7 +6,7 @@
   "content_scripts": [
     {
       "matches": ["*://*/*"],
-      "js": ["src/content/index.tsx"],
+      "js": ["src/content/index.iife.tsx"],
       "run_at": "document_start"
     }
   ],
