@@ -1,20 +1,22 @@
-# Guia de Desenvolvimento de Temas (GitOps)
+# Theme Development Guide
 
-Este diretório contém os pacotes de modernização de sites suportados pelo **Site Package Manager**. Qualquer desenvolvedor pode propor novos temas ou suporte a novos sites através de Pull Requests.
+This directory contains the modernization packages for all sites supported by the **Site Package Manager**. Anyone can contribute new themes or support for new sites via Pull Requests.
 
 ---
 
-## Como Adicionar um Novo Site ou Tema (Passo a Passo)
+## How to Add a New Site or Theme
 
-### Passo 1: Criar a Estrutura de Pastas
-Crie um novo diretório aninhado seguindo o padrão de nomenclatura `websites/<dominio-do-site>/<nome-do-tema>/`:
+### Step 1: Create the Directory Structure
+
+Create a nested directory following the pattern `websites/<site-domain>/<theme-name>/`:
 
 ```bash
-mkdir -p public/websites/meusite.com/meu-tema-moderno/
+mkdir -p websites/mysite.com/my-modern-theme/
 ```
 
-### Passo 2: Criar o Manifesto do Tema (`manifest.json`)
-Dentro da pasta do tema, crie o arquivo `manifest.json`. Ele define quais elementos do site original serão extraídos e qual componente React será montado para reconstruir a página:
+### Step 2: Create the Theme Manifest (`manifest.json`)
+
+Inside the theme folder, create a `manifest.json` file. It defines which elements are extracted from the original site and which React component is used to reconstruct the page:
 
 ```json
 {
@@ -22,7 +24,7 @@ Dentro da pasta do tema, crie o arquivo `manifest.json`. Ele define quais elemen
   "layoutComponent": "UiModernGridPage",
   "urlPattern": "page=gallery",
   "props": {
-    "pageTitle": "Minha Galeria Moderna"
+    "pageTitle": "My Modern Gallery"
   },
   "children": [
     {
@@ -38,8 +40,9 @@ Dentro da pasta do tema, crie o arquivo `manifest.json`. Ele define quais elemen
 }
 ```
 
-### Passo 3: Criar o Arquivo de Estilos (`content.css`)
-Crie o arquivo `content.css` contendo os tokens de design do tema e a inicialização do Tailwind CSS:
+### Step 3: Create the Stylesheet (`content.css`)
+
+Create a `content.css` file with the theme's design tokens and the Tailwind CSS initialization:
 
 ```css
 @tailwind base;
@@ -57,23 +60,26 @@ Crie o arquivo `content.css` contendo os tokens de design do tema e a inicializa
 }
 ```
 
-### Passo 4: (Opcional) Criar Componentes React Específicos
-Se o seu tema precisar de componentes React exclusivos que não existem na biblioteca da extensão:
-1. Crie uma pasta `components/` dentro do seu tema: `public/websites/meusite.com/meu-tema-moderno/components/`.
-2. Crie seu componente React lá (ex: `UiSpecialGalleryCard.tsx`).
-3. O script da extensão irá encontrar seu componente automaticamente e registrá-lo na biblioteca core durante a compilação!
+### Step 4: (Optional) Create Site-Specific React Components
 
-### Passo 5: Atualizar o Registro Central (`registry.json`)
-Abra o arquivo [`registry.json`](file:///home/watashi/Projects/extension/registry.json) na raiz do projeto e mapeie o novo domínio e pacote correspondente:
+If your theme needs custom React components that don't exist in the extension's core library:
+
+1. Create a `components/` folder inside your theme: `websites/mysite.com/my-modern-theme/components/`.
+2. Create your React component there (e.g. `UiSpecialGalleryCard.tsx`).
+3. The build script will automatically discover your component and register it in the core library during compilation.
+
+### Step 5: Update the Central Registry (`registry.json`)
+
+Open [`registry.json`](file:///home/watashi/Projects/extension/registry.json) at the project root and map the new domain and package:
 
 ```json
-  "meusite.com": {
-    "defaultPackage": "meu-tema-moderno",
+  "mysite.com": {
+    "defaultPackage": "my-modern-theme",
     "packages": {
-      "meu-tema-moderno": {
-        "displayName": "Meu Tema Moderno",
-        "author": "seu-username",
-        "directory": "meu-tema-moderno",
+      "my-modern-theme": {
+        "displayName": "My Modern Theme",
+        "author": "your-username",
+        "directory": "my-modern-theme",
         "activeVersion": "1.0.0",
         "history": [
           { "version": "1.0.0", "ref": "master", "date": "2026-08-08" }
@@ -83,26 +89,31 @@ Abra o arquivo [`registry.json`](file:///home/watashi/Projects/extension/registr
   }
 ```
 
-### Passo 6: Compilar e Testar Localmente
-Para gerar os arquivos finais de CSS utilitário e mapear novos componentes no registro, rode a compilação:
+### Step 6: Build and Test Locally
+
+Run the build to compile the Tailwind utility stylesheet and update the component registry:
 
 ```bash
 npm run build
 ```
 
-Isso gerará o arquivo `style.css` compilado pelo Tailwind dentro da pasta do seu tema.
+This generates the final compiled `style.css` inside your theme folder.
 
-#### Como Testar na Extensão:
-1. Abra a extensão no navegador Chrome.
-2. Acesse o site mapeado (ex: `meusite.com`).
-3. Abra o popup da extensão, ative o **Developer Mode** (Modo Desenvolvedor).
-4. Clique em **"Load Local Package Folder"** e selecione a pasta do seu tema (`public/websites/meusite.com/meu-tema-moderno/`).
-5. A extensão salvará os arquivos localmente no storage, ignorando os arquivos remotos. A página reabrirá carregando o seu novo design instantaneamente a cada F5!
+#### Testing in the Extension
+
+1. Open Chrome and load the extension (`chrome://extensions` → Load unpacked → `dist/`).
+2. Navigate to the mapped site (e.g. `mysite.com`).
+3. Open the extension popup, enable **Developer Mode**.
+4. Click **`manifest.json`** and select your theme's `manifest.json` file.
+5. Click **`style.css`** and select your theme's `style.css` file.
+6. The extension saves both files locally and reloads the tab with your new design instantly.
 
 ---
 
-## Enviando a Alteração (GitOps)
-Após validar o tema localmente:
-1. Faça o commit da sua nova pasta e do `registry.json` atualizado.
-2. Abra um Pull Request.
-3. Assim que o PR for aprovado e integrado ao branch principal, todos os usuários do Site Package Manager receberão o suporte ao novo site de forma imediata e automática!
+## Submitting Your Theme (GitOps)
+
+Once you have validated the theme locally:
+
+1. Commit your new theme folder and the updated `registry.json`.
+2. Open a Pull Request.
+3. Once merged to the main branch, all Site Package Manager users will receive support for the new site automatically.
