@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { UiCommentListPage } from './dedicated/UiCommentListPage';
+import { UiDashboardPage } from './dedicated/UiDashboardPage';
 import { UiHeroLanding } from './dedicated/UiHeroLanding';
 import { UiImageCard } from './dedicated/UiImageCard';
 import { UiImageViewer } from './dedicated/UiImageViewer';
@@ -13,6 +14,7 @@ import { UiPostDetails } from './dedicated/UiPostDetails';
 import { UiScrollPanel } from './dedicated/UiScrollPanel';
 import { UiSearchBar } from './dedicated/UiSearchBar';
 import { UiSplitLayout } from './dedicated/UiSplitLayout';
+import { UiStatsDashboard } from './dedicated/UiStatsDashboard';
 import { UiTable } from './dedicated/UiTable';
 import { UiTableListPage } from './dedicated/UiTableListPage';
 import { UiTagBadge } from './dedicated/UiTagBadge';
@@ -21,6 +23,7 @@ import { UiBox, UiFlexColumn, UiFlexRow, UiGrid, UiImage, UiLink, UiScrollBox, U
 
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiCommentListPage,
+  UiDashboardPage,
   UiHeroLanding,
   UiImageCard,
   UiImageViewer,
@@ -31,6 +34,7 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiScrollPanel,
   UiSearchBar,
   UiSplitLayout,
+  UiStatsDashboard,
   UiTable,
   UiTableListPage,
   UiTagBadge,
@@ -58,6 +62,7 @@ export const PRIMITIVE_COMPONENTS = [
 
 export const DEDICATED_COMPONENTS = [
   'UiCommentListPage',
+  'UiDashboardPage',
   'UiHeroLanding',
   'UiImageCard',
   'UiImageViewer',
@@ -68,6 +73,7 @@ export const DEDICATED_COMPONENTS = [
   'UiScrollPanel',
   'UiSearchBar',
   'UiSplitLayout',
+  'UiStatsDashboard',
   'UiTable',
   'UiTableListPage',
   'UiTagBadge',

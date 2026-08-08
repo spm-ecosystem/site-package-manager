@@ -45,4 +45,11 @@ describe('extractValue engine helper', () => {
     const span = div.querySelector('span');
     expect(span?.getAttribute('data-spm-id')).toBeTruthy();
   });
+
+  it('should extract text from the next sibling element', () => {
+    const div = document.createElement('div');
+    div.innerHTML = '<h4>Title</h4><p>Description text here</p>';
+    const result = extractValue(div, 'h4 | nextSiblingText');
+    expect(result).toBe('Description text here');
+  });
 });

@@ -39,6 +39,11 @@ export function extractValue(element: Element, queryRule: string): string | null
     return `[data-spm-id="${spmId}"]`;
   }
 
+  if (extractor === 'nextSiblingText') {
+    const next = targetEl.nextElementSibling;
+    return next ? next.textContent : null;
+  }
+
   return null;
 }
 
