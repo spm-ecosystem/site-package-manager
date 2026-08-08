@@ -235,7 +235,7 @@ export function runSandboxEngine(container: HTMLElement, manifest: any): number 
       const Component = COMPONENT_REGISTRY[config.layoutComponent];
       if (Component) {
         const root = createRoot(host);
-        root.render(<Component {...pageProps} {...childrenLists} />);
+        root.render(<Component {...(config.props || {})} {...pageProps} {...childrenLists} />);
 
         // Reparent slots
         setTimeout(() => {
