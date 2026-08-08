@@ -1,215 +1,283 @@
-import React, { useState } from 'react';
-
 interface NavLink {
   label: string;
   url: string;
 }
 
 interface UiHeroLandingProps {
+  // Identity
   siteName?: string;
   logoUrl?: string;
+  logoHref?: string;
+  // Hero copy
   tagline?: string;
   subtext?: string;
+  // CTA
   ctaLabel?: string;
   ctaUrl?: string;
+  // Search (delegates to UiSearchBar behaviour inline)
   searchPlaceholder?: string;
   searchSubmitUrl?: string;
   searchParamName?: string;
+  // Nav links displayed as pills below CTA
   primaryLinks?: NavLink[];
+  // Layout overrides
+  className?: string;
+  style?: React.CSSProperties;
 }
+
+import { useState } from 'react';
 
 export function UiHeroLanding({
   siteName = 'Site',
   logoUrl,
-  tagline = 'Welcome',
-  subtext = '',
+  logoHref = '/',
+  tagline,
+  subtext,
   ctaLabel = 'Browse',
   ctaUrl = '/',
   searchPlaceholder = 'Search…',
   searchSubmitUrl = '/',
   searchParamName = 'q',
   primaryLinks = [],
+  className = '',
+  style = {},
 }: UiHeroLandingProps) {
   const [query, setQuery] = useState('');
+  const [focused, setFocused] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const url = new URL(searchSubmitUrl);
-    url.searchParams.set(searchParamName, query);
-    window.location.href = url.toString();
+    try {
+      const url = new URL(searchSubmitUrl, window.location.href);
+      url.searchParams.set(searchParamName, query);
+      window.location.href = url.toString();
+    } catch {
+      // noop
+    }
   };
 
   return (
     <div
+      className={className}
       style={{
+        width: '100%',
         minHeight: '100vh',
         background: 'var(--spm-bg-primary)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '40px 24px',
+        padding: '48px 24px',
+        boxSizing: 'border-box',
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        position: 'relative',
-        overflow: 'hidden',
+        ...style,
       }}
     >
-
-      {/* Logo */}
-      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        {logoUrl ? (
-          <a href={ctaUrl} style={{ display: 'inline-block' }}>
-            <img
-              src={logoUrl}
-              alt={siteName}
-              style={{
-                maxWidth: '340px',
-                width: '100%',
-                height: 'auto',
-              }}
-            />
-          </a>
-        ) : (
-          <h1 style={{
-            fontSize: '52px',
-            fontWeight: 900,
-            background: 'linear-gradient(135deg, #fff 0%, #a09fff 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            margin: 0,
-            letterSpacing: '-0.03em',
-          }}>
-            {siteName}
-          </h1>
+      {/* Logo / Site name */}
+      <a
+        href={logoHref}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '10px',
+          textDecoration: 'none',
+          marginBottom: '24px',
+        }}
+      >
+        {logoUrl && (
+          <img
+            src={logoUrl}
+            alt={siteName}
+            style={{ maxWidth: '320px', width: '100%', height: 'auto', display: 'block' }}
+          />
         )}
-      </div>
+        {!logoUrl && (
+          <span
+            style={{
+              fontSize: '42px',
+              fontWeight: 900,
+              color: 'var(--spm-text-primary)',
+              letterSpacing: '-0.03em',
+            }}
+          >
+            {siteName}
+          </span>
+        )}
+      </a>
 
       {/* Tagline */}
       {tagline && (
-        <h2 style={{
-          fontSize: '18px',
-          fontWeight: 600,
-          color: 'var(--spm-text-primary)',
-          margin: '0 0 8px 0',
-          textAlign: 'center',
-          letterSpacing: '-0.01em',
-        }}>
+        <h1
+          style={{
+            margin: '0 0 8px 0',
+            fontSize: '20px',
+            fontWeight: 700,
+            color: 'var(--spm-text-primary)',
+            textAlign: 'center',
+            letterSpacing: '-0.01em',
+          }}
+        >
           {tagline}
-        </h2>
+        </h1>
       )}
 
       {/* Subtext */}
       {subtext && (
-        <p style={{
-          fontSize: '14px',
-          color: 'var(--spm-text-muted)',
-          margin: '0 0 36px 0',
-          textAlign: 'center',
-          maxWidth: '420px',
-          lineHeight: 1.6,
-        }}>
+        <p
+          style={{
+            margin: '0 0 36px 0',
+            fontSize: '14px',
+            color: 'var(--spm-text-muted)',
+            textAlign: 'center',
+            maxWidth: '440px',
+            lineHeight: 1.6,
+          }}
+        >
           {subtext}
         </p>
       )}
 
-      {/* Search Form */}
+      {/* Search bar — same visual style as UiSearchBar */}
       <form
         onSubmit={handleSearch}
         style={{
           display: 'flex',
-          gap: '0',
+          alignItems: 'center',
           width: '100%',
           maxWidth: '520px',
-          marginBottom: '28px',
-          boxShadow: '0 0 0 1px var(--spm-border), 0 8px 32px rgba(0,0,0,0.4)',
-          borderRadius: 'var(--spm-radius)',
-          overflow: 'hidden',
+          marginBottom: '16px',
         }}
       >
-        <input
-          type="text"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder={searchPlaceholder}
+        <div
           style={{
             flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
             background: 'var(--spm-bg-secondary)',
-            border: 'none',
-            outline: 'none',
-            padding: '14px 18px',
-            fontSize: '14px',
-            color: 'var(--spm-text-primary)',
-            fontFamily: 'inherit',
+            border: `1px solid ${focused ? 'var(--spm-accent)' : 'var(--spm-border)'}`,
+            borderRadius: 'var(--spm-radius)',
+            padding: '0 10px',
+            transition: 'border-color 0.15s',
           }}
-        />
-        <button
-          type="submit"
-          style={{
-            background: 'var(--spm-accent)',
-            border: 'none',
-            color: 'var(--spm-accent-fg)',
-            padding: '14px 22px',
-            fontSize: '13px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            transition: 'background 0.15s ease',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--spm-accent-hover)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--spm-accent)'; }}
         >
-          Search
-        </button>
+          {/* Search icon */}
+          <button
+            type="submit"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              color: focused ? 'var(--spm-accent)' : 'var(--spm-text-muted)',
+              transition: 'color 0.15s',
+              flexShrink: 0,
+            }}
+            aria-label="Search"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </button>
+
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={searchPlaceholder}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: 'var(--spm-text-primary)',
+              fontSize: '13px',
+              padding: '12px 0',
+              fontFamily: 'inherit',
+              minWidth: 0,
+            }}
+          />
+
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--spm-text-muted)',
+                padding: 0,
+                lineHeight: 1,
+                fontSize: '11px',
+                flexShrink: 0,
+              }}
+              aria-label="Clear"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </form>
 
-      {/* CTA Browse Button */}
-      <a
-        href={ctaUrl}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '11px 28px',
-          borderRadius: 'var(--spm-radius)',
-          background: 'transparent',
-          border: '1px solid var(--spm-border)',
-          color: 'var(--spm-text-primary)',
-          fontSize: '13px',
-          fontWeight: 600,
-          textDecoration: 'none',
-          transition: 'border-color 0.15s, background 0.15s',
-          marginBottom: '44px',
-        }}
-        onMouseEnter={e => {
-          const el = e.currentTarget as HTMLAnchorElement;
-          el.style.borderColor = 'var(--spm-accent)';
-          el.style.background = 'rgba(124,106,245,0.08)';
-        }}
-        onMouseLeave={e => {
-          const el = e.currentTarget as HTMLAnchorElement;
-          el.style.borderColor = 'var(--spm-border)';
-          el.style.background = 'transparent';
-        }}
-      >
-        <span>🖼️</span> {ctaLabel}
-      </a>
+      {/* CTA button */}
+      {ctaUrl && ctaLabel && (
+        <a
+          href={ctaUrl}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '9px 22px',
+            borderRadius: 'var(--spm-radius)',
+            background: 'transparent',
+            border: '1px solid var(--spm-border)',
+            color: 'var(--spm-text-muted)',
+            fontSize: '12px',
+            fontWeight: 600,
+            textDecoration: 'none',
+            transition: 'border-color 0.15s, color 0.15s, background 0.15s',
+            marginBottom: '40px',
+          }}
+          onMouseEnter={e => {
+            const el = e.currentTarget as HTMLAnchorElement;
+            el.style.borderColor = 'var(--spm-accent)';
+            el.style.color = 'var(--spm-text-primary)';
+            el.style.background = 'var(--spm-bg-secondary)';
+          }}
+          onMouseLeave={e => {
+            const el = e.currentTarget as HTMLAnchorElement;
+            el.style.borderColor = 'var(--spm-border)';
+            el.style.color = 'var(--spm-text-muted)';
+            el.style.background = 'transparent';
+          }}
+        >
+          {ctaLabel}
+        </a>
+      )}
 
-      {/* Navigation Links */}
+      {/* Nav links as pills */}
       {primaryLinks.length > 0 && (
-        <nav style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '8px',
-          justifyContent: 'center',
-          maxWidth: '500px',
-        }}>
+        <nav
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px',
+            justifyContent: 'center',
+            maxWidth: '540px',
+          }}
+        >
           {primaryLinks.map((link, i) => (
             <a
               key={i}
               href={link.url}
               style={{
-                padding: '6px 14px',
+                padding: '5px 14px',
                 borderRadius: '999px',
                 background: 'var(--spm-bg-secondary)',
                 border: '1px solid var(--spm-border)',
