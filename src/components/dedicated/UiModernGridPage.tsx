@@ -88,6 +88,7 @@ export function UiModernGridPage({
   const [isMobile, setIsMobile] = useState(false);
   const [gridItems, setGridItems] = useState(items);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const prevLink = pageLinks?.find(link => link.label === '<' || link.label === '‹' || link.label.toLowerCase().includes('prev') || link.label.toLowerCase().includes('previous'));
   const nextLink = pageLinks?.find(link => link.label === '>' || link.label === '›' || link.label.toLowerCase().includes('next'));
@@ -209,6 +210,7 @@ export function UiModernGridPage({
     <div
       className={`spm-modern-grid-page ${className}`.trim()}
       data-hide-sidebar-on-mobile={hideSidebarOnMobile ? 'true' : 'false'}
+      data-drawer-open={drawerOpen ? 'true' : 'false'}
       style={{
         display: 'flex',
         width: '100%',
@@ -254,8 +256,38 @@ export function UiModernGridPage({
               width: 100vw !important;
             }
 
-            .spm-modern-grid-page[data-hide-sidebar-on-mobile="true"] .spm-modern-grid-sidebar {
-              display: none !important;
+            .spm-modern-grid-page[data-hide-sidebar-on-mobile="true"][data-drawer-open="true"] .spm-modern-grid-sidebar {
+              display: flex !important;
+              flex-direction: column !important;
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 280px !important;
+              height: 100vh !important;
+              z-index: 99999 !important;
+              box-shadow: 0 0 40px rgba(0,0,0,0.8) !important;
+              transform: translateX(0) !important;
+              transition: transform 0.3s ease !important;
+              background: rgba(20, 20, 20, 0.98) !important;
+              backdrop-filter: blur(16px) !important;
+              border-right: 1px solid var(--spm-border) !important;
+              padding: 20px !important;
+            }
+
+            .spm-modern-grid-page[data-hide-sidebar-on-mobile="true"][data-drawer-open="false"] .spm-modern-grid-sidebar {
+              display: flex !important;
+              flex-direction: column !important;
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 280px !important;
+              height: 100vh !important;
+              z-index: 99999 !important;
+              transform: translateX(-100%) !important;
+              transition: transform 0.3s ease !important;
+              pointer-events: none !important;
+              border-right: none !important;
+              padding: 20px !important;
             }
 
             .spm-modern-grid-content {
@@ -378,9 +410,32 @@ export function UiModernGridPage({
           overflowY: 'auto',
           boxSizing: 'border-box',
         }}
-        dangerouslySetInnerHTML={sidebarHtml ? { __html: sidebarHtml } : undefined}
       >
-        {!sidebarHtml && (
+        {isMobile && (
+          <button
+            onClick={() => setDrawerOpen(false)}
+            style={{
+              alignSelf: 'flex-end',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--spm-text-primary)',
+              cursor: 'pointer',
+              padding: '4px',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        )}
+        {sidebarHtml ? (
+          <div dangerouslySetInnerHTML={{ __html: sidebarHtml }} />
+        ) : (
           <>
             {showSearch && searchSubmitUrl && (
               <div style={{ marginBottom: '20px' }}>
@@ -555,6 +610,52 @@ export function UiModernGridPage({
             </a>
           )}
         </div>
+      )}
+      {isMobile && drawerOpen && (
+        <div
+          onClick={() => setDrawerOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 99990,
+          }}
+        />
+      )}
+
+      {isMobile && (
+        <button
+          onClick={() => setDrawerOpen(prev => !prev)}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '24px',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'var(--spm-accent)',
+            color: 'var(--spm-accent-fg)',
+            border: 'none',
+            borderRadius: '20px',
+            padding: '10px 16px',
+            fontSize: '12px',
+            fontWeight: 700,
+            boxShadow: '0 4px 16px rgba(124, 106, 245, 0.4)',
+            cursor: 'pointer',
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          Search & Tags
+        </button>
       )}
     </div>
   );

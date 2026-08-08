@@ -29,6 +29,7 @@ interface UiScrollPanelProps {
   width?: string;
   className?: string;
   style?: React.CSSProperties;
+  onClose?: () => void;
 }
 
 // Classify buttons by label so primary actions stand out
@@ -53,6 +54,7 @@ export function UiScrollPanel({
   width = '280px',
   className = '',
   style = {},
+  onClose,
 }: UiScrollPanelProps) {
   const copyrightTags = tags.filter(t => t.type?.includes('copyright'));
   const characterTags = tags.filter(t => t.type?.includes('character'));
@@ -181,6 +183,29 @@ export function UiScrollPanel({
         ...style,
       }}
     >
+      {onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            alignSelf: 'flex-end',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--spm-text-primary)',
+            cursor: 'pointer',
+            padding: '4px',
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      )}
       {/* Search */}
       {showSearch && searchSubmitUrl && (
         <div style={{ marginBottom: '20px' }}>
