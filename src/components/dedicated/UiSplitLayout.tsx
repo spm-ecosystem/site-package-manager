@@ -1,5 +1,6 @@
 import { UiImageViewer } from './UiImageViewer';
 import { UiScrollPanel } from './UiScrollPanel';
+import { triggerProxyClick } from '../../content/engine';
 
 interface ImageSlotItem {
   src?: string;
@@ -119,8 +120,7 @@ export function UiSplitLayout({
                 onClick={e => {
                   if (btn.targetSelector) {
                     e.preventDefault();
-                    const el = document.querySelector(btn.targetSelector);
-                    if (el) (el as HTMLElement).click();
+                    triggerProxyClick(btn.targetSelector);
                   }
                 }}
                 style={{

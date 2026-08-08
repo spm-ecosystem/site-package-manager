@@ -1,5 +1,6 @@
 import { UiTagBadge } from './UiTagBadge';
 import { UiSearchBar } from './UiSearchBar';
+import { triggerProxyClick } from '../../content/engine';
 
 interface TagItem {
   name: string;
@@ -190,8 +191,7 @@ export function UiPostDetails({
                   onClick={e => {
                     if (btn.targetSelector) {
                       e.preventDefault();
-                      const el = document.querySelector(btn.targetSelector);
-                      if (el) (el as HTMLElement).click();
+                      triggerProxyClick(btn.targetSelector);
                     }
                   }}
                   style={{

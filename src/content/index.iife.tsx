@@ -26,7 +26,7 @@ function applyThemeEarly() {
         
         // Inject theme globally as early as possible
         if (manifest.theme?.cssVariables) {
-          applyThemeGlobally(manifest.theme.cssVariables, manifest.theme.customStyles);
+          applyThemeGlobally(manifest.theme.cssVariables, manifest.theme.customStyles, manifest.theme.noticeSelector);
         }
 
         // Safe race check: if DOM is already parsed, run modernizer immediately
