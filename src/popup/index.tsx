@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
 import registryMock from '../../registry.json';
@@ -36,7 +36,7 @@ function Popup() {
   const [devDraftManifestRaw, setDevDraftManifestRaw] = useState<string>('');
   const [devDraftCssRaw, setDevDraftCssRaw] = useState<string>('');
   
-  // folderInputRef removed — file picker now opens in a dedicated tab (devloader.html)
+
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
@@ -194,32 +194,6 @@ function Popup() {
     });
   };
 
-  const handleFolderSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Legacy inline handler kept for non-Linux fallback — primary path is openDevLoader
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    let manifestText = '';
-    let cssText = '';
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const name = file.name.toLowerCase();
-      if (name === 'manifest.json') manifestText = await file.text();
-      if (name === 'style.css') cssText = await file.text();
-    }
-    if (!manifestText) { alert('No manifest.json found.'); return; }
-    try {
-      JSON.parse(manifestText);
-      const updateObj: Record<string, any> = {};
-      updateObj[`dev-draft-manifest:${currentDomain}`] = manifestText;
-      updateObj[`dev-draft-css:${currentDomain}`] = cssText;
-      chrome.storage.local.set(updateObj, () => {
-        setDevDraftManifestRaw(manifestText);
-        setDevDraftCssRaw(cssText);
-        if (activeTabId !== undefined) chrome.tabs.reload(activeTabId);
-      });
-    } catch { alert('Invalid manifest.json'); }
-    e.target.value = '';
-  };
 
   const handleColorChange = (key: string, value: string) => {
     const next = { ...themeVars, [key]: value };
