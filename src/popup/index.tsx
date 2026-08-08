@@ -194,16 +194,22 @@ function Popup() {
     let manifestText = '';
     let cssText = '';
 
+    let styleCss = '';
+    let fallbackCss = '';
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const name = file.name.toLowerCase();
       if (name === 'manifest.json' || (name.endsWith('.json') && !name.includes('registry.json'))) {
         manifestText = await file.text();
       }
-      if (name === 'style.css' || name === 'content.css' || name.endsWith('.css')) {
-        cssText = await file.text();
+      if (name === 'style.css') {
+        styleCss = await file.text();
+      } else if (name.endsWith('.css') && name !== 'content.css') {
+        fallbackCss = await file.text();
       }
     }
+    cssText = styleCss || fallbackCss;
 
     if (!manifestText) {
       alert('Error: No valid manifest.json found in the selected folder.');
@@ -225,7 +231,9 @@ function Popup() {
           console.log('[SPM Popup] Dev draft saved successfully for:', currentDomain);
           setDevDraftManifestRaw(manifestText);
           setDevDraftCssRaw(cssText);
-          reloadTab();
+          if (activeTabId !== undefined) {
+            chrome.tabs.reload(activeTabId);
+          }
         });
       }
     } catch (err) {
