@@ -308,6 +308,7 @@ export function UiModernGridPage({
             .spm-modern-grid-main .spm-image-card {
               width: 100% !important;
               display: flex !important;
+              flex-direction: column !important;
               margin: 0 !important;
               border: 0 !important;
               border-radius: 8px !important;
@@ -317,11 +318,17 @@ export function UiModernGridPage({
             }
 
             .spm-modern-grid-main .spm-image-card-media {
+              width: 100% !important;
+              display: block !important;
               aspect-ratio: var(--spm-mobile-card-aspect-ratio) !important;
               background: var(--spm-bg-tertiary) !important;
+              overflow: hidden !important;
             }
 
             .spm-modern-grid-main .spm-image-card img {
+              width: 100% !important;
+              height: 100% !important;
+              display: block !important;
               object-fit: cover !important;
             }
 
