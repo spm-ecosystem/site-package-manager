@@ -4,7 +4,7 @@ import '../content/content.css';
 import registryMock from '../../registry.json';
 
 
-interface ThemeVariable {
+export interface ThemeVariable {
   key: string;
   label: string;
   type: 'color' | 'text';
@@ -243,7 +243,7 @@ function Popup() {
     try { return JSON.parse(devDraftManifestRaw); } catch { return null; }
   })();
   const devDraftLabel = devDraftParsed?.theme?.label || devDraftParsed?.name || 'Local Draft';
-  const devDraftVersion = devDraftParsed?.version || '—';
+  const devDraftVersion = devDraftParsed?.version || '-';
 
   return (
     <div className="flex flex-col min-h-[460px] font-sans select-none bg-black text-[#d4d4d4]" style={{ width: '320px' }}>
@@ -275,7 +275,7 @@ function Popup() {
         {/* Domain info */}
         <div className="px-4 py-2 border-b border-[#333333]">
           <div className="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold">Active Site</div>
-          <div className="text-xs text-white font-mono truncate mt-0.5">{currentDomain || '—'}</div>
+          <div className="text-xs text-white font-mono truncate mt-0.5">{currentDomain || '-'}</div>
         </div>
 
         {/* Tabs */}
@@ -295,7 +295,7 @@ function Popup() {
         {activeTab === 'theme' && currentDomain && (
           <div className="flex flex-col gap-4 p-4">
             
-            {/* Registry Info & Package Selection — hidden when dev draft is loaded */}
+            {/* Registry Info & Package Selection - hidden when dev draft is loaded */}
             {!isDevMode && isSupportedDomain && (
               <div className="flex flex-col gap-3">
                 <div>
@@ -400,7 +400,7 @@ function Popup() {
                   <div className="text-[10px] font-mono text-zinc-600">{key}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-zinc-500">{themeVars[key] || '—'}</span>
+                  <span className="text-[10px] font-mono text-zinc-500">{themeVars[key] || '-'}</span>
                   <input
                     type="color"
                     value={themeVars[key] || '#000000'}

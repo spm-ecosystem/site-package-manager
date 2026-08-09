@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* SPM Design Token System — all components should consume these variables */
+/* SPM Design Token System - all components should consume these variables */
 :host {
   /* Backgrounds */
   --spm-bg-primary: #000000;

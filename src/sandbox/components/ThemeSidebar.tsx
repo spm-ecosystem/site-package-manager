@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface CustomTheme {
+export interface CustomTheme {
   bgPrimary: string;
   bgSecondary: string;
   accent: string;
@@ -8,7 +8,7 @@ interface CustomTheme {
   customStyles: string;
 }
 
-interface ThemeSidebarProps {
+export interface ThemeSidebarProps {
   theme: CustomTheme;
   setTheme: React.Dispatch<React.SetStateAction<CustomTheme>>;
   onElementDrop: (data: { selector: string; tagName: string; id: string; classes: string }) => void;

@@ -1,13 +1,13 @@
 import React from 'react';
 
-interface DashboardCard {
+export interface DashboardCard {
   title: string;
   description?: string;
   url: string;
   urlLabel?: string;
 }
 
-interface UiDashboardPageProps {
+export interface UiDashboardPageProps {
   pageTitle?: string;
   subTitle?: string;
   cards?: DashboardCard[];

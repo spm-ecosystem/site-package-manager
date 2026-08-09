@@ -4,19 +4,19 @@ import { UiPaginationBar } from './UiPaginationBar';
 import { UiSearchBar } from './UiSearchBar';
 import { UiTagBadge } from './UiTagBadge';
 
-interface GridItem {
+export interface GridItem {
   imageUrl: string;
   linkUrl: string;
   title: string;
   id: string;
 }
 
-interface PageLink {
+export interface PageLink {
   label: string;
   url: string;
 }
 
-interface TagItem {
+export interface TagItem {
   name: string;
   count?: string | number;
   type: string;
@@ -30,7 +30,7 @@ export interface TagGroupConfig {
   typeKey: string;
 }
 
-interface UiModernGridPageProps {
+export interface UiModernGridPageProps {
   pageTitle: string;
   items: GridItem[];
   pageLinks?: PageLink[];
@@ -396,7 +396,7 @@ export function UiModernGridPage({
         `}
       </style>
 
-      {/* Sidebar slot — legacy nodes reparented here OR structured render */}
+      {/* Sidebar slot - legacy nodes reparented here OR structured render */}
       <aside
         id="sidebarSlot-container"
         className="spm-modern-grid-sidebar"

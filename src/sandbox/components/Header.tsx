@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface HeaderProps {
+export interface HeaderProps {
   urlInput: string;
   setUrlInput: (val: string) => void;
   wsStatus: string;

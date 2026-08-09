@@ -6,7 +6,7 @@ export interface ToastMessage {
   type: 'info' | 'warning' | 'success' | 'error';
 }
 
-interface UiToastProps {
+export interface UiToastProps {
   message: string;
   type?: 'info' | 'warning' | 'success' | 'error';
   onClose: () => void;
@@ -84,7 +84,7 @@ export function UiToast({ message, type = 'info', onClose }: UiToastProps) {
   );
 }
 
-interface UiConfirmDialogProps {
+export interface UiConfirmDialogProps {
   message: string;
   onConfirm: () => void;
   onCancel: () => void;

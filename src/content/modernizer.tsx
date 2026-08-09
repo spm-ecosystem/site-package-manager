@@ -381,7 +381,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
     for (const compConfig of manifest.components) {
       const originalElements = rootContext.querySelectorAll(compConfig.selector);
 
-      // action:hide — simply hide the element, no React mount
+      // action:hide - simply hide the element, no React mount
       if (compConfig.action === 'hide') {
         originalElements.forEach(el => { (el as HTMLElement).style.display = 'none'; });
         continue;

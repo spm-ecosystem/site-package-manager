@@ -1,11 +1,11 @@
 import { UiSearchBar } from './UiSearchBar';
 
-interface NavLink {
+export interface NavLink {
   label: string;
   url: string;
 }
 
-interface UiHeroLandingProps {
+export interface UiHeroLandingProps {
   siteName?: string;
   logoUrl?: string;
   logoHref?: string;
@@ -112,7 +112,7 @@ export function UiHeroLanding({
         </p>
       )}
 
-      {/* Search bar — reuses UiSearchBar so behaviour is identical */}
+      {/* Search bar - reuses UiSearchBar so behaviour is identical */}
       {searchSubmitUrl && (
         <UiSearchBar
           placeholder={searchPlaceholder}
@@ -157,7 +157,7 @@ export function UiHeroLanding({
         </a>
       )}
 
-      {/* Nav links — data comes entirely from JSON children */}
+      {/* Nav links - data comes entirely from JSON children */}
       {primaryLinks.length > 0 && (
         <nav
           style={{

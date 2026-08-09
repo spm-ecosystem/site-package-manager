@@ -47,7 +47,7 @@ function DevLoader() {
       if (typeof parsed !== 'object' || parsed === null) throw new Error('manifest.json is not a valid JSON object');
 
       const label = parsed?.theme?.label || parsed?.name || 'Local Draft';
-      const version = parsed?.version || '—';
+      const version = parsed?.version || '-';
 
       const updateObj: Record<string, any> = {
         [`dev-draft-manifest:${domain}`]: manifestText,

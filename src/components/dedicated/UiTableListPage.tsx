@@ -13,12 +13,12 @@ export interface TableColumnConfig {
   badgeStyleKey?: string;
 }
 
-interface PageLink {
+export interface PageLink {
   label: string;
   url: string;
 }
 
-interface UiTableListPageProps {
+export interface UiTableListPageProps {
   pageTitle?: string;
   tableRows?: any[];
   columns?: TableColumnConfig[];
@@ -110,7 +110,7 @@ export function UiTableListPage({
                 onMouseEnter={e => (e.currentTarget.style.color = 'var(--spm-accent-hover)')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'var(--spm-accent)')}
               >
-                {val || '—'}
+                {val || '-'}
               </a>
             );
           }
@@ -134,7 +134,7 @@ export function UiTableListPage({
               />
             );
           }
-          return <span>{val || '—'}</span>;
+          return <span>{val || '-'}</span>;
         },
       }))
     : [
@@ -245,7 +245,7 @@ export function UiTableListPage({
         }
       `}</style>
       
-      {/* Sidebar slot — legacy sidebar nodes reparented here */}
+      {/* Sidebar slot - legacy sidebar nodes reparented here */}
       <aside
         id="sidebarSlot-container"
         style={{

@@ -2,21 +2,21 @@ import { UiTagBadge } from './UiTagBadge';
 import { UiSearchBar } from './UiSearchBar';
 import { triggerProxyClick } from '../../content/engine';
 
-interface TagItem {
+export interface TagItem {
   name: string;
   count?: string;
   type?: string;
   url?: string;
 }
 
-interface ButtonItem {
+export interface ButtonItem {
   label: string;
   url?: string;
   targetSelector?: string;
 }
 
-interface UiScrollPanelProps {
-  // Content slots — all optional, all JSON-driven
+export interface UiScrollPanelProps {
+  // Content slots - all optional, all JSON-driven
   tags?: TagItem[];
   buttons?: ButtonItem[];
   statisticsHtml?: string;

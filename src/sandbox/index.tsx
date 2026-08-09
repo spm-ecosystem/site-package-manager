@@ -9,7 +9,7 @@ import { InspectorSidebar } from './components/InspectorSidebar';
 import { makeUrlsAbsolute, computeCssSelector } from './utils';
 import { runSandboxEngine } from './sandboxEngine';
 
-interface CustomTheme {
+export interface CustomTheme {
   bgPrimary: string;
   bgSecondary: string;
   accent: string;
@@ -17,7 +17,7 @@ interface CustomTheme {
   customStyles: string;
 }
 
-interface InspectedElementData {
+export interface InspectedElementData {
   tagName: string;
   id: string;
   classes: string[];
@@ -26,7 +26,7 @@ interface InspectedElementData {
   suggestedSelectors: string[];
 }
 
-interface CaptureDomResponse {
+export interface CaptureDomResponse {
   ok: boolean;
   html?: string;
   url?: string;

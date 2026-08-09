@@ -3,32 +3,32 @@ import { UiImageViewer } from './UiImageViewer';
 import { UiScrollPanel } from './UiScrollPanel';
 import { triggerProxyClick } from '../../content/engine';
 
-interface ImageSlotItem {
+export interface ImageSlotItem {
   src?: string;
   alt?: string;
 }
 
-interface TagItem {
+export interface TagItem {
   name: string;
   count?: string;
   type?: string;
   url?: string;
 }
 
-interface ButtonItem {
+export interface ButtonItem {
   label: string;
   url?: string;
   targetSelector?: string;
 }
 
-interface UiSplitLayoutProps {
-  // Slot: image — user maps via children[name="imageSlot"] in JSON
+export interface UiSplitLayoutProps {
+  // Slot: image - user maps via children[name="imageSlot"] in JSON
   imageSlot?: ImageSlotItem[];
-  // Slot: sidebar content — user maps via children in JSON
+  // Slot: sidebar content - user maps via children in JSON
   tags?: TagItem[];
   buttons?: ButtonItem[];
   statisticsHtml?: string;
-  // Layout config — user sets via props in JSON
+  // Layout config - user sets via props in JSON
   sidebarWidth?: string;
   sidebarSide?: 'left' | 'right';
   imageFit?: 'contain' | 'cover';
