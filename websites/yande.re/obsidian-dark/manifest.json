@@ -73,9 +73,9 @@
   ],
   "reconstructs": [
     {
-      "containerSelector": "#page-posts, #content, #static-index",
+      "containerSelector": "#static-index, #page-posts, #content",
       "layoutComponent": "UiHeroLanding",
-      "urlPattern": "yande\\.re\\/?(?:post)?$",
+      "urlPattern": "yande\\.re\\/?(?:index\\.php|)?$",
       "propsMap": {
         "siteName": "#site-title img | attr:alt",
         "logoUrl": "#site-title img | attr:src"
@@ -84,15 +84,15 @@
         "tagline": "Anime picture search engine",
         "subtext": "Browse millions of illustrations.",
         "ctaLabel": "Browse Gallery",
-        "ctaUrl": "/post",
+        "ctaUrl": "https://yande.re/post",
         "searchPlaceholder": "Search tags... (e.g. blue_hair 1girl)",
-        "searchSubmitUrl": "/post",
+        "searchSubmitUrl": "https://yande.re/post",
         "searchParamName": "tags"
       },
       "children": [
         {
           "name": "primaryLinks",
-          "selector": "#main-menu ul > li > a, #main-menu > ul > li > a",
+          "selector": "#main-menu a, #links a, nav a",
           "propsMap": {
             "label": "self | text",
             "url": "self | attr:href"
@@ -101,7 +101,7 @@
       ]
     },
     {
-      "containerSelector": "#content",
+      "containerSelector": "#post-list, #content, .posts, #posts",
       "layoutComponent": "UiModernGridPage",
       "urlPattern": "post",
       "infiniteScroll": {
@@ -119,7 +119,7 @@
         "hideSidebarOnMobile": true,
         "showSearch": true,
         "searchPlaceholder": "Search tags…",
-        "searchSubmitUrl": "/post",
+        "searchSubmitUrl": "https://yande.re/post",
         "searchParamName": "tags",
         "mobileBreakpoint": 720,
         "mobileColumns": 2,
@@ -140,7 +140,7 @@
       "children": [
         {
           "name": "items",
-          "selector": ".thumb, .post-preview, #post-list .thumb",
+          "selector": ".thumb, .post-preview, .post, #post-list .thumb",
           "propsMap": {
             "imageUrl": "img | attr:src",
             "linkUrl": "a | attr:href",
@@ -158,13 +158,423 @@
         },
         {
           "name": "tags",
-          "selector": ".tag-list li, #tag-sidebar li",
+          "selector": "#tag-sidebar li, .tag-list li, .tags li",
+          "scope": "document",
+          "propsMap": {
+            "name": "a:last-of-type | text",
+            "count": "span.tag-count | text",
+            "type": "self | attr:class",
+            "url": "a:last-of-type | attr:href",
+            "addUrl": "a:nth-of-type(2) | attr:href",
+            "removeUrl": "a:nth-of-type(3) | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#post-view, #image, .post-view",
+      "layoutComponent": "UiSplitLayout",
+      "urlPattern": "post/show|post/view|post",
+      "propsMap": {
+        "statisticsHtml": "#stats ul | html"
+      },
+      "props": {
+        "sidebarWidth": "300px",
+        "sidebarSide": "left",
+        "imageFit": "contain",
+        "height": "calc(100vh - 78px)",
+        "showSearch": true,
+        "searchPlaceholder": "Search tags...",
+        "searchSubmitUrl": "https://yande.re/post",
+        "searchParamName": "tags",
+        "tagGroups": [
+          { "title": "Artists", "typeKey": "artist" },
+          { "title": "Copyrights", "typeKey": "copyright" },
+          { "title": "Characters", "typeKey": "character" },
+          { "title": "General", "typeKey": "general" },
+          { "title": "Meta", "typeKey": "metadata" }
+        ]
+      },
+      "children": [
+        {
+          "name": "imageSlot",
+          "selector": "#image, img.post-image, .image, .post img",
+          "propsMap": {
+            "src": "self | attr:src",
+            "alt": "self | attr:alt"
+          }
+        },
+        {
+          "name": "tags",
+          "selector": "#tag-sidebar li[class*='tag-type-'], .tags li[class*='tag-type-']",
           "scope": "document",
           "propsMap": {
             "name": "a:last-of-type | text",
             "count": "span.tag-count | text",
             "type": "self | attr:class",
             "url": "a:last-of-type | attr:href"
+          }
+        },
+        {
+          "name": "buttons",
+          "selector": ".link-list a, .actions a, .post-actions a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | hrefOrOnclick",
+            "targetSelector": "self | selector"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content:has(#comment-list), #comments",
+      "layoutComponent": "UiCommentListPage",
+      "urlPattern": "comment|post/comment",
+      "props": {
+        "pageTitle": "Comments",
+        "height": "calc(100vh - 78px)"
+      },
+      "preserve": {
+        "sidebarSlot": ".sidebar"
+      },
+      "children": [
+        {
+          "name": "threads",
+          "selector": "#comment-list > div.post, .comment-thread > .post",
+          "propsMap": {
+            "id": "self | attr:id",
+            "thumbnailUrl": ".col1 img | attr:src",
+            "postUrl": ".col1 a | attr:href",
+            "postDate": ".col2 span.info:nth-child(1) | text",
+            "postUser": ".col2 span.info:nth-child(2) | text",
+            "postRating": ".col2 span.info:nth-child(3) | text",
+            "postScore": ".col2 span.info:nth-child(4) | text"
+          },
+          "children": [
+            {
+              "name": "tags",
+              "selector": ".col2 .tags span, .tags span",
+              "propsMap": {
+                "label": "a | text",
+                "url": "a | attr:href",
+                "type": "self | attr:class"
+              }
+            },
+            {
+              "name": "comments",
+              "selector": ".response-list div.post, .responses div.post",
+              "propsMap": {
+                "author": ".author h6 a | text",
+                "authorUrl": ".author h6 a | attr:href",
+                "date": ".author span.date | text",
+                "body": ".content .body | text"
+              }
+            }
+          ]
+        },
+        {
+          "name": "pageLinks",
+          "selector": "a[rel='next'], .pagination a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content:has(table.highlightable), table.highlightable",
+      "layoutComponent": "UiTableListPage",
+      "urlPattern": "page=wiki|wiki",
+      "props": {
+        "pageTitle": "Wiki Pages",
+        "height": "calc(100vh - 78px)"
+      },
+      "preserve": {
+        "sidebarSlot": ".sidebar"
+      },
+      "children": [
+        {
+          "name": "tableRows",
+          "selector": "table.highlightable tr",
+          "propsMap": {
+            "iconUrl": "td:nth-child(1) img | attr:src",
+            "iconLink": "td:nth-child(1) a | attr:href",
+            "title": "td:nth-child(2) a | text",
+            "titleUrl": "td:nth-child(2) a | attr:href",
+            "lastUpdatedText": "td:nth-child(2) span | text",
+            "lastUpdatedUser": "td:nth-child(2) span a | text",
+            "lastUpdatedUserUrl": "td:nth-child(2) span a | attr:href",
+            "version": "td:nth-child(3) h3 | text"
+          }
+        },
+        {
+          "name": "pageLinks",
+          "selector": "a[rel='next'], .pagination a, #paginator .pagination a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content:has(table.highlightable)",
+      "layoutComponent": "UiTableListPage",
+      "urlPattern": "page=alias|alias",
+      "infiniteScroll": {
+        "nextPageSelector": "a[rel='next'], .pagination a, #paginator .pagination a",
+        "nextPageText": ">"
+      },
+      "props": {
+        "pageTitle": "Tag Aliases",
+        "height": "calc(100vh - 78px)",
+        "columns": [
+          { "key": "pending", "header": "Pending", "width": "60px", "type": "checkbox" },
+          { "key": "aliasName", "header": "Alias", "type": "link", "urlKey": "aliasUrl" },
+          { "key": "toName", "header": "To Tag", "type": "link", "urlKey": "toUrl" },
+          { "key": "reason", "header": "Reason / Discussion", "type": "text" }
+        ]
+      },
+      "children": [
+        {
+          "name": "tableRows",
+          "selector": "#aliases table.highlightable tr:not(.tableheader)",
+          "propsMap": {
+            "pending": "td:nth-child(1) input[type='checkbox'] | attr:class",
+            "aliasName": "td:nth-child(2) a | text",
+            "aliasUrl": "td:nth-child(2) a | attr:href",
+            "toName": "td:nth-child(3) a | text",
+            "toUrl": "td:nth-child(3) a | attr:href",
+            "reason": "td:nth-child(4) | text"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content:has(table.highlightable)",
+      "layoutComponent": "UiTableListPage",
+      "urlPattern": "page=artist|artist",
+      "infiniteScroll": {
+        "nextPageSelector": "a[rel='next'], .pagination a",
+        "nextPageText": ">"
+      },
+      "props": {
+        "pageTitle": "Artists",
+        "height": "calc(100vh - 78px)",
+        "columns": [
+          { "key": "actions", "header": "Actions", "width": "100px", "type": "html" },
+          { "key": "name", "header": "Artist Name", "type": "link", "urlKey": "nameUrl" },
+          { "key": "updatedBy", "header": "Updated By", "type": "text" }
+        ]
+      },
+      "children": [
+        {
+          "name": "tableRows",
+          "selector": "table.highlightable tr:not(.tableheader)",
+          "propsMap": {
+            "actions": "td:nth-child(1) | html",
+            "name": "td:nth-child(2) a | text",
+            "nameUrl": "td:nth-child(2) a | attr:href",
+            "updatedBy": "td:nth-child(3) | text"
+          }
+        },
+        {
+          "name": "pageLinks",
+          "selector": "a[rel='next'], .pagination a, #paginator .pagination a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content:has(table.highlightable)",
+      "layoutComponent": "UiTableListPage",
+      "urlPattern": "page=tags|tags",
+      "infiniteScroll": {
+        "nextPageSelector": "a[rel='next'], .pagination a",
+        "nextPageText": ">"
+      },
+      "props": {
+        "pageTitle": "Tags Directory",
+        "height": "calc(100vh - 78px)",
+        "columns": [
+          { "key": "posts", "header": "Posts", "width": "120px", "type": "text" },
+          { "key": "tag", "header": "Tag", "type": "badge", "urlKey": "tagUrl" },
+          { "key": "type", "header": "Type Description", "type": "text" }
+        ]
+      },
+      "children": [
+        {
+          "name": "tableRows",
+          "selector": "table.highlightable tr:not(.tableheader)",
+          "propsMap": {
+            "posts": "td:nth-child(1) | text",
+            "tag": "td:nth-child(2) a | text",
+            "tagUrl": "td:nth-child(2) a | attr:href",
+            "type": "td:nth-child(3) | text"
+          }
+        },
+        {
+          "name": "pageLinks",
+          "selector": "a[rel='next'], .pagination a, #paginator .pagination a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content:has(table.highlightable)",
+      "layoutComponent": "UiTableListPage",
+      "urlPattern": "page=pool|pool",
+      "infiniteScroll": {
+        "nextPageSelector": "a[rel='next'], .pagination a",
+        "nextPageText": ">"
+      },
+      "props": {
+        "pageTitle": "Pools / Collections",
+        "height": "calc(100vh - 78px)",
+        "columns": [
+          { "key": "name", "header": "Pool Title", "type": "link", "urlKey": "nameUrl" },
+          { "key": "creator", "header": "Created By", "type": "link", "urlKey": "creatorUrl" },
+          { "key": "posts", "header": "Posts Count", "width": "120px", "type": "text" },
+          { "key": "isPublic", "header": "Public Status", "width": "120px", "type": "text" }
+        ]
+      },
+      "children": [
+        {
+          "name": "tableRows",
+          "selector": "table.highlightable tbody tr",
+          "propsMap": {
+            "name": "td:nth-child(1) a | text",
+            "nameUrl": "td:nth-child(1) a | attr:href",
+            "creator": "td:nth-child(2) a | text",
+            "creatorUrl": "td:nth-child(2) a | attr:href",
+            "posts": "td:nth-child(3) | text",
+            "isPublic": "td:nth-child(4) | text"
+          }
+        },
+        {
+          "name": "pageLinks",
+          "selector": "a[rel='next'], .pagination a, #paginator .pagination a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content:has(table.highlightable)",
+      "layoutComponent": "UiTableListPage",
+      "urlPattern": "page=forum|forum",
+      "infiniteScroll": {
+        "nextPageSelector": "a[rel='next'], .pagination a",
+        "nextPageText": ">"
+      },
+      "props": {
+        "pageTitle": "Community Forum",
+        "height": "calc(100vh - 78px)",
+        "columns": [
+          { "key": "title", "header": "Discussion Topic", "type": "html" },
+          { "key": "createdBy", "header": "Created By", "type": "text" },
+          { "key": "updated", "header": "Last Updated", "type": "text" },
+          { "key": "updatedBy", "header": "Updated By", "type": "text" },
+          { "key": "replies", "header": "Replies", "width": "100px", "type": "text" }
+        ]
+      },
+      "children": [
+        {
+          "name": "tableRows",
+          "selector": "table.highlightable tbody tr",
+          "propsMap": {
+            "title": "td:nth-child(1) | html",
+            "createdBy": "td:nth-child(2) | text",
+            "updated": "td:nth-child(3) span | attr:title",
+            "updatedBy": "td:nth-child(4) | text",
+            "replies": "td:nth-child(5) | text"
+          }
+        },
+        {
+          "name": "pageLinks",
+          "selector": "a[rel='next'], .pagination a, #paginator .pagination a",
+          "scope": "document",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content:has(div.toptencont), .toptencont",
+      "layoutComponent": "UiStatsDashboard",
+      "urlPattern": "page=stats|stats",
+      "props": {
+        "pageTitle": "Booru Statistics Dashboard",
+        "height": "calc(100vh - 78px)"
+      },
+      "propsMap": {
+        "dateRangeText": "h2 | text"
+      },
+      "children": [
+        {
+          "name": "navLinks",
+          "selector": "#content > a, #stats a, .stats a",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        },
+        {
+          "name": "sections",
+          "selector": "div.toptencont",
+          "propsMap": {
+            "title": "thead tr th | text"
+          },
+          "children": [
+            {
+              "name": "items",
+              "selector": "tbody tr",
+              "propsMap": {
+                "place": "td:nth-child(1) | text",
+                "amount": "td:nth-child(2) | text",
+                "name": "td:nth-child(3) a | text",
+                "profileUrl": "td:nth-child(3) a | attr:href"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "containerSelector": "#user-index, .user-index",
+      "layoutComponent": "UiDashboardPage",
+      "urlPattern": "page=account&s=home|account/home",
+      "props": {
+        "pageTitle": "My Account Home",
+        "subTitle": "Manage your settings, options, and sign up or login status.",
+        "height": "calc(100vh - 78px)"
+      },
+      "children": [
+        {
+          "name": "cards",
+          "selector": "#user-index h4, .user-index h4",
+          "propsMap": {
+            "title": "self | text",
+            "url": "a | attr:href",
+            "urlLabel": "a | text",
+            "description": "self | nextSiblingText"
           }
         }
       ]
