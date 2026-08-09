@@ -92,3 +92,20 @@ export function triggerProxyClick(targetSelector: string) {
     }));
   }
 }
+
+export function revealPage() {
+  // antiFlicker element
+  const antiFlickerStyle = document.createElement('style');
+  antiFlickerStyle.id = 'spm-anti-flicker';
+
+  antiFlickerStyle.textContent = `
+      html {
+        opacity: 0 !important;
+        background-color: var(--spm-bg-primary, #121212) !important;
+        transition: opacity 0.2s ease-in-out !important;
+      }
+    `;
+  setTimeout(() => {
+    antiFlickerStyle.remove();
+  }, 300);
+}

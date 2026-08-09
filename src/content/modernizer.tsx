@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { extractValue } from './engine';
+import { extractValue, revealPage } from './engine';
 import { COMPONENT_REGISTRY } from '../components/registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
 
@@ -448,6 +448,9 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
       });
     }
   }
+
+  // 3. Anti flickering reveal
+  revealPage();
 }
 
 export function normalizeGitOpsUrl(baseUrl: string, filePath: string, ref: string = 'master'): string {
