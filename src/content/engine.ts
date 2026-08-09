@@ -95,13 +95,18 @@ export function triggerProxyClick(targetSelector: string) {
 
 export function revealPage() {
   setTimeout(() => {
-    const antiFlickerStyle = document.createElement('style');
+    const antiFlickerStyle = document.getElementById('spm-anti-flicker');
+
+    if(!antiFlickerStyle) return;
+
     antiFlickerStyle.id = 'spm-anti-flicker';
 
     antiFlickerStyle.textContent = `
         html {
-          opacity: 0 !important;
-          background-color: var(--spm-bg-primary, #121212) !important;
+          background-color: var(--spm-bg-primary) !important;
+        }
+        body {
+          opacity: 1 !important;
           transition: opacity 0.2s ease-in-out !important;
         }
       `;
@@ -109,5 +114,7 @@ export function revealPage() {
       antiFlickerStyle.remove();
     }, 300);
   }, 50)
+
+  console.log(`[SPM] Anti-flicker style removed`)
 
 }

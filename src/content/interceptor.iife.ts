@@ -6,8 +6,10 @@
 
   antiFlickerStyle.textContent = `
       html {
-        opacity: 0 !important;
         background-color: var(--spm-bg-primary, #121212) !important;
+      }
+      body {
+        opacity: 0 !important;
         transition: opacity 0.2s ease-in-out !important;
       }
     `;
