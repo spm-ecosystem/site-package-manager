@@ -104,9 +104,9 @@ This generates the final compiled `style.css` inside your theme folder.
 1. Open Chrome and load the extension (`chrome://extensions` → Load unpacked → `dist/`).
 2. Navigate to the mapped site (e.g. `mysite.com`).
 3. Open the extension popup, enable **Developer Mode**.
-4. Click **`manifest.json`** and select your theme's `manifest.json` file.
-5. Click **`style.css`** and select your theme's `style.css` file.
-6. The extension saves both files locally and reloads the tab with your new design instantly.
+4. Click **Load Package Folder**. This will open a new browser tab (`devloader.html`).
+5. Click **Browse Folder** and select your theme folder (e.g. `obsidian-dark/`) containing `manifest.json` and `style.css`.
+6. The extension saves the draft locally and automatically reloads your target site tab with the new design instantly.
 
 ---
 

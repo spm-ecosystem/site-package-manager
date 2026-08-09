@@ -64,13 +64,12 @@ extension/
 ├── scripts/
 │   ├── build-registry.js            # Auto-generates src/components/registry.ts & copies registry.json
 │   └── compile-css.js               # Compiles content.css files using Tailwind + PostCSS
-├── public/
-│   └── websites/
-│       └── safebooru.org/           # Website domain folder
-│           └── obsidian-dark/       # Theme package folder
-│               ├── manifest.json    # Theme configuration manifest
-│               ├── content.css      # Custom Tailwind styling tokens
-│               └── style.css        # Compiled static stylesheet (Vite-copied)
+├── websites/                        # GitOps theme packages
+│   └── safebooru.org/               # Website domain folder
+│       └── obsidian-dark/           # Theme package folder
+│           ├── manifest.json        # Theme configuration manifest
+│           ├── content.css          # Custom Tailwind styling tokens
+│           └── style.css            # Compiled static stylesheet (Vite-copied)
 ├── src/
 │   ├── content/
 │   │   ├── index.iife.tsx           # Content script entry point (resolves dynamic themes)
@@ -114,7 +113,7 @@ npm run test     # run unit tests
 
 ## Manifest Schema
 
-Every `.json` in `public/websites/` is a theme manifest. Full structure:
+Every `.json` in `websites/` is a theme manifest. Full structure:
 
 ```json
 {
@@ -321,9 +320,50 @@ Reusable, styled components in `src/components/dedicated/`.
 | `UiImageViewer` | Full-height image that fills its container | `src`, `alt`, `fit` (`contain`\|`cover`), `background` |
 | `UiScrollPanel` | Scrollable sidebar panel with search, tags, buttons, stats | `tags`, `buttons`, `statisticsHtml`, `showSearch`, `searchSubmitUrl`, `searchParamName`, `width` |
 | `UiSplitLayout` | Two-column full-height layout shell | `imageSlot`, `tags`, `buttons`, `statisticsHtml`, `sidebarWidth`, `sidebarSide`, `imageFit`, `showSearch`, `searchSubmitUrl` |
+| `UiCommentListPage` | Comment threads list with optional sidebar | `pageTitle`, `threads`, `pageLinks`, `height` |
+| `UiDashboardPage` | List panel layout for options/actions | `pageTitle`, `subTitle`, `cards`, `height` |
+| `UiStatsDashboard` | Metric tables/rankings blocks dashboard | `pageTitle`, `dateRangeText`, `navLinks`, `sections`, `height` |
+| `UiTable` | Isolated tabular grid with row callback | `columns`, `data`, `onRowClick` |
+| `UiTableListPage` | Search results page layout inside a `UiTable` | `pageTitle`, `tableRows`, `columns`, `pageLinks`, `height`, `onLoadMore` |
+| `UiToastContainer` | Toast feedback overlays & confirmation portals | — |
 | `UiPostDetails` | *(legacy)* Booru post page (monolith) | — |
 
 ### Component Contracts (Props)
+
+#### `UiCommentListPage`
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `pageTitle` | `string` | `'Comments'` | Title of the comments page |
+| `threads` | `CommentThread[]` | `[]` | Array of comment threads (`id`, `thumbnailUrl`, `postUrl`, `postDate`, `postUser`, `postRating`, `postScore`, `tags`, `comments`) |
+| `pageLinks` | `PageLink[]` | `[]` | Array of page links for pagination (`label`, `url`) |
+| `height` | `string` | `'100vh'` | Layout height |
+
+#### `UiDashboardPage`
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `pageTitle` | `string` | `'Account Control Panel'` | Header title text |
+| `subTitle` | `string` | — | Subtitle description |
+| `cards` | `DashboardCard[]` | `[]` | Custom action cards (`title`, `description`, `url`, `urlLabel`) |
+| `height` | `string` | `'100vh'` | Layout height |
+
+#### `UiStatsDashboard`
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `pageTitle` | `string` | `'Statistics'` | Header title text |
+| `dateRangeText` | `string` | `'All time'` | Range label tag |
+| `navLinks` | `NavLink[]` | `[]` | Navigation links (`label`, `url`) |
+| `sections` | `StatSection[]` | `[]` | Stat card groups (`title`, list of `items` with `place`, `amount`, `name`, `profileUrl`) |
+| `height` | `string` | `'100vh'` | Layout height |
+
+#### `UiTableListPage`
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `pageTitle` | `string` | `'Wiki Pages'` | Header title text |
+| `tableRows` | `any[]` | `[]` | Data row list |
+| `columns` | `TableColumnConfig[]` | — | Configuration of columns (`key`, `header`, `width`, `align`, `type`, `urlKey`, `badgeStyleKey`) |
+| `pageLinks` | `PageLink[]` | `[]` | Pagination links |
+| `height` | `string` | `'100vh'` | Layout height |
+| `onLoadMore` | `() => Promise<{tableRows, hasMore}>` | — | Async infinite scroll trigger callback |
 
 #### `UiImageViewer`
 | Prop | Type | Default | Description |
@@ -406,9 +446,32 @@ Open **chrome://extensions → SPM → Extension options** to launch the Sandbox
 
 Click the SPM icon in Chrome's toolbar:
 
-- **Global toggle** — enable/disable the engine for all sites
-- **Active site** — displays the current domain
-- **Theme selector** — pick and activate a theme; reloads the tab immediately
+- **Global toggle** — Enable/disable the engine for all sites.
+- **Active site** — Displays the current domain.
+- **Theme selector** — Pick and activate a theme; reloads the tab immediately.
+- **Colors customizer** — Override theme `cssVariables` values locally using color pickers.
+- **Developer Mode** — Bypasses remote registry packages to load a local draft.
+  - **Load Package Folder** — Opens a dedicated local devloader tab (`devloader.html`) to safely select and import a folder containing `manifest.json` and `style.css` without Chrome popup closure issues.
+  - Displays loaded draft metadata (theme label, version, and stylesheet size) when active.
+
+---
+
+## Anti-Flickering System
+
+To ensure a seamless visual experience, SPM includes a built-in **Anti-Flickering** system that prevents the visual flash of raw legacy elements or bright white screens before the reconstruction engine mounts.
+
+1. **Immediate Hide:** Upon `document_start`, the MAIN-world interceptor (`src/content/interceptor.iife.ts`) injects a global style element (`#spm-anti-flicker`):
+   ```css
+   html {
+     background-color: var(--spm-bg-primary, #121212) !important;
+   }
+   body {
+     opacity: 0 !important;
+     transition: opacity 0.2s ease-in-out !important;
+   }
+   ```
+2. **Smooth Reveal:** Once the modernization engine completes component reconstructions (or if the engine aborts due to a global toggle disable), it calls `revealPage()`. This transitions the body opacity smoothly to `1` with a `0.2s` fade effect.
+3. **Cleanup:** The style element is completely removed from the document after a `300ms` delay to leave the DOM clean.
 
 ---
 
@@ -416,7 +479,7 @@ Click the SPM icon in Chrome's toolbar:
 
 ### Adding a New Site Theme
 
-To add support for a new site or create a new theme package under an existing site domain, please refer to the detailed **[Theme Development Guide](file:///home/watashi/Projects/extension/public/websites/README.md)**.
+To add support for a new site or create a new theme package under an existing site domain, please refer to the detailed **[Theme Development Guide](file:///home/watashi/Projects/extension/websites/README.md)**.
 
 ---
 
