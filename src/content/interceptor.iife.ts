@@ -1,4 +1,28 @@
 (function() {
+
+  // antiFlicker element
+  const antiFlickerStyle = document.createElement('style');
+  antiFlickerStyle.id = 'spm-anti-flicker';
+
+  antiFlickerStyle.textContent = `
+      html {
+        background-color: var(--spm-bg-primary, #121212) !important;
+      }
+      body {
+        opacity: 0 !important;
+        transition: opacity 0.2s ease-in-out !important;
+      }
+    `;
+
+  if (document.documentElement) {
+    document.documentElement.appendChild(antiFlickerStyle);
+  } else {
+    // fallback
+    document.addEventListener('DOMContentLoaded', () => {
+      document.documentElement.appendChild(antiFlickerStyle);
+    });
+  }
+
   let confirmMode: 'idle' | 'dry-run' | 'force-true' = 'idle';
   let lastConfirmMessage = '';
 

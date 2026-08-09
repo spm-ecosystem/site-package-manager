@@ -92,3 +92,29 @@ export function triggerProxyClick(targetSelector: string) {
     }));
   }
 }
+
+export function revealPage() {
+  setTimeout(() => {
+    const antiFlickerStyle = document.getElementById('spm-anti-flicker');
+
+    if(!antiFlickerStyle) return;
+
+    antiFlickerStyle.id = 'spm-anti-flicker';
+
+    antiFlickerStyle.textContent = `
+        html {
+          background-color: var(--spm-bg-primary) !important;
+        }
+        body {
+          opacity: 1 !important;
+          transition: opacity 0.2s ease-in-out !important;
+        }
+      `;
+    setTimeout(() => {
+      antiFlickerStyle.remove();
+    }, 300);
+  }, 50)
+
+  console.log(`[SPM] Anti-flicker style removed`)
+
+}
