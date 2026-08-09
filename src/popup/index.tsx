@@ -251,7 +251,7 @@ function Popup() {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-[#333333] px-4 py-3 bg-[#111111] shrink-0">
         <h1 className="text-sm font-bold text-white tracking-tight">Site Package Manager</h1>
-        <span className="text-[10px] bg-[#222222] text-white border border-[#333333] px-2 py-0.5 rounded-full font-medium">v1.3.0</span>
+        <span className="text-[10px] bg-[#222222] text-white border border-[#333333] px-2 py-0.5 rounded-full font-medium">v1.0.0</span>
       </header>
 
       <main className="flex-1 flex flex-col">
