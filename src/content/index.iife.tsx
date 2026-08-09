@@ -1,5 +1,6 @@
 import { runModernizer, applyThemeGlobally, fetchRegistry, fetchThemeFiles, SiteManifest } from './modernizer';
 import stylesText from './content.css?inline';
+import { revealPage } from './engine';
 
 let hasRunModernizer = false;
 
@@ -94,6 +95,7 @@ async function init() {
     const globalEnabled = res.spm_global_enabled !== false;
     if (!globalEnabled) {
       console.log('[SPM] Global enabled is false. Aborting modernizer.');
+      revealPage();
       return;
     }
 
