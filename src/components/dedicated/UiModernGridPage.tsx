@@ -396,7 +396,7 @@ export function UiModernGridPage({
         `}
       </style>
 
-      {/* Sidebar slot — legacy nodes reparented here OR structured render */}
+      {/* Sidebar slot - legacy nodes reparented here OR structured render */}
       <aside
         id="sidebarSlot-container"
         className="spm-modern-grid-sidebar"

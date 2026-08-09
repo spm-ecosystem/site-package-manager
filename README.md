@@ -1,37 +1,53 @@
 # Site Package Manager (SPM)
 
-A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Shadow DOM — without touching the original site's code. Configure reconstructions declaratively through `.json` manifest files and design them visually in the built-in Sandbox IDE.
+A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Shadow DOM - without touching the original site's code. Configure reconstructions declaratively through `.json` manifest files and design them visually in the built-in Sandbox IDE.
 
 ---
 
 ## Table of Contents
 
-- [How It Works](#how-it-works)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Manifest Schema](#manifest-schema)
-  - [Theme](#theme)
-  - [Components](#components)
-  - [Reconstructs](#reconstructs)
-  - [Prop Mapping Rules](#prop-mapping-rules)
-  - [Preservation Slots](#preservation-slots)
-- [Component System](#component-system)
-  - [Primitives](#primitives)
-  - [Dedicated Components](#dedicated-components)
-  - [Component Contracts (Props)](#component-contracts-props)
-- [Visual Sandbox IDE](#visual-sandbox-ide)
-- [Extension Popup](#extension-popup)
-- [Contributing](#contributing)
-  - [Adding a New Site Theme](#adding-a-new-site-theme)
-  - [Creating a New Component](#creating-a-new-component)
-  - [Running Tests](#running-tests)
-  - [Code Style](#code-style)
+- [Site Package Manager (SPM)](#site-package-manager-spm)
+  - [Table of Contents](#table-of-contents)
+  - [How It Works](#how-it-works)
+  - [Project Structure](#project-structure)
+  - [Getting Started](#getting-started)
+  - [Manifest Schema](#manifest-schema)
+    - [Theme](#theme)
+    - [Components](#components)
+    - [Reconstructs](#reconstructs)
+    - [Prop Mapping Rules](#prop-mapping-rules)
+    - [Preservation Slots](#preservation-slots)
+  - [Component System](#component-system)
+    - [Primitives](#primitives)
+    - [Dedicated Components](#dedicated-components)
+    - [Component Contracts (Props)](#component-contracts-props)
+      - [`UiCommentListPage`](#uicommentlistpage)
+      - [`UiDashboardPage`](#uidashboardpage)
+      - [`UiStatsDashboard`](#uistatsdashboard)
+      - [`UiTableListPage`](#uitablelistpage)
+      - [`UiImageViewer`](#uiimageviewer)
+      - [`UiScrollPanel`](#uiscrollpanel)
+      - [`UiSplitLayout`](#uisplitlayout)
+      - [`UiHeroLanding`](#uiherolanding)
+  - [Visual Sandbox IDE](#visual-sandbox-ide)
+    - [Views](#views)
+    - [Panels](#panels)
+    - [Interactive Features](#interactive-features)
+  - [Extension Popup](#extension-popup)
+  - [Anti-Flickering System](#anti-flickering-system)
+  - [Contributing](#contributing)
+    - [Adding a New Site Theme](#adding-a-new-site-theme)
+    - [Creating a New Component](#creating-a-new-component)
+    - [Auto-Registration](#auto-registration)
+    - [Running Tests](#running-tests)
+    - [Code Style](#code-style)
+  - [License](#license)
 
 ---
 
 ## How It Works
 
-```
+```md
 Legacy Site HTML
       │
       ▼
@@ -55,7 +71,7 @@ The entire pipeline is data-driven. No React code changes are needed to support 
 
 ## Project Structure
 
-```
+```md
 extension/
 ├── manifest.json                    # Chrome MV3 manifest
 ├── index.html                       # Popup entry point
@@ -104,6 +120,7 @@ npm run test     # run unit tests
 ```
 
 **Load in Chrome:**
+
 1. Open `chrome://extensions`
 2. Enable **Developer Mode**
 3. Click **Load unpacked** → select `dist/`
@@ -176,10 +193,10 @@ The `components` array replaces or hides **individual elements** on the page.
 ```
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | `name` | Component name (must exist in registry) |
 | `selector` | CSS selector of the legacy element to target |
-| `action` | `"replace"` — inject the component, `"hide"` — `display:none` |
+| `action` | `"replace"` - inject the component, `"hide"` - `display:none` |
 | `propsMap` | Prop values extracted live from the DOM at injection time |
 | `props` | Static prop values set directly in the JSON |
 | `children` | Named arrays of child elements to extract (same format as reconstructs) |
@@ -243,11 +260,11 @@ The `reconstructs` array replaces **entire page sections** with a React componen
 ```
 
 | Field | Description |
-|---|---|
+| --- | --- |
 | `containerSelector` | CSS selector of the legacy container to replace |
 | `layoutComponent` | Name of the React layout component (must exist in registry) |
 | `propsMap` | Props extracted from inside the container at injection time |
-| `props` | Static props passed directly — **supports all component props** |
+| `props` | Static props passed directly - **supports all component props** |
 | `preserve` | Named slots: legacy nodes reparented into the React layout (see below) |
 | `mediaQuery` | Optional: only apply if this media query matches |
 | `children` | Named arrays of child elements. Each becomes a prop array on the component. |
@@ -261,7 +278,7 @@ The `reconstructs` array replaces **entire page sections** with a React componen
 Rules follow the format `"selector | operation"`:
 
 | Rule | Example | Result |
-|---|---|---|
+| --- | --- | --- |
 | `selector \| text` | `"h2 \| text"` | Text content of the first matching descendant |
 | `selector \| attr:name` | `"img \| attr:src"` | Attribute value of first matching descendant |
 | `selector \| html` | `"ul \| html"` | Inner HTML of first matching descendant |
@@ -285,17 +302,17 @@ The layout component must render a matching container element:
 
 All components follow the same contract:
 
-- **100% CSS variable styling** — `var(--spm-*)` only, zero hardcoded colors
+- **100% CSS variable styling** - `var(--spm-*)` only, zero hardcoded colors
 - **Always accept `className` and `style`** for external overrides
-- **Conditional rendering** — sections that receive no data simply don't render
-- **Single responsibility** — each component does one thing
+- **Conditional rendering** - sections that receive no data simply don't render
+- **Single responsibility** - each component does one thing
 
 ### Primitives
 
 Generic building blocks in `src/components/primitives/LayoutPrimitives.tsx`.
 
 | Component | Renders | Key Props |
-|---|---|---|
+| --- | --- | --- |
 | `UiBox` | `<div>` | standard HTML div props |
 | `UiFlexRow` | `<div>` flex row | standard HTML div props |
 | `UiFlexColumn` | `<div>` flex column | standard HTML div props |
@@ -309,7 +326,7 @@ Generic building blocks in `src/components/primitives/LayoutPrimitives.tsx`.
 Reusable, styled components in `src/components/dedicated/`.
 
 | Component | Purpose | Key Props |
-|---|---|---|
+| --- | --- | --- |
 | `UiNavHeader` | Site navigation header | `siteName`, `logoUrl`, `logoHref`, `primaryLinks`, `secondaryLinks`, `layout` |
 | `UiHeroLanding` | Full-viewport landing page hero | `siteName`, `logoUrl`, `logoHref`, `tagline`, `subtext`, `ctaLabel`, `ctaUrl`, `searchSubmitUrl`, `searchParamName`, `primaryLinks` |
 | `UiSearchBar` | Search input field | `placeholder`, `defaultValue`, `submitUrl`, `queryParamName` |
@@ -325,30 +342,33 @@ Reusable, styled components in `src/components/dedicated/`.
 | `UiStatsDashboard` | Metric tables/rankings blocks dashboard | `pageTitle`, `dateRangeText`, `navLinks`, `sections`, `height` |
 | `UiTable` | Isolated tabular grid with row callback | `columns`, `data`, `onRowClick` |
 | `UiTableListPage` | Search results page layout inside a `UiTable` | `pageTitle`, `tableRows`, `columns`, `pageLinks`, `height`, `onLoadMore` |
-| `UiToastContainer` | Toast feedback overlays & confirmation portals | — |
-| `UiPostDetails` | *(legacy)* Booru post page (monolith) | — |
+| `UiToastContainer` | Toast feedback overlays & confirmation portals | - |
+| `UiPostDetails` | *(legacy)* Booru post page (monolith) | - |
 
 ### Component Contracts (Props)
 
 #### `UiCommentListPage`
+
 | Prop | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `pageTitle` | `string` | `'Comments'` | Title of the comments page |
 | `threads` | `CommentThread[]` | `[]` | Array of comment threads (`id`, `thumbnailUrl`, `postUrl`, `postDate`, `postUser`, `postRating`, `postScore`, `tags`, `comments`) |
 | `pageLinks` | `PageLink[]` | `[]` | Array of page links for pagination (`label`, `url`) |
 | `height` | `string` | `'100vh'` | Layout height |
 
 #### `UiDashboardPage`
+
 | Prop | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `pageTitle` | `string` | `'Account Control Panel'` | Header title text |
-| `subTitle` | `string` | — | Subtitle description |
+| `subTitle` | `string` | - | Subtitle description |
 | `cards` | `DashboardCard[]` | `[]` | Custom action cards (`title`, `description`, `url`, `urlLabel`) |
 | `height` | `string` | `'100vh'` | Layout height |
 
 #### `UiStatsDashboard`
+
 | Prop | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `pageTitle` | `string` | `'Statistics'` | Header title text |
 | `dateRangeText` | `string` | `'All time'` | Range label tag |
 | `navLinks` | `NavLink[]` | `[]` | Navigation links (`label`, `url`) |
@@ -356,59 +376,64 @@ Reusable, styled components in `src/components/dedicated/`.
 | `height` | `string` | `'100vh'` | Layout height |
 
 #### `UiTableListPage`
+
 | Prop | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `pageTitle` | `string` | `'Wiki Pages'` | Header title text |
 | `tableRows` | `any[]` | `[]` | Data row list |
-| `columns` | `TableColumnConfig[]` | — | Configuration of columns (`key`, `header`, `width`, `align`, `type`, `urlKey`, `badgeStyleKey`) |
+| `columns` | `TableColumnConfig[]` | - | Configuration of columns (`key`, `header`, `width`, `align`, `type`, `urlKey`, `badgeStyleKey`) |
 | `pageLinks` | `PageLink[]` | `[]` | Pagination links |
 | `height` | `string` | `'100vh'` | Layout height |
-| `onLoadMore` | `() => Promise<{tableRows, hasMore}>` | — | Async infinite scroll trigger callback |
+| `onLoadMore` | `() => Promise<{tableRows, hasMore}>` | - | Async infinite scroll trigger callback |
 
 #### `UiImageViewer`
+
 | Prop | Type | Default | Description |
-|---|---|---|---|
-| `src` | `string` | — | Image URL |
+| --- | --- | --- | --- |
+| `src` | `string` | - | Image URL |
 | `alt` | `string` | `''` | Alt text |
 | `fit` | `'contain' \| 'cover'` | `'contain'` | CSS `object-fit` |
 | `background` | `string` | `var(--spm-bg-primary)` | Container background |
 
 #### `UiScrollPanel`
+
 | Prop | Type | Default | Description |
-|---|---|---|---|
-| `tags` | `TagItem[]` | `[]` | Tags array (`name`, `count`, `type`, `url`) — grouped by `type` automatically |
-| `buttons` | `ButtonItem[]` | `[]` | Button array (`label`, `url`) — auto-classified into nav/primary/ghost by label keywords |
-| `statisticsHtml` | `string` | — | Raw HTML rendered in a statistics section |
+| --- | --- | --- | --- |
+| `tags` | `TagItem[]` | `[]` | Tags array (`name`, `count`, `type`, `url`) - grouped by `type` automatically |
+| `buttons` | `ButtonItem[]` | `[]` | Button array (`label`, `url`) - auto-classified into nav/primary/ghost by label keywords |
+| `statisticsHtml` | `string` | - | Raw HTML rendered in a statistics section |
 | `showSearch` | `boolean` | `false` | Show UiSearchBar at the top |
-| `searchSubmitUrl` | `string` | — | URL to submit searches to |
+| `searchSubmitUrl` | `string` | - | URL to submit searches to |
 | `searchParamName` | `string` | `'q'` | Query parameter name |
 | `width` | `string` | `'280px'` | Panel width |
 
 #### `UiSplitLayout`
+
 | Prop | Type | Default | Description |
-|---|---|---|---|
-| `imageSlot` | `{src, alt}[]` | `[]` | Image data — first item is rendered via `UiImageViewer` |
+| --- | --- | --- | --- |
+| `imageSlot` | `{src, alt}[]` | `[]` | Image data - first item is rendered via `UiImageViewer` |
 | `tags` | `TagItem[]` | `[]` | Forwarded to `UiScrollPanel` |
 | `buttons` | `ButtonItem[]` | `[]` | Forwarded to `UiScrollPanel` |
-| `statisticsHtml` | `string` | — | Forwarded to `UiScrollPanel` |
+| `statisticsHtml` | `string` | - | Forwarded to `UiScrollPanel` |
 | `sidebarWidth` | `string` | `'280px'` | Panel width |
 | `sidebarSide` | `'left' \| 'right'` | `'left'` | Panel position |
 | `imageFit` | `'contain' \| 'cover'` | `'contain'` | Forwarded to `UiImageViewer` |
 | `showSearch` | `boolean` | `false` | Show search in panel |
-| `searchSubmitUrl` | `string` | — | Search URL |
+| `searchSubmitUrl` | `string` | - | Search URL |
 | `searchParamName` | `string` | `'q'` | Search param name |
 
 #### `UiHeroLanding`
+
 | Prop | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `siteName` | `string` | `'Site'` | Fallback text if no logo |
-| `logoUrl` | `string` | — | Logo image URL |
+| `logoUrl` | `string` | - | Logo image URL |
 | `logoHref` | `string` | `'/'` | Logo link URL |
-| `tagline` | `string` | — | Heading below logo |
-| `subtext` | `string` | — | Subtitle paragraph |
+| `tagline` | `string` | - | Heading below logo |
+| `subtext` | `string` | - | Subtitle paragraph |
 | `ctaLabel` | `string` | `'Browse'` | CTA button text |
 | `ctaUrl` | `string` | `'/'` | CTA button URL |
-| `searchSubmitUrl` | `string` | — | If set, renders a search bar |
+| `searchSubmitUrl` | `string` | - | If set, renders a search bar |
 | `searchParamName` | `string` | `'q'` | Search param name |
 | `primaryLinks` | `{label, url}[]` | `[]` | Pill nav links below CTA |
 
@@ -421,23 +446,23 @@ Open **chrome://extensions → SPM → Extension options** to launch the Sandbox
 ### Views
 
 | View | Purpose |
-|---|---|
+| --- | --- |
 | **Preview** | Live render of your JSON config inside an iframe. Reflects all changes in real time. |
 | **Legacy** | Interactive view of the site's original HTML. Click any element to inspect its attributes and CSS selectors. |
 
 ### Panels
 
 | Panel | Location | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | **Component Library** | Left | Click to add components to the canvas |
 | **Element Inspector** | Right (Legacy view) | Shows the clicked element's tag, class, attributes, and mapping suggestions |
 | **Component Settings** | Right (Preview view) | Edit the selected component's props visually |
-| **JSON Editor** | Bottom | Full manifest editor — changes sync both ways with the visual preview |
+| **JSON Editor** | Bottom | Full manifest editor - changes sync both ways with the visual preview |
 
 ### Interactive Features
 
 - **Hover** over any component in Preview to see its edit toolbar (edit ✏️, delete 🗑️)
-- **Resize** components by dragging the right edge — `width` is persisted to the JSON
+- **Resize** components by dragging the right edge - `width` is persisted to the JSON
 - **Click** Legacy elements to see `alt`, `src`, `href` attributes and auto-generated `propsMap` suggestions
 
 ---
@@ -446,12 +471,12 @@ Open **chrome://extensions → SPM → Extension options** to launch the Sandbox
 
 Click the SPM icon in Chrome's toolbar:
 
-- **Global toggle** — Enable/disable the engine for all sites.
-- **Active site** — Displays the current domain.
-- **Theme selector** — Pick and activate a theme; reloads the tab immediately.
-- **Colors customizer** — Override theme `cssVariables` values locally using color pickers.
-- **Developer Mode** — Bypasses remote registry packages to load a local draft.
-  - **Load Package Folder** — Opens a dedicated local devloader tab (`devloader.html`) to safely select and import a folder containing `manifest.json` and `style.css` without Chrome popup closure issues.
+- **Global toggle** - Enable/disable the engine for all sites.
+- **Active site** - Displays the current domain.
+- **Theme selector** - Pick and activate a theme; reloads the tab immediately.
+- **Colors customizer** - Override theme `cssVariables` values locally using color pickers.
+- **Developer Mode** - Bypasses remote registry packages to load a local draft.
+  - **Load Package Folder** - Opens a dedicated local devloader tab (`devloader.html`) to safely select and import a folder containing `manifest.json` and `style.css` without Chrome popup closure issues.
   - Displays loaded draft metadata (theme label, version, and stylesheet size) when active.
 
 ---
@@ -461,6 +486,7 @@ Click the SPM icon in Chrome's toolbar:
 To ensure a seamless visual experience, SPM includes a built-in **Anti-Flickering** system that prevents the visual flash of raw legacy elements or bright white screens before the reconstruction engine mounts.
 
 1. **Immediate Hide:** Upon `document_start`, the MAIN-world interceptor (`src/content/interceptor.iife.ts`) injects a global style element (`#spm-anti-flicker`):
+
    ```css
    html {
      background-color: var(--spm-bg-primary, #121212) !important;
@@ -470,6 +496,7 @@ To ensure a seamless visual experience, SPM includes a built-in **Anti-Flickerin
      transition: opacity 0.2s ease-in-out !important;
    }
    ```
+
 2. **Smooth Reveal:** Once the modernization engine completes component reconstructions (or if the engine aborts due to a global toggle disable), it calls `revealPage()`. This transitions the body opacity smoothly to `1` with a `0.2s` fade effect.
 3. **Cleanup:** The style element is completely removed from the document after a `300ms` delay to leave the DOM clean.
 
@@ -488,7 +515,7 @@ To add support for a new site or create a new theme package under an existing si
 Components must follow the system contract:
 
 ```tsx
-// 1. Interface first — all props optional with sensible defaults
+// 1. Interface first - all props optional with sensible defaults
 interface UiMyComponentProps {
   items?: { label: string; url: string }[];
   title?: string;
@@ -496,7 +523,7 @@ interface UiMyComponentProps {
   style?: React.CSSProperties;
 }
 
-// 2. Export a named function — no default exports
+// 2. Export a named function - no default exports
 export function UiMyComponent({
   items = [],
   title,
@@ -512,7 +539,7 @@ export function UiMyComponent({
         ...style,                              // Always spread style last
       }}
     >
-      {title && <h2>{title}</h2>}             {/* Conditional — no orphan markup */}
+      {title && <h2>{title}</h2>}             {/* Conditional - no orphan markup */}
       {items.map((item, i) => (
         <a key={i} href={item.url}>{item.label}</a>
       ))}
@@ -522,7 +549,8 @@ export function UiMyComponent({
 ```
 
 ### Auto-Registration
-You do **not** need to edit `src/components/registry.ts` manually! 
+
+You do **not** need to edit `src/components/registry.ts` manually!
 During compilation, the pre-build script `scripts/build-registry.js` scans all components under `src/components/` and packages them automatically. Simply write your component file, run `npm run build`, and it will be ready to be used in manifests.
 
 To add its schema to the Sandbox IDE:
@@ -552,8 +580,8 @@ All test files that use DOM APIs must include:
 
 ### Code Style
 
-- **Language**: English — code, comments, commits, file names
-- **Colors**: CSS variables only (`var(--spm-*)`) — never hardcoded `#rgb` values
+- **Language**: English - code, comments, commits, file names
+- **Colors**: CSS variables only (`var(--spm-*)`) - never hardcoded `#rgb` values
 - **Props**: Always include `className` and `style` for external override
 - **Rendering**: All component sections must be conditional on data presence
 - **Commits**: Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`)

@@ -264,7 +264,7 @@ export function UiCommentListPage({
           display: none !important;
         }
       `}</style>
-      {/* Sidebar slot — legacy sidebar nodes reparented here */}
+      {/* Sidebar slot - legacy sidebar nodes reparented here */}
       <aside
         id="sidebarSlot-container"
         style={{

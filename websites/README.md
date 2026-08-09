@@ -101,6 +101,7 @@ This generates the final compiled `style.css` inside your theme folder.
 
 #### Testing in the Extension
 
+
 1. Open Chrome and load the extension (`chrome://extensions` → Load unpacked → `dist/`).
 2. Navigate to the mapped site (e.g. `mysite.com`).
 3. Open the extension popup, enable **Developer Mode**.

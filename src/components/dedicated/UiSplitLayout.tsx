@@ -22,13 +22,13 @@ interface ButtonItem {
 }
 
 interface UiSplitLayoutProps {
-  // Slot: image — user maps via children[name="imageSlot"] in JSON
+  // Slot: image - user maps via children[name="imageSlot"] in JSON
   imageSlot?: ImageSlotItem[];
-  // Slot: sidebar content — user maps via children in JSON
+  // Slot: sidebar content - user maps via children in JSON
   tags?: TagItem[];
   buttons?: ButtonItem[];
   statisticsHtml?: string;
-  // Layout config — user sets via props in JSON
+  // Layout config - user sets via props in JSON
   sidebarWidth?: string;
   sidebarSide?: 'left' | 'right';
   imageFit?: 'contain' | 'cover';

@@ -16,7 +16,7 @@ interface ButtonItem {
 }
 
 interface UiScrollPanelProps {
-  // Content slots — all optional, all JSON-driven
+  // Content slots - all optional, all JSON-driven
   tags?: TagItem[];
   buttons?: ButtonItem[];
   statisticsHtml?: string;
