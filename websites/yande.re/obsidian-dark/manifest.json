@@ -1,0 +1,173 @@
+{
+  "targetUrl": "*://yande.re/*",
+  "version": "1.14.0",
+  "theme": {
+    "label": "Obsidian",
+    "cssVariables": {
+      "--spm-bg-primary": "#000000",
+      "--spm-bg-secondary": "#111111",
+      "--spm-bg-tertiary": "#222222",
+      "--spm-text-primary": "#ffffff",
+      "--spm-text-muted": "#a1a1aa",
+      "--spm-accent": "#7c6af5",
+      "--spm-accent-hover": "#9d8fff",
+      "--spm-accent-fg": "#ffffff",
+      "--spm-border": "#333333",
+      "--spm-radius": "10px"
+    },
+    "customStyles": "#notice, #long-notice, #has-mail-notice { display: none !important; }"
+  },
+  "components": [
+    {
+      "name": "UiNavHeader",
+      "selector": "#header, #navbar, header, .navbar, #topbar, #main-menu",
+      "action": "replace",
+      "propsMap": {
+        "siteName": "#site-title a | text",
+        "logoUrl": "#site-title img | attr:src"
+      },
+      "props": {
+        "className": "yande-site-nav",
+        "logoHref": "https://yande.re/",
+        "primaryLinks": [
+          { "label": "My Account", "url": "/user/home" },
+          { "label": "Posts", "url": "/post" },
+          { "label": "Comments", "url": "/comment" },
+          { "label": "Notes", "url": "/note" },
+          { "label": "Artists", "url": "/artist" },
+          { "label": "Tags", "url": "/tag" },
+          { "label": "Pools", "url": "/pool" },
+          { "label": "Wiki", "url": "/wiki" },
+          { "label": "Forum", "url": "/forum" },
+          { "label": "Help", "url": "/help" }
+        ],
+        "secondaryLinks": [
+          { "label": "View Posts", "url": "/post" },
+          { "label": "Search Posts", "url": "/post" },
+          { "label": "Upload", "url": "/post/upload" },
+          { "label": "Random", "url": "/post?tags=order:random" },
+          { "label": "Popular", "url": "/post/popular_recent" },
+          { "label": "Image Search", "url": "/post/similar" },
+          { "label": "History", "url": "/history" }
+        ]
+      }
+    },
+    {
+      "name": "UiNavHeader",
+      "selector": "#subnavbar",
+      "action": "hide"
+    },
+    {
+      "name": "UiSearchBar",
+      "selector": "#main-menu form, .search-box form, .sidebar form",
+      "action": "replace",
+      "propsMap": {
+        "defaultValue": "input[name='tags'] | attr:value"
+      },
+      "props": {
+        "placeholder": "Search tags…",
+        "submitUrl": "/post",
+        "queryParamName": "tags"
+      }
+    }
+  ],
+  "reconstructs": [
+    {
+      "containerSelector": "#page-posts, #content, #static-index",
+      "layoutComponent": "UiHeroLanding",
+      "urlPattern": "yande\\.re\\/?(?:post)?$",
+      "propsMap": {
+        "siteName": "#site-title img | attr:alt",
+        "logoUrl": "#site-title img | attr:src"
+      },
+      "props": {
+        "tagline": "Anime picture search engine",
+        "subtext": "Browse millions of illustrations.",
+        "ctaLabel": "Browse Gallery",
+        "ctaUrl": "/post",
+        "searchPlaceholder": "Search tags... (e.g. blue_hair 1girl)",
+        "searchSubmitUrl": "/post",
+        "searchParamName": "tags"
+      },
+      "children": [
+        {
+          "name": "primaryLinks",
+          "selector": "#main-menu ul > li > a, #main-menu > ul > li > a",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        }
+      ]
+    },
+    {
+      "containerSelector": "#content",
+      "layoutComponent": "UiModernGridPage",
+      "urlPattern": "post",
+      "infiniteScroll": {
+        "nextPageSelector": "a[rel='next'], link[rel='next'], .pagination a",
+        "nextPageText": ">"
+      },
+      "propsMap": {
+        "searchDefaultValue": "input[name='tags'] | attr:value"
+      },
+      "props": {
+        "className": "yande-gallery",
+        "pageTitle": "Gallery",
+        "height": "calc(100vh - 78px)",
+        "sidebarWidth": "260px",
+        "hideSidebarOnMobile": true,
+        "showSearch": true,
+        "searchPlaceholder": "Search tags…",
+        "searchSubmitUrl": "/post",
+        "searchParamName": "tags",
+        "mobileBreakpoint": 720,
+        "mobileColumns": 2,
+        "mobileGap": "8px",
+        "mobilePadding": "8px",
+        "mobileCardAspectRatio": "1 / 1.28",
+        "mobileHeaderSticky": true,
+        "mobileShowHeader": true,
+        "mobileShowPagination": true,
+        "tagGroups": [
+          { "title": "Artists", "typeKey": "artist" },
+          { "title": "Copyrights", "typeKey": "copyright" },
+          { "title": "Characters", "typeKey": "character" },
+          { "title": "General", "typeKey": "general" },
+          { "title": "Meta", "typeKey": "metadata" }
+        ]
+      },
+      "children": [
+        {
+          "name": "items",
+          "selector": ".thumb, .post-preview, #post-list .thumb",
+          "propsMap": {
+            "imageUrl": "img | attr:src",
+            "linkUrl": "a | attr:href",
+            "title": "img | attr:title",
+            "id": "self | attr:id"
+          }
+        },
+        {
+          "name": "pageLinks",
+          "selector": "a[rel='next'], .pagination a",
+          "propsMap": {
+            "label": "self | text",
+            "url": "self | attr:href"
+          }
+        },
+        {
+          "name": "tags",
+          "selector": ".tag-list li, #tag-sidebar li",
+          "scope": "document",
+          "propsMap": {
+            "name": "a:last-of-type | text",
+            "count": "span.tag-count | text",
+            "type": "self | attr:class",
+            "url": "a:last-of-type | attr:href"
+          }
+        }
+      ]
+    }
+  ]
+}

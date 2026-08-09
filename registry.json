@@ -27,5 +27,19 @@
         ]
       }
     }
+  },
+  "yande.re": {
+    "defaultPackage": "obsidian-dark",
+    "packages": {
+      "obsidian-dark": {
+        "displayName": "Obsidian Dark",
+        "author": "watashi",
+        "directory": "obsidian-dark",
+        "activeVersion": "1.14.0",
+        "history": [
+          { "version": "1.14.0", "ref": "master", "date": "2026-08-08" }
+        ]
+      }
+    }
   }
 }
