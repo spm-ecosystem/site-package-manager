@@ -35,9 +35,9 @@
         "displayName": "Obsidian Dark",
         "author": "watashi",
         "directory": "obsidian-dark",
-        "activeVersion": "1.14.0",
+        "activeVersion": "1.0.0",
         "history": [
-          { "version": "1.14.0", "ref": "master", "date": "2026-08-08" }
+          { "version": "1.0.0", "ref": "master", "date": "2026-08-08" }
         ]
       }
     }
