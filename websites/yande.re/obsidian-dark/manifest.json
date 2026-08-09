@@ -23,7 +23,7 @@
       "selector": "#header, #navbar, header, .navbar, #topbar, #main-menu",
       "action": "replace",
       "propsMap": {
-        "siteName": "#site-title a | text",
+        "siteName": "#site-title img | attr:alt",
         "logoUrl": "#site-title img | attr:src"
       },
       "props": {
