@@ -4,6 +4,10 @@ import postcss from 'postcss';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
 
+import { createLogger } from '../logger.js';
+
+const log = createLogger('Compile CSS');
+
 // Create the PostCSS processor used to compile website styles.
 export function createProcessor() {
     return postcss([
@@ -25,7 +29,7 @@ export async function compileCssFile(processor, cssFile) {
     const outputFile = path.join(outputDir, 'style.css');
     const cssContent = fs.readFileSync(cssFile, 'utf8');
 
-    console.log(`[Compile CSS] Compiling ${cssFile} -> ${outputFile}...`);
+    log.step(`Compiling ${cssFile} -> ${outputFile}...`);
 
     const result = await processor.process(cssContent, {
         from: cssFile,
@@ -34,5 +38,5 @@ export async function compileCssFile(processor, cssFile) {
 
     fs.writeFileSync(outputFile, result.css, 'utf8');
 
-    console.log(`[Compile CSS] Successfully compiled: ${outputFile}`);
+    log.success(`Successfully compiled: ${outputFile}`);
 }

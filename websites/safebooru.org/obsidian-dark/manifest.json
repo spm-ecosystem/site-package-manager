@@ -19,6 +19,11 @@
   },
   "components": [
     {
+      "name": ""
+    },
+
+
+    {
       "name": "UiNavHeader",
       "selector": "#header, #navbar, header, .navbar, #topbar",
       "action": "replace",

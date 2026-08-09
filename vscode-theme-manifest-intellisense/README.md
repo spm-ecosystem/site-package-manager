@@ -1,19 +1,19 @@
 # SPM Theme Manifest IntelliSense
 
-Esta extensão fornece validação de esquema JSON e autocompletar para arquivos de tema `manifest.json` usados pelo Site Package Manager.
+This extension provides JSON schema validation and auto-completion for `manifest.json` theme files used by the Site Package Manager.
 
-## Instalação local
+## Local Installation
 
-1. Abra o workspace no VS Code.
-2. Abra a paleta de comandos e execute `Developer: Open Extensions Folder`.
-3. Abra `vscode-theme-manifest-intellisense` como uma nova janela ou use `Run Extension` em uma configuração de depuração se você tiver o VS Code Extension Development Host configurado.
+1. Open the workspace in VS Code.
+2. Open the command palette and run `Developer: Open Extensions Folder`.
+3. Open `vscode-theme-manifest-intellisense` as a new window or use `Run Extension` in a debug configuration if you have the VS Code Extension Development Host set up.
 
-## Suporte de arquivo
+## File Support
 
-Aplica-se a:
+Applies to:
 
-- `**/websites/*/*/manifest.json`
+* `**/websites/*/*/manifest.json`
 
-## Esquema
+## Schema
 
-O esquema valida campos como `theme`, `components`, `reconstructs`, `propsMap`, `children` e `preserve`.
+The schema validates fields such as `theme`, `components`, `reconstructs`, `propsMap`, `children`, and `preserve`.

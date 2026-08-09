@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { findCssFiles } from './css/discovery.js';
 import { compileCssFile, createProcessor } from './css/compiler.js';
 
+import { createLogger } from './logger.js';
+
+const log = createLogger('CSS');
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -11,7 +15,7 @@ const WEBSITES_DIR = path.join(__dirname, '../websites');
 
 async function compileCss() {
     const cssFiles = findCssFiles(WEBSITES_DIR);
-    console.log(`[Compile CSS] Found ${cssFiles.length} CSS file(s) to compile.`);
+    log.info(`Found ${cssFiles.length} CSS file(s) to compile.`);
 
     const processor = createProcessor();
 
@@ -19,12 +23,13 @@ async function compileCss() {
         try {
             await compileCssFile(processor, cssFile);
         } catch (err) {
-            console.error(`[Compile CSS] Failed to compile ${cssFile}:`, err.message);
+            log.error(`Failed to compile ${cssFile}:`, err.message);
+            console.error(err);
         }
     }
 }
 
 compileCss().catch(err => {
-    console.error('[Compile CSS] Compilation error:', err);
+    log.error('Compilation error:', err);
     process.exit(1);
 });

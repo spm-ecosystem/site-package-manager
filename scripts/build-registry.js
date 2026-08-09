@@ -6,6 +6,10 @@ import { createGenerator } from 'ts-json-schema-generator';
 import { generateComponentArray, generateImports, generateRegistry } from './registry/generator.js';
 import { createComponentSources } from './registry/sources.js';
 
+import { createLogger } from './logger.js';
+
+const log = createLogger('Registry');
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -13,7 +17,7 @@ const PATHS = {
     dedicated: path.join(__dirname, '../src/components/dedicated'),
     primitives: path.join(__dirname, '../src/components/primitives/LayoutPrimitives.tsx'),
     output: path.join(__dirname, '../src/components/registry.ts'),
-    outputSchema: path.join(__dirname, '../../vscode-theme-manifest-intellisense/schemas/theme-manifest-schema.json'),
+    outputSchema: path.join(__dirname, '../vscode-theme-manifest-intellisense/schemas/theme-manifest-schema.json'),
     tempTypes: path.join(__dirname, '../src/components/temp-schema-types.ts'),
     tsconfig: path.join(__dirname, '../tsconfig.json')
 };
@@ -40,14 +44,14 @@ const content = [
 
 // Avoid unnecessary filesystem writes if the registry hasn't changed
 if (fs.existsSync(PATHS.output) && fs.readFileSync(PATHS.output, 'utf8') === content) {
-    console.log('Registry is already up to date.');
+    log.success('Registry is already up to date.');
 } else {
     fs.writeFileSync(PATHS.output, content, 'utf8');
-    console.log(`Successfully generated src/components/registry.ts (${allComponents.length} components)`);
+    log.success(`Successfully generated src/components/registry.ts (${allComponents.length} components)`);
 }
 
-// vs code schema generation
-console.log('Analyzing TypeScript interfaces for the VS Code Schema...');
+// VS Code schema generation
+log.info('Analyzing TypeScript interfaces for the VS Code Schema...');
 
 // 1. Generate a temporary file exporting all discovered component props
 const typeImports = sources.map(source => {
@@ -76,8 +80,8 @@ try {
     // 2. Extract AST definitions using ts-json-schema-generator
     const rawSchema = createGenerator(config).createSchema(config.type);
 
-    // 3. Build dynamic if/then blocks to map "name" to its specific "props" interface
-    const allOfBlocks = allComponents.map(compName => {
+    // 3A. Build dynamic if/then blocks for "components" (triggers on "name")
+    const allOfBlocksComponents = allComponents.map(compName => {
         const propsTypeName = `${compName}Props`;
         
         if (!rawSchema.definitions || !rawSchema.definitions[propsTypeName]) {
@@ -86,6 +90,20 @@ try {
 
         return {
             if: { properties: { name: { const: compName } } },
+            then: { properties: { props: { $ref: `#/definitions/${propsTypeName}` } } }
+        };
+    }).filter(Boolean);
+
+    // 3B. Build dynamic if/then blocks for "reconstructs" (triggers on "layoutComponent")
+    const allOfBlocksReconstructs = allComponents.map(compName => {
+        const propsTypeName = `${compName}Props`;
+        
+        if (!rawSchema.definitions || !rawSchema.definitions[propsTypeName]) {
+            return null;
+        }
+
+        return {
+            if: { properties: { layoutComponent: { const: compName } } },
             then: { properties: { props: { $ref: `#/definitions/${propsTypeName}` } } }
         };
     }).filter(Boolean);
@@ -121,10 +139,25 @@ try {
                         propsMap: { type: "object", additionalProperties: { type: "string" } },
                         props: { type: "object" } 
                     },
-                    allOf: allOfBlocks
+                    allOf: allOfBlocksComponents
                 }
             },
-            reconstructs: { type: "array" }
+            reconstructs: {
+                type: "array",
+                items: {
+                    type: "object",
+                    properties: {
+                        containerSelector: { type: "string" },
+                        layoutComponent: { type: "string" },
+                        urlPattern: { type: "string" },
+                        propsMap: { type: "object" },
+                        props: { type: "object" },
+                        children: { type: "array" },
+                        preserve: { type: "object" }
+                    },
+                    allOf: allOfBlocksReconstructs
+                }
+            }
         },
         additionalProperties: true
     };
@@ -135,10 +168,10 @@ try {
     }
 
     fs.writeFileSync(PATHS.outputSchema, JSON.stringify(finalVsCodeSchema, null, 2), 'utf8');
-    console.log(`Successfully generated intelligent JSON schema (${allOfBlocks.length} interfaces mapped).`);
+    log.success(`Successfully generated intelligent JSON schema (${allOfBlocksComponents.length} components, ${allOfBlocksReconstructs.length} reconstructs mapped).`);
 
 } catch (error) {
-    console.error("Schema generation failed:", error);
+    log.error("Schema generation failed:", error);
 } finally {
     // 5. Clean up temporary types file
     if (fs.existsSync(PATHS.tempTypes)) {
