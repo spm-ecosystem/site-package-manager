@@ -1,23 +1,23 @@
 import React from 'react';
 
-interface StatItem {
+export interface StatItem {
   place?: string;
   amount: string;
   name: string;
   profileUrl?: string;
 }
 
-interface StatSection {
+export interface StatSection {
   title: string;
   items: StatItem[];
 }
 
-interface NavLink {
+export interface NavLink {
   label: string;
   url: string;
 }
 
-interface UiStatsDashboardProps {
+export interface UiStatsDashboardProps {
   pageTitle?: string;
   dateRangeText?: string;
   navLinks?: NavLink[];

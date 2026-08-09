@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 
-interface NavLink {
+export interface NavLink {
   label: string;
   url: string;
 }
 
-interface UiNavHeaderProps {
+export interface UiNavHeaderProps {
   siteName?: string;
   logoUrl?: string;
   logoHref?: string;

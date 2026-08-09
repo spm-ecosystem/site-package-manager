@@ -12,14 +12,56 @@
         opacity: 0 !important;
         transition: opacity 0.2s ease-in-out !important;
       }
+
+      #spm-loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: var(--spm-bg-primary, #121212);
+      z-index: 2147483647; /* Z-index máximo do navegador */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      transition: opacity 0.3s ease-in-out;
+      pointer-events: all;
+    }
+
+    .spm-spinner {
+      width: 40px !important;
+      height: 40px !important;
+      background-color: transparent !important;
+      border: 3px solid var(--spm-bg-tertiary, rgba(255, 255, 255, 0.1)) !important;
+      border-radius: 50% !important;
+      border-top-color: var(--spm-accent, #7c6af5) !important;
+      animation: spm-spin 1s linear infinite !important;
+      box-sizing: border-box !important;
+    }
+
+    @keyframes spm-spin {
+      to { transform: rotate(360deg); }
+    }
     `;
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'spm-loading-overlay';
+    
+    const spinner = document.createElement('div');
+    spinner.className = 'spm-spinner';
+    loadingOverlay.appendChild(spinner);
+
+  const injectAntiFlicker = () => {
+    document.documentElement.appendChild(antiFlickerStyle);
+    document.documentElement.appendChild(loadingOverlay);
+  };
 
   if (document.documentElement) {
-    document.documentElement.appendChild(antiFlickerStyle);
+    injectAntiFlicker();
   } else {
     // fallback
     document.addEventListener('DOMContentLoaded', () => {
-      document.documentElement.appendChild(antiFlickerStyle);
+      injectAntiFlicker();
     });
   }
 

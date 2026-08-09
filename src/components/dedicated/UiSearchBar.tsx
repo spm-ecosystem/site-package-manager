@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-interface UiSearchBarProps {
+export interface UiSearchBarProps {
   placeholder?: string;
   defaultValue?: string;
   submitUrl?: string;

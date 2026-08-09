@@ -1,4 +1,4 @@
-interface UiImageViewerProps {
+export interface UiImageViewerProps {
   src?: string;
   alt?: string;
   fit?: 'contain' | 'cover';

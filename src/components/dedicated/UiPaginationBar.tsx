@@ -1,9 +1,9 @@
-interface PageLink {
+export interface PageLink {
   label: string;
   url: string;
 }
 
-interface UiPaginationBarProps {
+export interface UiPaginationBarProps {
   pageLinks?: PageLink[];
   paramName?: string;
   className?: string;

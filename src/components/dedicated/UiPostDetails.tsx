@@ -2,7 +2,7 @@ import { UiTagBadge } from './UiTagBadge';
 import { UiSearchBar } from './UiSearchBar';
 import { triggerProxyClick } from '../../content/engine';
 
-interface TagItem {
+export interface TagItem {
   name: string;
   count: string;
   type: string;
@@ -11,7 +11,7 @@ interface TagItem {
   removeUrl?: string;
 }
 
-interface GenericButtonItem {
+export interface GenericButtonItem {
   label: string;
   url: string;
   targetSelector?: string;
@@ -25,7 +25,7 @@ export interface TagGroupConfig {
   typeKey: string;
 }
 
-interface UiPostDetailsProps {
+export interface UiPostDetailsProps {
   imageUrl: string;
   tags?: TagItem[];
   tagGroups?: TagGroupConfig[];

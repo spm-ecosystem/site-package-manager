@@ -4,7 +4,7 @@ import '../content/content.css';
 import registryMock from '../../registry.json';
 
 
-interface ThemeVariable {
+export interface ThemeVariable {
   key: string;
   label: string;
   type: 'color' | 'text';

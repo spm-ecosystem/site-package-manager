@@ -1,4 +1,4 @@
-interface UiImageCardProps {
+export interface UiImageCardProps {
   imageUrl: string;
   linkUrl: string;
   title: string;

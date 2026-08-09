@@ -96,10 +96,11 @@ export function triggerProxyClick(targetSelector: string) {
 export function revealPage() {
   setTimeout(() => {
     const antiFlickerStyle = document.getElementById('spm-anti-flicker');
+    const loadingOverlay   = document.getElementById('spm-loading-overlay');
 
     if(!antiFlickerStyle) return;
 
-    antiFlickerStyle.id = 'spm-anti-flicker';
+    console.log("[SPM] revealPage called")
 
     antiFlickerStyle.textContent = `
         html {
@@ -112,9 +113,10 @@ export function revealPage() {
       `;
     setTimeout(() => {
       antiFlickerStyle.remove();
-    }, 300);
+      loadingOverlay?.remove();
+      console.log(`[SPM] Anti-flicker style removed`)
+    }, 200);
   }, 50)
 
-  console.log(`[SPM] Anti-flicker style removed`)
 
 }

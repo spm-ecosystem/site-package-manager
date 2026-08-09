@@ -1,11 +1,11 @@
 import { UiSearchBar } from './UiSearchBar';
 
-interface NavLink {
+export interface NavLink {
   label: string;
   url: string;
 }
 
-interface UiHeroLandingProps {
+export interface UiHeroLandingProps {
   siteName?: string;
   logoUrl?: string;
   logoHref?: string;

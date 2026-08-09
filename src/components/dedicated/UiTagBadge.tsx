@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface UiTagBadgeProps {
+export interface UiTagBadgeProps {
   label: string;
   count?: string | number;
   href?: string;

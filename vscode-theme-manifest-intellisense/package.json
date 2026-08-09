@@ -14,7 +14,7 @@
         "fileMatch": [
           "**/websites/*/*/manifest.json"
         ],
-        "url": "schemas/theme-manifest-schema.json"
+        "url": "./schemas/theme-manifest-schema.json" 
       }
     ]
   }

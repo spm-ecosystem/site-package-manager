@@ -8,7 +8,7 @@ export interface ColumnConfig<T> {
   render?: (item: T) => React.ReactNode;
 }
 
-interface UiTableProps<T> {
+export interface UiTableProps<T> {
   columns: ColumnConfig<T>[];
   data: T[];
   onRowClick?: (item: T) => void;

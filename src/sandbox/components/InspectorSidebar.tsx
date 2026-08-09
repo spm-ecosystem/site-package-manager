@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface InspectedElementData {
+export interface InspectedElementData {
   tagName: string;
   id: string;
   classes: string[];
@@ -9,7 +9,7 @@ interface InspectedElementData {
   suggestedSelectors: string[];
 }
 
-interface InspectorSidebarProps {
+export interface InspectorSidebarProps {
   inspectedElement: InspectedElementData | null;
   activeSelector: string;
   setActiveSelector: (sel: string) => void;

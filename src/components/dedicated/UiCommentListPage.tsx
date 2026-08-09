@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { UiPaginationBar } from './UiPaginationBar';
 
-interface TagItem {
+export interface TagItem {
   label: string;
   url: string;
   type: string;
 }
 
-interface CommentItem {
+export interface CommentItem {
   author: string;
   authorUrl?: string;
   date: string;
   body: string;
 }
 
-interface CommentThread {
+export interface CommentThread {
   id: string;
   thumbnailUrl: string;
   postUrl: string;
@@ -26,12 +26,12 @@ interface CommentThread {
   comments?: CommentItem[];
 }
 
-interface PageLink {
+export interface PageLink {
   label: string;
   url: string;
 }
 
-interface UiCommentListPageProps {
+export interface UiCommentListPageProps {
   pageTitle?: string;
   threads?: CommentThread[];
   pageLinks?: PageLink[];
@@ -41,7 +41,7 @@ interface UiCommentListPageProps {
 }
 
 // 1. Modular Sub-component: A single comment reply speech bubble
-interface UiCommentReplyProps {
+export interface UiCommentReplyProps {
   comment: CommentItem;
 }
 
@@ -91,7 +91,7 @@ export function UiCommentReply({ comment }: UiCommentReplyProps) {
 }
 
 // 2. Modular Sub-component: A single thread card containing a thumbnail, details, replies and tags
-interface UiCommentCardProps {
+export interface UiCommentCardProps {
   thread: CommentThread;
 }
 

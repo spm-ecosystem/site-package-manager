@@ -13,12 +13,12 @@ export interface TableColumnConfig {
   badgeStyleKey?: string;
 }
 
-interface PageLink {
+export interface PageLink {
   label: string;
   url: string;
 }
 
-interface UiTableListPageProps {
+export interface UiTableListPageProps {
   pageTitle?: string;
   tableRows?: any[];
   columns?: TableColumnConfig[];
