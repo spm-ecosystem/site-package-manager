@@ -1,6 +1,6 @@
 # Site Package Manager (SPM)
 
-A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Shadow DOM - without touching the original site's code. Configure reconstructions declaratively through `.json` manifest files and design them visually in the built-in Sandbox IDE.
+A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Shadow DOM - without touching the original site's code. Configure reconstructions declaratively through `.json` manifest files, with automatic edge synchronization via Cloudflare Workers and dynamic WebSocket hot-reloading using the C++ `spm dev` watch utility.
 
 ---
 
@@ -29,10 +29,8 @@ A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Sh
       - [`UiScrollPanel`](#uiscrollpanel)
       - [`UiSplitLayout`](#uisplitlayout)
       - [`UiHeroLanding`](#uiherolanding)
-  - [Visual Sandbox IDE](#visual-sandbox-ide)
-    - [Views](#views)
-    - [Panels](#panels)
-    - [Interactive Features](#interactive-features)
+  - [spm-cli & Local Watcher (C++ Dev Server)](#spm-cli--local-watcher-c-dev-server)
+    - [Watcher Payload](#watcher-payload)
   - [Extension Popup](#extension-popup)
   - [Anti-Flickering System](#anti-flickering-system)
   - [Contributing](#contributing)
@@ -75,10 +73,9 @@ The entire pipeline is data-driven. No React code changes are needed to support 
 extension/
 ├── manifest.json                    # Chrome MV3 manifest
 ├── index.html                       # Popup entry point
-├── sandbox.html                     # Visual Sandbox IDE
-├── registry.json                    # Root GitOps registry index of available themes
+├── devloader.html                   # Dedicated local devloader page
 ├── scripts/
-│   ├── build-registry.js            # Auto-generates src/components/registry.ts & copies registry.json
+│   ├── build-registry.js            # Auto-generates src/components/registry.ts
 │   └── compile-css.js               # Compiles content.css files using Tailwind + PostCSS
 ├── websites/                        # GitOps theme packages
 │   └── safebooru.org/               # Website domain folder
@@ -93,18 +90,13 @@ extension/
 │   │   ├── modernizer.tsx           # Core reconstruction engine & fetch cache fallbacks
 │   │   └── engine.ts                # Selector / data-attribute extraction parser
 │   ├── popup/
-│   │   └── index.tsx                # Popup React UI (supports dev folder load & rollback versioning)
-│   ├── sandbox/
-│   │   ├── index.tsx                # Sandbox IDE entry
-│   │   └── ...
+│   │   └── index.tsx                # Popup React UI (supports dev folder load & dynamic Worker listing)
 │   └── components/
 │       ├── registry.ts              # Component registry (AUTO-GENERATED)
-│       ├── primitives/
-│       │   └── LayoutPrimitives.tsx # Primitive flex/grid elements
-│       └── dedicated/
-│           └── ...                  # Reusable UI component templates
+│       └── spm-components/          # Shared components submodule pointer (dedicated & primitives)
 └── tests/
-    └── engine.test.ts               # Unit tests for extractValue
+    ├── engine.test.ts               # Unit tests for extractValue
+    └── hot-reload.test.ts           # Unit tests for WebSocket client hot-reloading
 ```
 
 ---
@@ -439,31 +431,24 @@ Reusable, styled components in `src/components/dedicated/`.
 
 ---
 
-## Visual Sandbox IDE
+## spm-cli & Local Watcher (C++ Dev Server)
 
-Open **chrome://extensions → SPM → Extension options** to launch the Sandbox IDE.
+The `spm-cli` is a binary written in C++ that facilitates local theme development, compilation, validation, and remote GitOps deployment.
 
-### Views
+### Features
 
-| View | Purpose |
-| --- | --- |
-| **Preview** | Live render of your JSON config inside an iframe. Reflects all changes in real time. |
-| **Legacy** | Interactive view of the site's original HTML. Click any element to inspect its attributes and CSS selectors. |
+- **Interactive Local Watcher (`spm dev -d <manifest.json>`)**: Starts a WebSocket server on `localhost:8080`. It watches the folder containing the manifest and CSS files. When files are saved:
+  - It detects modifications and packages them into a unified JSON message: `{ "manifest": ..., "css": ... }`.
+  - It broadcasts the payload to all connected extension clients on the target website in real-time.
+  - The extension content script hot-reloads theme variables and custom CSS rules dynamically into Shadow DOM roots, or triggers a single tab reload if components or layout structure changed.
+- **GitOps Importer & Publisher (`spm publish`)**: Validates the manifest against standard schemas, packages folder assets, and pushes the theme package to the remote registry.
 
-### Panels
+### Installation & Rebuild
 
-| Panel | Location | Purpose |
-| --- | --- | --- |
-| **Component Library** | Left | Click to add components to the canvas |
-| **Element Inspector** | Right (Legacy view) | Shows the clicked element's tag, class, attributes, and mapping suggestions |
-| **Component Settings** | Right (Preview view) | Edit the selected component's props visually |
-| **JSON Editor** | Bottom | Full manifest editor - changes sync both ways with the visual preview |
-
-### Interactive Features
-
-- **Hover** over any component in Preview to see its edit toolbar (edit ✏️, delete 🗑️)
-- **Resize** components by dragging the right edge - `width` is persisted to the JSON
-- **Click** Legacy elements to see `alt`, `src`, `href` attributes and auto-generated `propsMap` suggestions
+Navigate to `/home/watashi/Projects/spm-cli` and compile:
+```bash
+make
+```
 
 ---
 
@@ -553,18 +538,7 @@ export function UiMyComponent({
 You do **not** need to edit `src/components/registry.ts` manually!
 During compilation, the pre-build script `scripts/build-registry.js` scans all components under `src/components/` and packages them automatically. Simply write your component file, run `npm run build`, and it will be ready to be used in manifests.
 
-To add its schema to the Sandbox IDE:
-Open `src/sandbox/components/InspectorSidebar.tsx` and configure:
 
-```ts
-UiMyComponent: {
-  props: ['title', 'items'],
-  placeholders: {
-    title: 'h1 | text',
-    items: 'ul li a | text'
-  }
-}
-```
 
 ### Running Tests
 
