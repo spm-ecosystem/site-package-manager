@@ -72,15 +72,44 @@ async function init() {
               } else {
                 runDevEngine();
               }
-              resolve();
-              return;
             } catch (err) {
               console.error('[SPM] Error loading Dev Mode draft files:', err);
-              revealPage();
-              resolve();
-              return;
             }
           }
+
+          console.log('[SPM] Dev Mode active. Opening WebSocket connection to dev server...');
+          const ws = new WebSocket('ws://localhost:8080');
+          ws.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              console.log('[SPM] Dev Server update received:', data);
+              
+              // Save to local storage for persistence on next load
+              chrome.storage.local.set({
+                [`dev-draft-manifest:${domain}`]: JSON.stringify(data.manifest),
+                [`dev-draft-css:${domain}`]: data.css
+              });
+              
+              const cssVars = { ...(data.manifest.theme?.cssVariables || {}) };
+              
+              // Apply theme modifications dynamically in real-time
+              applyThemeGlobally(cssVars, data.css, data.manifest.theme?.noticeSelector);
+              runModernizer(document, data.manifest, stylesText, data.css);
+            } catch (err) {
+              console.error('[SPM] Error processing WebSocket message:', err);
+            }
+          };
+          
+          ws.onerror = (err) => {
+            console.warn('[SPM] WebSocket connection error (is dev server running?):', err);
+          };
+          
+          ws.onclose = () => {
+            console.log('[SPM] WebSocket connection closed.');
+          };
+
+          resolve();
+          return;
         }
 
         // 3. Dev Mode is off: resolve theme and version from edge Worker / pinned storage
