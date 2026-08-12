@@ -15,6 +15,7 @@ describe('Hot Reloading and WebSocket Error handling', () => {
     const shadowRoot = host.attachShadow({ mode: 'open' });
 
     const hostStyle = document.createElement('style');
+    hostStyle.setAttribute('data-spm-vars', 'true');
     hostStyle.textContent = ':host { --spm-bg-primary: #000; }';
     shadowRoot.appendChild(hostStyle);
 

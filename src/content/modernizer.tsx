@@ -52,6 +52,7 @@ export interface SiteManifest {
 
 export function applyTheme(shadowRoot: ShadowRoot, variables: Record<string, string>) {
   const styleEl = document.createElement('style');
+  styleEl.setAttribute('data-spm-vars', 'true');
   const cssVars = Object.entries(variables)
     .map(([key, val]) => `${key}: ${val};`)
     .join('\n');

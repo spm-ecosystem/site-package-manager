@@ -19,7 +19,7 @@ export function updateShadowStyleTags(cssVarsString: string, newCss: string, sty
       const styleTags = host.shadowRoot.querySelectorAll('style');
       let hasHostStyle = false;
       styleTags.forEach((styleTag) => {
-        if (styleTag.textContent && styleTag.textContent.includes(':host')) {
+        if (styleTag.hasAttribute('data-spm-vars')) {
           styleTag.textContent = `:host {\n${cssVarsString}\n}`;
           hasHostStyle = true;
         } else {
@@ -28,6 +28,7 @@ export function updateShadowStyleTags(cssVarsString: string, newCss: string, sty
       });
       if (!hasHostStyle && cssVarsString) {
         const hostStyle = document.createElement('style');
+        hostStyle.setAttribute('data-spm-vars', 'true');
         hostStyle.textContent = `:host {\n${cssVarsString}\n}`;
         host.shadowRoot.appendChild(hostStyle);
       }
@@ -150,16 +151,20 @@ async function init() {
                 window.__spm_last_manifest = data.manifest;
 
                 chrome.storage.local.get(['spm_theme_overrides'], (storageRes) => {
-                  const userOverrides = storageRes.spm_theme_overrides?.[domain] || {};
-                  const cssVars = { ...(data.manifest?.theme?.cssVariables || {}), ...userOverrides };
+                  try {
+                    const userOverrides = storageRes?.spm_theme_overrides?.[domain] || {};
+                    const cssVars = { ...(data.manifest?.theme?.cssVariables || {}), ...userOverrides };
 
-                  applyThemeGlobally(cssVars, data.css, data.manifest?.theme?.noticeSelector);
+                    applyThemeGlobally(cssVars, data.css, data.manifest?.theme?.noticeSelector);
 
-                  const cssVarsString = Object.entries(cssVars)
-                    .map(([key, val]) => `${key}: ${val};`)
-                    .join('\n');
+                    const cssVarsString = Object.entries(cssVars)
+                      .map(([key, val]) => `${key}: ${val};`)
+                      .join('\n');
 
-                  updateShadowStyleTags(cssVarsString, data.css || '', stylesText);
+                    updateShadowStyleTags(cssVarsString, data.css || '', stylesText);
+                  } catch (err) {
+                    console.error('[SPM] Error in storage callback:', err);
+                  }
                 });
               });
             } catch (err) {
