@@ -248,7 +248,17 @@ function Popup() {
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.get(['spm_theme_overrides'], (res) => {
         const overrides = res.spm_theme_overrides || {};
-        overrides[currentDomain] = next;
+        const nextOverrides: Record<string, string> = {};
+        Object.entries(next).forEach(([k, v]) => {
+          if (v !== defaultThemeVars[k]) {
+            nextOverrides[k] = v;
+          }
+        });
+        if (Object.keys(nextOverrides).length > 0) {
+          overrides[currentDomain] = nextOverrides;
+        } else {
+          delete overrides[currentDomain];
+        }
         chrome.storage.local.set({ spm_theme_overrides: overrides }, reloadTab);
       });
     }
@@ -414,7 +424,7 @@ function Popup() {
 
             {!isDevMode && !isSupportedDomain && (
               <div className="bg-[#111111] border border-[#333333] rounded-lg p-3 text-[11px] text-zinc-400 text-center">
-                This domain is not supported by the GitOps registry.
+                This domain has no registered themes.
               </div>
             )}
 

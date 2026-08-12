@@ -145,8 +145,11 @@ async function init() {
         const manifestCacheKey = `theme_manifest:${domain}:${themeName}:${version}`;
         const cacheTimeKey = `theme_cache_time:${domain}:${themeName}:${version}`;
 
-        const cachedManifest = res[manifestCacheKey];
-        const cachedTime = res[cacheTimeKey] || 0;
+        const cacheRes = await new Promise<Record<string, any>>((resolve) => {
+          chrome.storage.local.get([manifestCacheKey, cacheTimeKey], resolve);
+        });
+        const cachedManifest = cacheRes[manifestCacheKey];
+        const cachedTime = cacheRes[cacheTimeKey] || 0;
         const isCacheValid = cachedManifest && cachedTime && (Date.now() - cachedTime < 3600000);
 
         let manifestData: SiteManifest = cachedManifest;
