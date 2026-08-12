@@ -3,6 +3,9 @@ import { extractValue, revealPage } from './engine';
 import { COMPONENT_REGISTRY } from '../components/registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
 
+const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
+
+
 export interface ChildrenConfig {
   name: string;
   selector: string;
@@ -49,6 +52,7 @@ export interface SiteManifest {
 
 export function applyTheme(shadowRoot: ShadowRoot, variables: Record<string, string>) {
   const styleEl = document.createElement('style');
+  styleEl.setAttribute('data-spm-vars', 'true');
   const cssVars = Object.entries(variables)
     .map(([key, val]) => `${key}: ${val};`)
     .join('\n');
@@ -172,7 +176,7 @@ function getNextPageUrl(context: Document | HTMLElement, config?: InfiniteScroll
   return null;
 }
 
-export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string, styleCSS: string = '') {
+export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string, _styleCSS: string = '') {
   // Helper queries targeting scoped parent
   const rootDoc = rootContext instanceof Document ? rootContext : document;
 
@@ -193,7 +197,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
     const shadowRoot = toastHost.attachShadow({ mode: 'open' });
     const styleTag = rootDoc.createElement('style');
-    styleTag.textContent = stylesText + '\n' + styleCSS;
+    styleTag.textContent = stylesText;
     shadowRoot.appendChild(styleTag);
 
     if (manifest.theme?.cssVariables) {
@@ -309,7 +313,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         const shadowRoot = host.attachShadow({ mode: 'open' });
 
         const styleTag = rootDoc.createElement('style');
-        styleTag.textContent = stylesText + '\n' + styleCSS;
+        styleTag.textContent = stylesText;
         shadowRoot.appendChild(styleTag);
 
         if (manifest.theme?.cssVariables) {
@@ -428,7 +432,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         const shadowRoot = host.attachShadow({ mode: 'open' });
 
         const styleTag = rootDoc.createElement('style');
-        styleTag.textContent = stylesText + '\n' + styleCSS;
+        styleTag.textContent = stylesText;
         shadowRoot.appendChild(styleTag);
 
         if (manifest.theme?.cssVariables) applyTheme(shadowRoot, manifest.theme.cssVariables);
@@ -453,67 +457,14 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
   revealPage();
 }
 
-export function normalizeGitOpsUrl(baseUrl: string, filePath: string, ref: string = 'master'): string {
-  let base = baseUrl.trim().replace(/\/$/, '');
-  
-  const githubRegex = /^https?:\/\/(www\.)?github\.com\/([^\/]+)\/([^\/]+)/i;
-  const githubMatch = base.match(githubRegex);
-  if (githubMatch) {
-    const user = githubMatch[2];
-    const repo = githubMatch[3].replace(/\.git$/, '');
-    return `https://raw.githubusercontent.com/${user}/${repo}/${ref}/${filePath}`;
-  }
-
-  const gitlabRegex = /^https?:\/\/(www\.)?gitlab\.com\/([^\/]+)\/([^\/]+)/i;
-  const gitlabMatch = base.match(gitlabRegex);
-  if (gitlabMatch) {
-    const user = gitlabMatch[2];
-    const repo = gitlabMatch[3].replace(/\.git$/, '');
-    return `https://gitlab.com/${user}/${repo}/-/raw/${ref}/${filePath}`;
-  }
-
-  const rawGithubRegex = /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)/i;
-  const rawGithubMatch = base.match(rawGithubRegex);
-  if (rawGithubMatch) {
-    const user = rawGithubMatch[1];
-    const repo = rawGithubMatch[2].replace(/\.git$/, '');
-    return `https://raw.githubusercontent.com/${user}/${repo}/${ref}/${filePath}`;
-  }
-
-  return `${base}/${filePath}`;
-}
-
-export async function fetchRegistry(gitopsUrl: string) {
-  const url = normalizeGitOpsUrl(gitopsUrl, 'registry.json', 'master');
-  console.log(`[SPM] Fetching registry from remote GitOps URL: ${url}`);
-  const res = await fetch(`${url}?t=${Date.now()}`);
+export async function fetchThemeFiles(domain: string, themeName: string, version: string) {
+  const url = `${WORKER_ORIGIN}/spm/v1/api/themes/${domain}/${themeName}/${version}`;
+  console.log(`[SPM] Fetching theme manifest from Worker: ${url}`);
+  const res = await fetch(url);
   if (!res.ok) {
-    throw new Error(`Failed to fetch remote registry: ${res.statusText}`);
+    throw new Error(`Failed to fetch theme manifest from ${url}: ${res.statusText}`);
   }
-  return await res.json();
-}
-
-export async function fetchThemeFiles(gitopsUrl: string, domain: string, pkgDir: string, ref: string) {
-  const manifestPath = `websites/${domain}/${pkgDir}/manifest.json`;
-  const cssPath = `websites/${domain}/${pkgDir}/style.css`;
-  
-  const manifestUrl = normalizeGitOpsUrl(gitopsUrl, manifestPath, ref);
-  const cssUrl = normalizeGitOpsUrl(gitopsUrl, cssPath, ref);
-
-  const t = Date.now();
-  console.log(`[SPM] Fetching theme manifest from remote: ${manifestUrl}`);
-  const manifestRes = await fetch(`${manifestUrl}?t=${t}`);
-  if (!manifestRes.ok) {
-    throw new Error(`Failed to fetch remote manifest from ${manifestUrl}: ${manifestRes.statusText}`);
-  }
-  const manifest = await manifestRes.json();
-
-  console.log(`[SPM] Fetching theme CSS from remote: ${cssUrl}`);
-  const cssRes = await fetch(`${cssUrl}?t=${t}`);
-  if (!cssRes.ok) {
-    throw new Error(`Failed to fetch remote CSS from ${cssUrl}: ${cssRes.statusText}`);
-  }
-  const cssText = await cssRes.text();
-
+  const manifest: SiteManifest = await res.json();
+  const cssText = manifest.theme?.customStyles || '';
   return { manifest, cssText };
 }

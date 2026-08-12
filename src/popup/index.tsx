@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
-import registryMock from '../../registry.json';
+
+const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
+
 
 
 export interface ThemeVariable {
@@ -27,8 +29,10 @@ function Popup() {
   const [activeTabId, setActiveTabId]       = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab]           = useState<'theme' | 'colors'>('theme');
   const [themeVars, setThemeVars]           = useState<Record<string, string>>({});
+  const [defaultThemeVars, setDefaultThemeVars] = useState<Record<string, string>>({});
 
-  // GitOps registry and preferences
+
+  // Reconstructed registry and preferences
   const [registry, setRegistry] = useState<Record<string, any>>({});
   const [spmActivePackages, setSpmActivePackages] = useState<Record<string, string>>({});
   const [spmPinnedVersions, setSpmPinnedVersions] = useState<Record<string, Record<string, string>>>({});
@@ -40,7 +44,7 @@ function Popup() {
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.tabs) {
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
         const tab = tabs[0];
         if (tab?.id) setActiveTabId(tab.id);
         if (tab?.url) {
@@ -48,27 +52,81 @@ function Popup() {
             const domain = new URL(tab.url).hostname;
             setCurrentDomain(domain);
             
+            // 1. Fetch available themes from R2 Worker
+            let reconstructedRegistry: Record<string, any> = {};
+            try {
+              const workerRes = await fetch(`${WORKER_ORIGIN}/spm/v1/api/themes/${domain}`);
+              if (workerRes.ok) {
+                const data = await workerRes.json();
+                if (data && data.themes && Array.isArray(data.themes) && data.themes.length > 0) {
+                  const packagesMap: Record<string, any> = {};
+                  let firstThemeName = '';
+
+                  for (const item of data.themes) {
+                    const parts = (item.key || '').split('/');
+                    const themeName = parts.length >= 3 ? parts[2] : (item.key || 'default');
+                    if (!firstThemeName) firstThemeName = themeName;
+
+                    if (!packagesMap[themeName]) {
+                      packagesMap[themeName] = {
+                        displayName: item.label || themeName,
+                        activeVersion: item.version,
+                        directory: themeName,
+                        history: []
+                      };
+                    }
+                    packagesMap[themeName].activeVersion = item.version;
+                    if (item.label) packagesMap[themeName].displayName = item.label;
+
+                    let formattedDate = 'R2';
+                    if (item.timestamp) {
+                      try {
+                        formattedDate = new Date(item.timestamp).toISOString().split('T')[0];
+                      } catch {
+                        formattedDate = String(item.timestamp);
+                      }
+                    }
+
+                    packagesMap[themeName].history.push({
+                      version: item.version,
+                      ref: 'R2',
+                      date: formattedDate
+                    });
+                  }
+
+                  if (firstThemeName) {
+                    reconstructedRegistry = {
+                      [domain]: {
+                        defaultPackage: firstThemeName,
+                        packages: packagesMap
+                      }
+                    };
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('[SPM Popup] Error fetching themes from R2 Worker:', err);
+            }
+
+            setRegistry(reconstructedRegistry);
+
+            // 2. Read storage preferences
             const storageKeys = [
               'spm_global_enabled',
-              'spm_gitops_url',
               'spm_active_packages',
               'spm_pinned_versions',
               'spm_dev_mode_hosts',
               'spm_dev_mode',
-              'gitops_registry',
-              'spm_cached_registry',
               `dev-draft-manifest:${domain}`,
               `dev-draft-css:${domain}`,
               `spm_pinned_package:${domain}`,
-              `spm_pinned_version:${domain}`
+              `spm_pinned_version:${domain}`,
+              'spm_theme_overrides'
             ];
 
             chrome.storage.local.get(storageKeys, (res) => {
               if (res.spm_global_enabled !== undefined) setGlobalEnabled(res.spm_global_enabled);
               
-              const activeReg = res.spm_cached_registry || res.gitops_registry || registryMock;
-              setRegistry(activeReg);
-
               const activePkgs = res.spm_active_packages || {};
               if (res[`spm_pinned_package:${domain}`] && !activePkgs[domain]) {
                 activePkgs[domain] = res[`spm_pinned_package:${domain}`];
@@ -77,7 +135,7 @@ function Popup() {
 
               const pinnedVers = res.spm_pinned_versions || {};
               if (res[`spm_pinned_version:${domain}`]) {
-                const pkg = activePkgs[domain] || activeReg[domain]?.defaultPackage || '';
+                const pkg = activePkgs[domain] || reconstructedRegistry[domain]?.defaultPackage || '';
                 if (pkg) {
                   if (!pinnedVers[domain]) pinnedVers[domain] = {};
                   if (!pinnedVers[domain][pkg]) {
@@ -98,20 +156,8 @@ function Popup() {
               setDevDraftManifestRaw(res[`dev-draft-manifest:${domain}`] || '');
               setDevDraftCssRaw(res[`dev-draft-css:${domain}`] || '');
 
-              const currentActivePkg = activePkgs[domain] || activeReg[domain]?.defaultPackage || '';
-              const pkgInfo = activeReg[domain]?.packages?.[currentActivePkg];
-              let baseVars: Record<string, string> = {};
-              if (pkgInfo && pkgInfo.theme?.cssVariables) {
-                baseVars = { ...pkgInfo.theme.cssVariables };
-              }
-              
-              chrome.storage.local.get(['spm_theme_overrides'], (overridesRes) => {
-                const overrides = overridesRes.spm_theme_overrides?.[domain];
-                if (overrides) {
-                  baseVars = { ...baseVars, ...overrides };
-                }
-                setThemeVars(baseVars);
-              });
+              const overrides = res.spm_theme_overrides?.[domain] || {};
+              setThemeVars(overrides);
             });
           } catch (err) {
             console.error('[SPM Popup] Error querying active tab info:', err);
@@ -202,29 +248,30 @@ function Popup() {
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.get(['spm_theme_overrides'], (res) => {
         const overrides = res.spm_theme_overrides || {};
-        overrides[currentDomain] = next;
+        const nextOverrides: Record<string, string> = {};
+        Object.entries(next).forEach(([k, v]) => {
+          if (v !== defaultThemeVars[k]) {
+            nextOverrides[k] = v;
+          }
+        });
+        if (Object.keys(nextOverrides).length > 0) {
+          overrides[currentDomain] = nextOverrides;
+        } else {
+          delete overrides[currentDomain];
+        }
         chrome.storage.local.set({ spm_theme_overrides: overrides }, reloadTab);
       });
     }
   };
 
   const resetColors = () => {
+    setThemeVars(defaultThemeVars);
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.get(['spm_theme_overrides'], (res) => {
-        const activePkg = spmActivePackages[currentDomain] || registry[currentDomain]?.defaultPackage || '';
-        const pkgInfo = registry[currentDomain]?.packages?.[activePkg];
-        let baseVars: Record<string, string> = {};
-        if (pkgInfo && pkgInfo.theme?.cssVariables) {
-          baseVars = { ...pkgInfo.theme.cssVariables };
-        }
-        setThemeVars(baseVars);
-        
         const overrides = res.spm_theme_overrides || {};
         delete overrides[currentDomain];
         chrome.storage.local.set({ spm_theme_overrides: overrides }, reloadTab);
       });
-    } else {
-      setThemeVars({});
     }
   };
 
@@ -237,6 +284,47 @@ function Popup() {
   const versionHistory = pkgInfo?.history || [];
   const pinnedVersion = spmPinnedVersions[currentDomain]?.[activePackageId] || pkgInfo?.activeVersion || '';
   const isDevMode = !!spmDevModeHosts[currentDomain];
+
+  useEffect(() => {
+    if (!currentDomain || !activePackageId || !pinnedVersion) return;
+
+    let isMounted = true;
+    async function loadActiveManifestVars() {
+      try {
+        const url = `${WORKER_ORIGIN}/spm/v1/api/themes/${currentDomain}/${activePackageId}/${pinnedVersion}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const manifest = await res.json();
+          const defaultVars = manifest.theme?.cssVariables || {};
+
+          if (isMounted) {
+            setDefaultThemeVars(defaultVars);
+          }
+
+          if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.get(['spm_theme_overrides'], (storageRes) => {
+              if (!isMounted) return;
+              const overrides = storageRes.spm_theme_overrides?.[currentDomain] || {};
+              setThemeVars({ ...defaultVars, ...overrides });
+            });
+          } else {
+            if (isMounted) {
+              setThemeVars(defaultVars);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[SPM Popup] Error fetching active theme manifest:', err);
+      }
+    }
+
+    loadActiveManifestVars();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentDomain, activePackageId, pinnedVersion]);
+
 
   const devDraftParsed = (() => {
     if (!devDraftManifestRaw) return null;
@@ -336,7 +424,7 @@ function Popup() {
 
             {!isDevMode && !isSupportedDomain && (
               <div className="bg-[#111111] border border-[#333333] rounded-lg p-3 text-[11px] text-zinc-400 text-center">
-                This domain is not supported by the GitOps registry.
+                This domain has no registered themes.
               </div>
             )}
 

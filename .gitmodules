@@ -1,0 +1,3 @@
+[submodule "src/components/spm-components"]
+	path = src/components/spm-components
+	url = /home/watashi/Projects/spm-components
