@@ -176,7 +176,7 @@ function getNextPageUrl(context: Document | HTMLElement, config?: InfiniteScroll
   return null;
 }
 
-export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string, styleCSS: string = '') {
+export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string, _styleCSS: string = '') {
   // Helper queries targeting scoped parent
   const rootDoc = rootContext instanceof Document ? rootContext : document;
 
@@ -197,7 +197,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
     const shadowRoot = toastHost.attachShadow({ mode: 'open' });
     const styleTag = rootDoc.createElement('style');
-    styleTag.textContent = stylesText + '\n' + styleCSS;
+    styleTag.textContent = stylesText;
     shadowRoot.appendChild(styleTag);
 
     if (manifest.theme?.cssVariables) {
@@ -313,7 +313,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         const shadowRoot = host.attachShadow({ mode: 'open' });
 
         const styleTag = rootDoc.createElement('style');
-        styleTag.textContent = stylesText + '\n' + styleCSS;
+        styleTag.textContent = stylesText;
         shadowRoot.appendChild(styleTag);
 
         if (manifest.theme?.cssVariables) {
@@ -432,7 +432,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         const shadowRoot = host.attachShadow({ mode: 'open' });
 
         const styleTag = rootDoc.createElement('style');
-        styleTag.textContent = stylesText + '\n' + styleCSS;
+        styleTag.textContent = stylesText;
         shadowRoot.appendChild(styleTag);
 
         if (manifest.theme?.cssVariables) applyTheme(shadowRoot, manifest.theme.cssVariables);

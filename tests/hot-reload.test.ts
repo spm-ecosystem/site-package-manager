@@ -30,7 +30,7 @@ describe('Hot Reloading and WebSocket Error handling', () => {
     updateShadowStyleTags(cssVarsString, newCss, stylesText);
 
     expect(hostStyle.textContent).toContain('--spm-bg-primary: #fff;');
-    expect(mainStyle.textContent).toBe('/* base */\nbody { color: blue; }');
+    expect(mainStyle.textContent).toBe('/* base */');
   });
 
   it('should detect layout changes based on components and reconstructs comparison', () => {
