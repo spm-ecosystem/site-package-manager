@@ -1,8 +1,9 @@
-import { runModernizer, applyThemeGlobally, fetchRegistry, fetchThemeFiles, SiteManifest } from './modernizer';
+import { runModernizer, applyThemeGlobally, fetchThemeFiles, SiteManifest } from './modernizer';
 import stylesText from './content.css?inline';
 import { revealPage } from './engine';
 
 let hasRunModernizer = false;
+
 async function init() {
   if (typeof chrome === 'undefined' || !chrome.storage) {
     return;
@@ -10,18 +11,17 @@ async function init() {
 
   const domain = window.location.hostname;
 
-  // 1. Retrieve all required keys from local storage
+  // 1. Retrieve required keys from local storage
   const storageKeys = [
     'spm_global_enabled',
     'spm_dev_mode',
     `dev-draft-manifest:${domain}`,
     `dev-draft-css:${domain}`,
-    'spm_gitops_url',
-    'gitops_url',
-    'gitops_registry',
-    'gitops_registry_timestamp',
+    'spm_active_packages',
+    'spm_pinned_versions',
     `spm_pinned_package:${domain}`,
-    `spm_pinned_version:${domain}`
+    `spm_pinned_version:${domain}`,
+    'spm_theme_overrides'
   ];
 
   chrome.storage.local.get(storageKeys, async (res) => {
@@ -41,14 +41,14 @@ async function init() {
           const devManifest: SiteManifest = typeof devManifestRaw === 'string'
             ? JSON.parse(devManifestRaw)
             : devManifestRaw;
-          const devCss = res[`dev-draft-css:${domain}`] || '';
+          const devCss = res[`dev-draft-css:${domain}`] || devManifest.theme?.customStyles || '';
 
           console.log('[SPM] Dev Mode active. Applying draft changes for:', domain);
 
-          // Apply theme globally early to prevent flashing
-          if (devManifest.theme?.cssVariables) {
-            applyThemeGlobally(devManifest.theme.cssVariables, devManifest.theme.customStyles, devManifest.theme.noticeSelector);
-          }
+          const userOverrides = res.spm_theme_overrides?.[domain] || {};
+          const cssVars = { ...(devManifest.theme?.cssVariables || {}), ...userOverrides };
+
+          applyThemeGlobally(cssVars, devCss, devManifest.theme?.noticeSelector);
 
           const runDevEngine = () => {
             if (!hasRunModernizer) {
@@ -69,107 +69,101 @@ async function init() {
       }
     }
 
-    // 3. Dev Mode is off, look up registry.json in storage (refreshing if older than 1 hour)
-    const gitopsUrl = res.spm_gitops_url || res.gitops_url || 'https://github.com/watashi-00/site-package-manager';
-    let registry = res.gitops_registry;
-    const registryTimestamp = res.gitops_registry_timestamp || 0;
-    const isRegistryStale = !registry || (Date.now() - registryTimestamp > 3600000);
+    // 3. Dev Mode is off: resolve theme and version from edge Worker / pinned storage
+    let pinnedPkg = res[`spm_pinned_package:${domain}`] || res.spm_active_packages?.[domain];
+    let pinnedVer = res[`spm_pinned_version:${domain}`];
+    if (!pinnedVer && pinnedPkg && res.spm_pinned_versions?.[domain]?.[pinnedPkg]) {
+      pinnedVer = res.spm_pinned_versions[domain][pinnedPkg];
+    }
 
-    if (isRegistryStale) {
+    let themeName = pinnedPkg;
+    let version = pinnedVer;
+
+    // If package or version is missing, fetch available themes for domain from Worker
+    if (!themeName || !version) {
       try {
-        console.log('[SPM] Registry missing or stale. Fetching fresh registry from:', gitopsUrl);
-        registry = await fetchRegistry(gitopsUrl);
-        chrome.storage.local.set({
-          gitops_registry: registry,
-          gitops_registry_timestamp: Date.now()
-        });
+        const listRes = await fetch(`https://spm.hexacloud.net.br/spm/v1/api/themes/${domain}`);
+        if (!listRes.ok) {
+          console.log('[SPM] Domain has no registered themes or fetch failed:', domain);
+          revealPage();
+          return;
+        }
+        const listData = await listRes.json();
+        const themesList: Array<{ key: string, label: string, version: string, timestamp?: string }> = listData?.themes || [];
+        if (themesList.length === 0) {
+          console.log('[SPM] No themes returned for domain:', domain);
+          revealPage();
+          return;
+        }
+
+        // Determine themeName
+        if (!themeName) {
+          const firstKey = themesList[0].key || '';
+          const parts = firstKey.split('/');
+          themeName = parts.length >= 3 ? parts[2] : (firstKey || 'default');
+        }
+
+        // Determine version for themeName
+        if (!version) {
+          const matchingThemes = themesList.filter(t => {
+            const parts = (t.key || '').split('/');
+            const name = parts.length >= 3 ? parts[2] : t.key;
+            return name === themeName;
+          });
+          const target = matchingThemes.length > 0 ? matchingThemes[matchingThemes.length - 1] : themesList[0];
+          version = target?.version;
+        }
       } catch (err) {
-        console.error('[SPM] Failed to fetch registry from GitOps URL. Using cached registry fallback.', err);
+        console.error('[SPM] Error querying themes list from edge:', err);
+        revealPage();
+        return;
       }
     }
 
-    if (!registry) {
-      console.error('[SPM] No registry config available. Aborting modernizer.');
+    if (!themeName || !version) {
+      console.error('[SPM] Could not resolve active theme or version for:', domain);
+      revealPage();
       return;
     }
 
-    // 4. Resolve the active package and version for current domain
-    const domainConfig = registry[domain];
-    if (!domainConfig) {
-      console.log('[SPM] Domain is not registered in GitOps registry:', domain);
-      return;
-    }
-
-    const defaultPkg = domainConfig.defaultPackage;
-    const pinnedPkg = res[`spm_pinned_package:${domain}`] || defaultPkg;
-    if (!pinnedPkg) {
-      console.error('[SPM] No package resolved for domain:', domain);
-      return;
-    }
-
-    const pkgInfo = domainConfig.packages?.[pinnedPkg];
-    if (!pkgInfo) {
-      console.error('[SPM] Package not found in registry:', pinnedPkg);
-      return;
-    }
-
-    const activeVersion = res[`spm_pinned_version:${domain}`] || pkgInfo.activeVersion;
-    if (!activeVersion) {
-      console.error('[SPM] No active version found for package:', pinnedPkg);
-      return;
-    }
-
-    // Resolve git ref
-    let ref = 'master';
-    if (pkgInfo.history && Array.isArray(pkgInfo.history)) {
-      const historyEntry = pkgInfo.history.find((h: any) => h.version === activeVersion);
-      if (historyEntry && historyEntry.ref) {
-        ref = historyEntry.ref;
-      }
-    }
-
-    // 5. Read manifest and CSS from cache
-    const manifestCacheKey = `theme_manifest:${domain}:${pinnedPkg}:${activeVersion}`;
-    const cssCacheKey = `theme_css:${domain}:${pinnedPkg}:${activeVersion}`;
-    const cacheTimeKey = `theme_cache_time:${domain}:${pinnedPkg}:${activeVersion}`;
+    // 4. Fetch manifest JSON from edge Worker (with local caching)
+    const manifestCacheKey = `theme_manifest:${domain}:${themeName}:${version}`;
+    const cacheTimeKey = `theme_cache_time:${domain}:${themeName}:${version}`;
 
     const cachedManifest = res[manifestCacheKey];
-    const cachedCss = res[cssCacheKey];
     const cachedTime = res[cacheTimeKey] || 0;
+    const isCacheValid = cachedManifest && cachedTime && (Date.now() - cachedTime < 3600000);
 
-    const isCacheValid = cachedManifest && cachedCss && cachedTime && (Date.now() - cachedTime < 3600000);
-
-    let manifestData = cachedManifest;
-    let cssTextData = cachedCss;
+    let manifestData: SiteManifest = cachedManifest;
 
     if (!isCacheValid) {
       try {
-        console.log(`[SPM] Fetching theme ${pinnedPkg}@${activeVersion} from GitOps raw source...`);
-        const fetched = await fetchThemeFiles(gitopsUrl, domain, pkgInfo.directory || pinnedPkg, ref);
+        console.log(`[SPM] Fetching theme ${themeName}@${version} from edge Worker...`);
+        const fetched = await fetchThemeFiles(domain, themeName, version);
         manifestData = fetched.manifest;
-        cssTextData = fetched.cssText;
 
         // Save to cache
         const cacheUpdate: Record<string, any> = {};
         cacheUpdate[manifestCacheKey] = manifestData;
-        cacheUpdate[cssCacheKey] = cssTextData;
         cacheUpdate[cacheTimeKey] = Date.now();
         chrome.storage.local.set(cacheUpdate);
       } catch (err) {
-        console.error('[SPM] Failed to fetch package assets from GitOps source:', err);
-        // Fallback to stale cache if we have it
-        if (!manifestData || !cssTextData) {
-          console.error('[SPM] No cached assets available as fallback. Aborting.');
+        console.error('[SPM] Failed to fetch theme manifest from edge Worker:', err);
+        if (!manifestData) {
+          console.error('[SPM] No cached manifest available as fallback. Aborting.');
+          revealPage();
           return;
         }
-        console.log('[SPM] Using stale cached theme assets fallback.');
+        console.log('[SPM] Using stale cached theme manifest fallback.');
       }
     }
 
-    // 6. Run early global styles and mount modernizer on DOM load
-    if (manifestData.theme?.cssVariables) {
-      applyThemeGlobally(manifestData.theme.cssVariables, manifestData.theme.customStyles, manifestData.theme.noticeSelector);
-    }
+    const cssTextData = manifestData.theme?.customStyles || '';
+    const userOverrides = res.spm_theme_overrides?.[domain] || {};
+    const cssVars = { ...(manifestData.theme?.cssVariables || {}), ...userOverrides };
+
+    // 5. Run early global styles and mount modernizer on DOM load
+    applyThemeGlobally(cssVars, cssTextData, manifestData.theme?.noticeSelector);
 
     const runEngine = () => {
       if (!hasRunModernizer) {
@@ -188,4 +182,5 @@ async function init() {
 
 init().catch(err => {
   console.error('[SPM] Initialization failed:', err);
+  revealPage();
 });
