@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
+import { updateShadowStyleTags } from '../src/content/index.iife';
 
 describe('Hot Reloading and WebSocket Error handling', () => {
   beforeEach(() => {
@@ -9,6 +10,7 @@ describe('Hot Reloading and WebSocket Error handling', () => {
 
   it('should update shadow root style tags correctly for :host and general styles', () => {
     const host = document.createElement('div');
+    host.className = 'modern-host-test';
     document.body.appendChild(host);
     const shadowRoot = host.attachShadow({ mode: 'open' });
 
@@ -24,14 +26,7 @@ describe('Hot Reloading and WebSocket Error handling', () => {
     const newCss = 'body { color: blue; }';
     const stylesText = '/* base */';
 
-    const styleTags = shadowRoot.querySelectorAll('style');
-    styleTags.forEach((styleTag) => {
-      if (styleTag.textContent && styleTag.textContent.includes(':host')) {
-        styleTag.textContent = `:host {\n${cssVarsString}\n}`;
-      } else {
-        styleTag.textContent = stylesText + '\n' + newCss;
-      }
-    });
+    updateShadowStyleTags(cssVarsString, newCss, stylesText);
 
     expect(hostStyle.textContent).toContain('--spm-bg-primary: #fff;');
     expect(mainStyle.textContent).toBe('/* base */\nbody { color: blue; }');

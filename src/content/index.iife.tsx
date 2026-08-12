@@ -12,26 +12,25 @@ declare global {
   }
 }
 
-function updateShadowStyleTags(container: Document | ShadowRoot, cssVarsString: string, newCss: string) {
-  const elements = container.querySelectorAll('*');
-  elements.forEach((el) => {
-    if (el.shadowRoot) {
-      const styleTags = el.shadowRoot.querySelectorAll('style');
+export function updateShadowStyleTags(cssVarsString: string, newCss: string, stylesTextVal = '') {
+  const hosts = document.querySelectorAll('[class^="modern-reconstruct-host-"], [class^="modern-host-"], #spm-global-toast-host');
+  hosts.forEach((host) => {
+    if (host.shadowRoot) {
+      const styleTags = host.shadowRoot.querySelectorAll('style');
       let hasHostStyle = false;
       styleTags.forEach((styleTag) => {
         if (styleTag.textContent && styleTag.textContent.includes(':host')) {
           styleTag.textContent = `:host {\n${cssVarsString}\n}`;
           hasHostStyle = true;
         } else {
-          styleTag.textContent = stylesText + '\n' + newCss;
+          styleTag.textContent = stylesTextVal + '\n' + newCss;
         }
       });
       if (!hasHostStyle && cssVarsString) {
         const hostStyle = document.createElement('style');
         hostStyle.textContent = `:host {\n${cssVarsString}\n}`;
-        el.shadowRoot.appendChild(hostStyle);
+        host.shadowRoot.appendChild(hostStyle);
       }
-      updateShadowStyleTags(el.shadowRoot, cssVarsString, newCss);
     }
   });
 }
@@ -143,7 +142,6 @@ async function init() {
 
                 if (layoutChanged) {
                   console.log('[SPM] Layout structure changed or first load, reloading page...');
-                  window.__spm_last_manifest = data.manifest;
                   window.location.reload();
                   return;
                 }
@@ -161,7 +159,7 @@ async function init() {
                     .map(([key, val]) => `${key}: ${val};`)
                     .join('\n');
 
-                  updateShadowStyleTags(document, cssVarsString, data.css || '');
+                  updateShadowStyleTags(cssVarsString, data.css || '', stylesText);
                 });
               });
             } catch (err) {
