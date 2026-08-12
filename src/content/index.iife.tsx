@@ -85,7 +85,7 @@ async function init() {
 
         // 3. Dev Mode is off: resolve theme and version from edge Worker / pinned storage
         let pinnedPkg = res[`spm_pinned_package:${domain}`] || res.spm_active_packages?.[domain];
-        let pinnedVer = (pinnedPkg && res.spm_pinned_versions?.[domain]?.[pinnedPkg]) || res[`spm_pinned_version:${domain}`];
+        let pinnedVer = (pinnedPkg && res.spm_pinned_versions?.[domain]?.[pinnedPkg]) || (!pinnedPkg ? res[`spm_pinned_version:${domain}`] : undefined);
 
         let themeName = pinnedPkg;
         let version = pinnedVer;
