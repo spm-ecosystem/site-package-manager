@@ -3,6 +3,9 @@ import { extractValue, revealPage } from './engine';
 import { COMPONENT_REGISTRY } from '../components/registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
 
+const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
+
+
 export interface ChildrenConfig {
   name: string;
   selector: string;
@@ -454,7 +457,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 }
 
 export async function fetchThemeFiles(domain: string, themeName: string, version: string) {
-  const url = `https://spm.hexacloud.net.br/spm/v1/api/themes/${domain}/${themeName}/${version}`;
+  const url = `${WORKER_ORIGIN}/spm/v1/api/themes/${domain}/${themeName}/${version}`;
   console.log(`[SPM] Fetching theme manifest from Worker: ${url}`);
   const res = await fetch(url);
   if (!res.ok) {

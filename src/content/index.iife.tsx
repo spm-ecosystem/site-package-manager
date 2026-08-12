@@ -2,6 +2,8 @@ import { runModernizer, applyThemeGlobally, fetchThemeFiles, SiteManifest } from
 import stylesText from './content.css?inline';
 import { revealPage } from './engine';
 
+const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
+
 let hasRunModernizer = false;
 
 async function init() {
@@ -24,159 +26,183 @@ async function init() {
     'spm_theme_overrides'
   ];
 
-  chrome.storage.local.get(storageKeys, async (res) => {
-    const globalEnabled = res.spm_global_enabled !== false;
-    if (!globalEnabled) {
-      console.log('[SPM] Global enabled is false. Aborting modernizer.');
-      revealPage();
-      return;
-    }
+  await new Promise<void>((resolve, reject) => {
+    chrome.storage.local.get(storageKeys, async (res) => {
+      try {
+        const globalEnabled = res.spm_global_enabled !== false;
+        if (!globalEnabled) {
+          console.log('[SPM] Global enabled is false. Aborting modernizer.');
+          revealPage();
+          resolve();
+          return;
+        }
 
-    // 2. Check Dev Mode draft bypass
-    const isDevMode = res.spm_dev_mode === true || (res.spm_dev_mode && res.spm_dev_mode[domain] === true);
-    if (isDevMode) {
-      const devManifestRaw = res[`dev-draft-manifest:${domain}`];
-      if (devManifestRaw) {
-        try {
-          const devManifest: SiteManifest = typeof devManifestRaw === 'string'
-            ? JSON.parse(devManifestRaw)
-            : devManifestRaw;
-          const devCss = res[`dev-draft-css:${domain}`] || devManifest.theme?.customStyles || '';
+        // 2. Check Dev Mode draft bypass
+        const isDevMode = res.spm_dev_mode === true || (res.spm_dev_mode && res.spm_dev_mode[domain] === true);
+        if (isDevMode) {
+          const devManifestRaw = res[`dev-draft-manifest:${domain}`];
+          if (devManifestRaw) {
+            try {
+              const devManifest: SiteManifest = typeof devManifestRaw === 'string'
+                ? JSON.parse(devManifestRaw)
+                : devManifestRaw;
+              const devCss = res[`dev-draft-css:${domain}`] || devManifest.theme?.customStyles || '';
 
-          console.log('[SPM] Dev Mode active. Applying draft changes for:', domain);
+              console.log('[SPM] Dev Mode active. Applying draft changes for:', domain);
 
-          const userOverrides = res.spm_theme_overrides?.[domain] || {};
-          const cssVars = { ...(devManifest.theme?.cssVariables || {}), ...userOverrides };
+              const userOverrides = res.spm_theme_overrides?.[domain] || {};
+              const cssVars = { ...(devManifest.theme?.cssVariables || {}), ...userOverrides };
 
-          applyThemeGlobally(cssVars, devCss, devManifest.theme?.noticeSelector);
+              applyThemeGlobally(cssVars, devCss, devManifest.theme?.noticeSelector);
 
-          const runDevEngine = () => {
-            if (!hasRunModernizer) {
-              hasRunModernizer = true;
-              runModernizer(document, devManifest, stylesText, devCss);
+              devManifest.theme = {
+                ...devManifest.theme,
+                cssVariables: cssVars
+              };
+
+              const runDevEngine = () => {
+                if (!hasRunModernizer) {
+                  hasRunModernizer = true;
+                  runModernizer(document, devManifest, stylesText, devCss);
+                }
+              };
+
+              if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', runDevEngine);
+              } else {
+                runDevEngine();
+              }
+              resolve();
+              return;
+            } catch (err) {
+              console.error('[SPM] Error loading Dev Mode draft files:', err);
+              revealPage();
+              resolve();
+              return;
             }
-          };
-
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', runDevEngine);
-          } else {
-            runDevEngine();
           }
-          return;
-        } catch (err) {
-          console.error('[SPM] Error loading Dev Mode draft files:', err);
         }
-      }
-    }
 
-    // 3. Dev Mode is off: resolve theme and version from edge Worker / pinned storage
-    let pinnedPkg = res[`spm_pinned_package:${domain}`] || res.spm_active_packages?.[domain];
-    let pinnedVer = res[`spm_pinned_version:${domain}`];
-    if (!pinnedVer && pinnedPkg && res.spm_pinned_versions?.[domain]?.[pinnedPkg]) {
-      pinnedVer = res.spm_pinned_versions[domain][pinnedPkg];
-    }
+        // 3. Dev Mode is off: resolve theme and version from edge Worker / pinned storage
+        let pinnedPkg = res[`spm_pinned_package:${domain}`] || res.spm_active_packages?.[domain];
+        let pinnedVer = (pinnedPkg && res.spm_pinned_versions?.[domain]?.[pinnedPkg]) || res[`spm_pinned_version:${domain}`];
 
-    let themeName = pinnedPkg;
-    let version = pinnedVer;
+        let themeName = pinnedPkg;
+        let version = pinnedVer;
 
-    // If package or version is missing, fetch available themes for domain from Worker
-    if (!themeName || !version) {
-      try {
-        const listRes = await fetch(`https://spm.hexacloud.net.br/spm/v1/api/themes/${domain}`);
-        if (!listRes.ok) {
-          console.log('[SPM] Domain has no registered themes or fetch failed:', domain);
+        // If package or version is missing, fetch available themes for domain from Worker
+        if (!themeName || !version) {
+          try {
+            const listRes = await fetch(`${WORKER_ORIGIN}/spm/v1/api/themes/${domain}`);
+            if (!listRes.ok) {
+              console.log('[SPM] Domain has no registered themes or fetch failed:', domain);
+              revealPage();
+              resolve();
+              return;
+            }
+            const listData = await listRes.json();
+            const themesList: Array<{ key: string, label: string, version: string, timestamp?: string }> = listData?.themes || [];
+            if (themesList.length === 0) {
+              console.log('[SPM] No themes returned for domain:', domain);
+              revealPage();
+              resolve();
+              return;
+            }
+
+            // Determine themeName
+            if (!themeName) {
+              const firstKey = themesList[0].key || '';
+              const parts = firstKey.split('/');
+              themeName = parts.length >= 3 ? parts[2] : (firstKey || 'default');
+            }
+
+            // Determine version for themeName
+            if (!version) {
+              const matchingThemes = themesList.filter(t => {
+                const parts = (t.key || '').split('/');
+                const name = parts.length >= 3 ? parts[2] : t.key;
+                return name === themeName;
+              });
+              const target = matchingThemes.length > 0 ? matchingThemes[matchingThemes.length - 1] : themesList[0];
+              version = target?.version;
+            }
+          } catch (err) {
+            console.error('[SPM] Error querying themes list from edge:', err);
+            revealPage();
+            resolve();
+            return;
+          }
+        }
+
+        if (!themeName || !version) {
+          console.error('[SPM] Could not resolve active theme or version for:', domain);
           revealPage();
-          return;
-        }
-        const listData = await listRes.json();
-        const themesList: Array<{ key: string, label: string, version: string, timestamp?: string }> = listData?.themes || [];
-        if (themesList.length === 0) {
-          console.log('[SPM] No themes returned for domain:', domain);
-          revealPage();
+          resolve();
           return;
         }
 
-        // Determine themeName
-        if (!themeName) {
-          const firstKey = themesList[0].key || '';
-          const parts = firstKey.split('/');
-          themeName = parts.length >= 3 ? parts[2] : (firstKey || 'default');
+        // 4. Fetch manifest JSON from edge Worker (with local caching)
+        const manifestCacheKey = `theme_manifest:${domain}:${themeName}:${version}`;
+        const cacheTimeKey = `theme_cache_time:${domain}:${themeName}:${version}`;
+
+        const cachedManifest = res[manifestCacheKey];
+        const cachedTime = res[cacheTimeKey] || 0;
+        const isCacheValid = cachedManifest && cachedTime && (Date.now() - cachedTime < 3600000);
+
+        let manifestData: SiteManifest = cachedManifest;
+
+        if (!isCacheValid) {
+          try {
+            console.log(`[SPM] Fetching theme ${themeName}@${version} from edge Worker...`);
+            const fetched = await fetchThemeFiles(domain, themeName, version);
+            manifestData = fetched.manifest;
+
+            // Save to cache
+            const cacheUpdate: Record<string, any> = {};
+            cacheUpdate[manifestCacheKey] = manifestData;
+            cacheUpdate[cacheTimeKey] = Date.now();
+            chrome.storage.local.set(cacheUpdate);
+          } catch (err) {
+            console.error('[SPM] Failed to fetch theme manifest from edge Worker:', err);
+            if (!manifestData) {
+              console.error('[SPM] No cached manifest available as fallback. Aborting.');
+              revealPage();
+              resolve();
+              return;
+            }
+            console.log('[SPM] Using stale cached theme manifest fallback.');
+          }
         }
 
-        // Determine version for themeName
-        if (!version) {
-          const matchingThemes = themesList.filter(t => {
-            const parts = (t.key || '').split('/');
-            const name = parts.length >= 3 ? parts[2] : t.key;
-            return name === themeName;
-          });
-          const target = matchingThemes.length > 0 ? matchingThemes[matchingThemes.length - 1] : themesList[0];
-          version = target?.version;
+        const cssTextData = manifestData.theme?.customStyles || '';
+        const userOverrides = res.spm_theme_overrides?.[domain] || {};
+        const cssVars = { ...(manifestData.theme?.cssVariables || {}), ...userOverrides };
+
+        // 5. Run early global styles and mount modernizer on DOM load
+        applyThemeGlobally(cssVars, cssTextData, manifestData.theme?.noticeSelector);
+
+        manifestData.theme = {
+          ...manifestData.theme,
+          cssVariables: cssVars
+        };
+
+        const runEngine = () => {
+          if (!hasRunModernizer) {
+            hasRunModernizer = true;
+            runModernizer(document, manifestData, stylesText, cssTextData);
+          }
+        };
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', runEngine);
+        } else {
+          runEngine();
         }
+        resolve();
       } catch (err) {
-        console.error('[SPM] Error querying themes list from edge:', err);
-        revealPage();
-        return;
+        reject(err);
       }
-    }
-
-    if (!themeName || !version) {
-      console.error('[SPM] Could not resolve active theme or version for:', domain);
-      revealPage();
-      return;
-    }
-
-    // 4. Fetch manifest JSON from edge Worker (with local caching)
-    const manifestCacheKey = `theme_manifest:${domain}:${themeName}:${version}`;
-    const cacheTimeKey = `theme_cache_time:${domain}:${themeName}:${version}`;
-
-    const cachedManifest = res[manifestCacheKey];
-    const cachedTime = res[cacheTimeKey] || 0;
-    const isCacheValid = cachedManifest && cachedTime && (Date.now() - cachedTime < 3600000);
-
-    let manifestData: SiteManifest = cachedManifest;
-
-    if (!isCacheValid) {
-      try {
-        console.log(`[SPM] Fetching theme ${themeName}@${version} from edge Worker...`);
-        const fetched = await fetchThemeFiles(domain, themeName, version);
-        manifestData = fetched.manifest;
-
-        // Save to cache
-        const cacheUpdate: Record<string, any> = {};
-        cacheUpdate[manifestCacheKey] = manifestData;
-        cacheUpdate[cacheTimeKey] = Date.now();
-        chrome.storage.local.set(cacheUpdate);
-      } catch (err) {
-        console.error('[SPM] Failed to fetch theme manifest from edge Worker:', err);
-        if (!manifestData) {
-          console.error('[SPM] No cached manifest available as fallback. Aborting.');
-          revealPage();
-          return;
-        }
-        console.log('[SPM] Using stale cached theme manifest fallback.');
-      }
-    }
-
-    const cssTextData = manifestData.theme?.customStyles || '';
-    const userOverrides = res.spm_theme_overrides?.[domain] || {};
-    const cssVars = { ...(manifestData.theme?.cssVariables || {}), ...userOverrides };
-
-    // 5. Run early global styles and mount modernizer on DOM load
-    applyThemeGlobally(cssVars, cssTextData, manifestData.theme?.noticeSelector);
-
-    const runEngine = () => {
-      if (!hasRunModernizer) {
-        hasRunModernizer = true;
-        runModernizer(document, manifestData, stylesText, cssTextData);
-      }
-    };
-
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', runEngine);
-    } else {
-      runEngine();
-    }
+    });
   });
 }
 

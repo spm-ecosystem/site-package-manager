@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../content/content.css';
 
+const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
+
+
 
 export interface ThemeVariable {
   key: string;
@@ -26,6 +29,8 @@ function Popup() {
   const [activeTabId, setActiveTabId]       = useState<number | undefined>(undefined);
   const [activeTab, setActiveTab]           = useState<'theme' | 'colors'>('theme');
   const [themeVars, setThemeVars]           = useState<Record<string, string>>({});
+  const [defaultThemeVars, setDefaultThemeVars] = useState<Record<string, string>>({});
+
 
   // Reconstructed registry and preferences
   const [registry, setRegistry] = useState<Record<string, any>>({});
@@ -50,7 +55,7 @@ function Popup() {
             // 1. Fetch available themes from R2 Worker
             let reconstructedRegistry: Record<string, any> = {};
             try {
-              const workerRes = await fetch(`https://spm.hexacloud.net.br/spm/v1/api/themes/${domain}`);
+              const workerRes = await fetch(`${WORKER_ORIGIN}/spm/v1/api/themes/${domain}`);
               if (workerRes.ok) {
                 const data = await workerRes.json();
                 if (data && data.themes && Array.isArray(data.themes) && data.themes.length > 0) {
@@ -250,7 +255,7 @@ function Popup() {
   };
 
   const resetColors = () => {
-    setThemeVars({});
+    setThemeVars(defaultThemeVars);
     if (typeof chrome !== 'undefined' && chrome.storage) {
       chrome.storage.local.get(['spm_theme_overrides'], (res) => {
         const overrides = res.spm_theme_overrides || {};
@@ -269,6 +274,47 @@ function Popup() {
   const versionHistory = pkgInfo?.history || [];
   const pinnedVersion = spmPinnedVersions[currentDomain]?.[activePackageId] || pkgInfo?.activeVersion || '';
   const isDevMode = !!spmDevModeHosts[currentDomain];
+
+  useEffect(() => {
+    if (!currentDomain || !activePackageId || !pinnedVersion) return;
+
+    let isMounted = true;
+    async function loadActiveManifestVars() {
+      try {
+        const url = `${WORKER_ORIGIN}/spm/v1/api/themes/${currentDomain}/${activePackageId}/${pinnedVersion}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const manifest = await res.json();
+          const defaultVars = manifest.theme?.cssVariables || {};
+
+          if (isMounted) {
+            setDefaultThemeVars(defaultVars);
+          }
+
+          if (typeof chrome !== 'undefined' && chrome.storage) {
+            chrome.storage.local.get(['spm_theme_overrides'], (storageRes) => {
+              if (!isMounted) return;
+              const overrides = storageRes.spm_theme_overrides?.[currentDomain] || {};
+              setThemeVars({ ...defaultVars, ...overrides });
+            });
+          } else {
+            if (isMounted) {
+              setThemeVars(defaultVars);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[SPM Popup] Error fetching active theme manifest:', err);
+      }
+    }
+
+    loadActiveManifestVars();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentDomain, activePackageId, pinnedVersion]);
+
 
   const devDraftParsed = (() => {
     if (!devDraftManifestRaw) return null;
