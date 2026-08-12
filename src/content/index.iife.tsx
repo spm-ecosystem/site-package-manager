@@ -6,6 +6,36 @@ const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
 let hasRunModernizer = false;
 
+declare global {
+  interface Window {
+    __spm_last_manifest?: SiteManifest;
+  }
+}
+
+function updateShadowStyleTags(container: Document | ShadowRoot, cssVarsString: string, newCss: string) {
+  const elements = container.querySelectorAll('*');
+  elements.forEach((el) => {
+    if (el.shadowRoot) {
+      const styleTags = el.shadowRoot.querySelectorAll('style');
+      let hasHostStyle = false;
+      styleTags.forEach((styleTag) => {
+        if (styleTag.textContent && styleTag.textContent.includes(':host')) {
+          styleTag.textContent = `:host {\n${cssVarsString}\n}`;
+          hasHostStyle = true;
+        } else {
+          styleTag.textContent = stylesText + '\n' + newCss;
+        }
+      });
+      if (!hasHostStyle && cssVarsString) {
+        const hostStyle = document.createElement('style');
+        hostStyle.textContent = `:host {\n${cssVarsString}\n}`;
+        el.shadowRoot.appendChild(hostStyle);
+      }
+      updateShadowStyleTags(el.shadowRoot, cssVarsString, newCss);
+    }
+  });
+}
+
 async function init() {
   if (typeof chrome === 'undefined' || !chrome.storage) {
     return;
@@ -60,6 +90,8 @@ async function init() {
                 cssVariables: cssVars
               };
 
+              window.__spm_last_manifest = devManifest;
+
               const runDevEngine = () => {
                 if (!hasRunModernizer) {
                   hasRunModernizer = true;
@@ -78,32 +110,72 @@ async function init() {
           }
 
           console.log('[SPM] Dev Mode active. Opening WebSocket connection to dev server...');
+
+          let wsOpened = false;
+          const wsTimeout = setTimeout(() => {
+            if (!wsOpened && !devManifestRaw) {
+              revealPage();
+            }
+          }, 2000);
+
           const ws = new WebSocket('ws://localhost:8080');
+
+          ws.onopen = () => {
+            wsOpened = true;
+            clearTimeout(wsTimeout);
+            console.log('[SPM] WebSocket connection opened.');
+          };
+
           ws.onmessage = (event) => {
             try {
               const data = JSON.parse(event.data);
               console.log('[SPM] Dev Server update received:', data);
-              
+
               // Save to local storage for persistence on next load
               chrome.storage.local.set({
                 [`dev-draft-manifest:${domain}`]: JSON.stringify(data.manifest),
                 [`dev-draft-css:${domain}`]: data.css
+              }, () => {
+                const lastManifest = window.__spm_last_manifest;
+                const layoutChanged = !lastManifest ||
+                  JSON.stringify(data.manifest?.components || []) !== JSON.stringify(lastManifest?.components || []) ||
+                  JSON.stringify(data.manifest?.reconstructs || []) !== JSON.stringify(lastManifest?.reconstructs || []);
+
+                if (layoutChanged) {
+                  console.log('[SPM] Layout structure changed or first load, reloading page...');
+                  window.__spm_last_manifest = data.manifest;
+                  window.location.reload();
+                  return;
+                }
+
+                // Only styles or variables changed: dynamic hot-reload
+                window.__spm_last_manifest = data.manifest;
+
+                chrome.storage.local.get(['spm_theme_overrides'], (storageRes) => {
+                  const userOverrides = storageRes.spm_theme_overrides?.[domain] || {};
+                  const cssVars = { ...(data.manifest?.theme?.cssVariables || {}), ...userOverrides };
+
+                  applyThemeGlobally(cssVars, data.css, data.manifest?.theme?.noticeSelector);
+
+                  const cssVarsString = Object.entries(cssVars)
+                    .map(([key, val]) => `${key}: ${val};`)
+                    .join('\n');
+
+                  updateShadowStyleTags(document, cssVarsString, data.css || '');
+                });
               });
-              
-              const cssVars = { ...(data.manifest.theme?.cssVariables || {}) };
-              
-              // Apply theme modifications dynamically in real-time
-              applyThemeGlobally(cssVars, data.css, data.manifest.theme?.noticeSelector);
-              runModernizer(document, data.manifest, stylesText, data.css);
             } catch (err) {
               console.error('[SPM] Error processing WebSocket message:', err);
             }
           };
-          
+
           ws.onerror = (err) => {
             console.warn('[SPM] WebSocket connection error (is dev server running?):', err);
+            if (!devManifestRaw) {
+              revealPage();
+            }
           };
-          
+
           ws.onclose = () => {
             console.log('[SPM] WebSocket connection closed.');
           };
@@ -218,6 +290,8 @@ async function init() {
           cssVariables: cssVars
         };
 
+        window.__spm_last_manifest = manifestData;
+
         const runEngine = () => {
           if (!hasRunModernizer) {
             hasRunModernizer = true;
@@ -242,3 +316,4 @@ init().catch(err => {
   console.error('[SPM] Initialization failed:', err);
   revealPage();
 });
+
