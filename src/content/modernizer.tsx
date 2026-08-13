@@ -458,13 +458,30 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 }
 
 export async function fetchThemeFiles(domain: string, themeName: string, version: string) {
-  const url = `${WORKER_ORIGIN}/spm/v1/api/themes/${domain}/${themeName}/${version}`;
-  console.log(`[SPM] Fetching theme manifest from Worker: ${url}`);
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch theme manifest from ${url}: ${res.statusText}`);
+  const manifestUrl = `${WORKER_ORIGIN}/spm/v1/api/themes/${domain}/${themeName}/${version}/manifest.json`;
+  const cssUrl = `${WORKER_ORIGIN}/spm/v1/api/themes/${domain}/${themeName}/${version}/content.css`;
+
+  console.log(`[SPM] Fetching theme assets from Worker: manifest and css...`);
+
+  const [manifestRes, cssRes] = await Promise.all([
+    fetch(manifestUrl),
+    fetch(cssUrl)
+  ]);
+
+  if (!manifestRes.ok) {
+    throw new Error(`Failed to fetch theme manifest from ${manifestUrl}: ${manifestRes.statusText}`);
   }
-  const manifest: SiteManifest = await res.json();
-  const cssText = manifest.theme?.customStyles || '';
+
+  const manifest: SiteManifest = await manifestRes.json();
+  let cssText = '';
+  if (cssRes.ok) {
+    cssText = await cssRes.text();
+  }
+
+  if (!manifest.theme) {
+    manifest.theme = {};
+  }
+  manifest.theme.customStyles = cssText;
+
   return { manifest, cssText };
 }

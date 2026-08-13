@@ -356,7 +356,7 @@ function Popup() {
     let isMounted = true;
     async function loadActiveManifestVars() {
       try {
-        const url = `${WORKER_ORIGIN}/spm/v1/api/themes/${currentDomain}/${activePackageId}/${pinnedVersion}`;
+        const url = `${WORKER_ORIGIN}/spm/v1/api/themes/${currentDomain}/${activePackageId}/${pinnedVersion}/manifest.json`;
         const res = await fetch(url);
         if (res.ok) {
           const manifest = await res.json();
