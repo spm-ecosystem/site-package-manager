@@ -1,163 +1,328 @@
-# Veneer Spec Language Guide & Specification
+# Veneer Spec Language Reference Manual
 
-The Veneer Spec (`.vnr`) configuration language is a custom declarative DSL built specifically for the Site Package Manager (SPM). It eliminates the friction of writing large, verbose, and error-prone JSON configuration manifests by introducing structural semantics, strict class inheritance, raw string literal support, and a type-safe parser.
+The Veneer Spec (`.vnr`) configuration language is a custom declarative Domain Specific Language (DSL) built for the Site Package Manager (SPM) compiler. 
 
 ---
 
-## 1. Syntax & Keywords Reference
+## 1. Introduction & Rationale
+
+Traditionally, layout overrides and DOM modernization mappings in SPM were written directly as raw JSON files (`manifest.json`). However, as configuration complexity scales (with hundreds of properties, nested loops, data scraping selectors, and layout variables), writing raw JSON becomes extremely verbose, difficult to validate at write-time, and error-prone due to character escaping.
+
+Veneer Spec solves these issues by providing:
+1.  **Strong Typing and Semantic Syntax**: Structural keywords instead of generic JSON key-value pairs.
+2.  **Object-Oriented blue-printing (`class` / `extends`)**: Allows creating base layouts and inheriting selectors/bindings, removing duplication (DRY configuration).
+3.  **Raw String Literal Blocks**: Bypasses backslash escaping for regexes and pure JSON lists/tables.
+4.  **Static Validation and Compiler Diagnostics**: Resolves inheritance paths, detects circular dependencies, checks type compatibility, and reports exact syntax error lines before compiling.
+
+---
+
+## 2. Core Concepts & Mental Model
+
+### The Layout Override Paradigm
+SPM works by intercepting the legacy site's HTML, hiding targeted sections, and injecting modern React views. The Veneer DSL defines **what** parts of the page to target, **which** React component to mount, and **how** to extract unstructured data from the legacy DOM to populate the React component's props.
+
+### Scraping Mappings & Bindings
+A key concept of the Veneer Spec is the declarative binding of HTML nodes to component props using the extraction syntax:
+
+$$\text{Selector} \quad | \quad \text{Operation}$$
+
+The Veneer engine evaluates this query at runtime against the page structure, scraping text content, attributes, or raw HTML, and feeding it dynamically as parameters into the React UI host.
+
+---
+
+## 3. Keyword-by-Keyword Reference
 
 ### `theme`
-Defines the main metadata, visual variables, and global CSS styles for a website package.
-```scss
-theme "ModernDark" {
-    variables {
-        --spm-accent: "#7c6af5";
-        --spm-bg-primary: "#000000";
-        --spm-bg-secondary: "#111111";
-        --spm-text-primary: "#ffffff";
+The `theme` block defines the metadata, visual design tokens (CSS custom properties), and raw CSS stylesheet modifications injected into the global document scope.
+
+*   **Role**: Groups styling tokens and global page overrides under a single visual label.
+*   **Rules**:
+    *   Only one `theme` block is allowed per compiled project.
+    *   Variables are defined inside the `variables` sub-block and compile to the manifest's `"cssVariables"`.
+    *   Custom stylesheet rules are defined under `customStyles: "<raw-css>";`.
+*   **Syntax**:
+    ```scss
+    theme "ModernDark" {
+        variables {
+            --spm-accent: "#7c6af5";
+            --spm-bg-primary: "#000000";
+        }
+        customStyles: "#advertisement-banner { display: none !important; }";
     }
-    customStyles: "#advertisement-banner { display: none !important; }";
-}
-```
+    ```
+*   **Compiled Output**:
+    ```json
+    "theme": {
+      "label": "ModernDark",
+      "cssVariables": {
+        "--spm-accent": "#7c6af5",
+        "--spm-bg-primary": "#000000"
+      },
+      "customStyles": "#advertisement-banner { display: none !important; }"
+    }
+    ```
+
+---
 
 ### `class` & `extends`
-Classes allow you to define reuse contracts for child nodes. A class can extend another class, inheriting all its bindings, scope, and selectors, and overriding them when needed.
-```scss
-class LinkBase {
-    bind label: "self | text";
-    bind url: "self | attr:href";
-}
+Classes act as blueprints defining reusable data extraction fields and scopes.
 
-class DocumentLink extends LinkBase {
-    scope: "document";
-}
-```
+*   **Role**: Simplifies the declaration of repetitive structures (like list item cards, buttons, or navigation links) by letting child nodes inherit and override properties.
+*   **Rules**:
+    *   Classes are resolved at compile-time and are completely omitted from the final JSON output (zero runtime cost).
+    *   A class can inherit properties from a parent class using the `extends` keyword.
+    *   If a property or binding is declared in both the child and parent, the child's value overrides the parent's.
+*   **Syntax**:
+    ```scss
+    class LinkBase {
+        bind label: "self | text";
+        bind url: "self | attr:href";
+    }
 
-### `selector` & `action`
-Target and perform actions on individual elements. Typically used to hide ads or replace headers.
-```scss
-selector "#sub-navbar" {
-    action: hide;
-}
+    class DocumentLink extends LinkBase {
+        scope: "document";
+    }
+    ```
 
-selector "#search-input-box" -> UiSearchBar {
-    action: replace;
-    placeholder: "Search…";
-    submitUrl: "https://example.com/search";
-    queryParamName: "q";
-    bind defaultValue: "input[name='q'] | attr:value";
-}
-```
+---
+
+### `selector`
+A `selector` block targets an individual legacy element in the DOM to replace it with an isolated React component or hide it entirely.
+
+*   **Role**: Alters targeted, individual legacy elements (like headers, sidebars, or search bars) without replacing the whole page grid.
+*   **Rules**:
+    *   Must specify a target string representing the CSS selector of the legacy node.
+    *   Can map directly to a component using the arrow syntax: `selector "#element" -> UiComponent`.
+    *   Must contain an `action` key (either `hide` or `replace`).
+*   **Syntax**:
+    ```scss
+    selector "#sub-navbar" {
+        action: hide;
+    }
+
+    selector "#search-input" -> UiSearchBar {
+        action: replace;
+        placeholder: "Search…";
+        bind defaultValue: "input[name='q'] | attr:value";
+    }
+    ```
+*   **Compiled Output**:
+    ```json
+    "components": [
+      {
+        "selector": "#sub-navbar",
+        "action": "hide"
+      },
+      {
+        "selector": "#search-input",
+        "name": "UiSearchBar",
+        "action": "replace",
+        "props": {
+          "placeholder": "Search…"
+        },
+        "propsMap": {
+          "defaultValue": "input[name='q'] | attr:value"
+        }
+      }
+    ]
+    ```
+
+---
 
 ### `reconstruct`
-Transforms a large page container into a React layout component.
-```scss
-reconstruct "#gallery-container" -> UiGridPage {
-    urlPattern: "page=gallery";
-    pageTitle: "Gallery";
-    height: "calc(100vh - 80px)";
-}
-```
+Transforms a large page container (like a full catalog feed, comment board, or landing page) into a modern React view mounted inside an isolated Shadow DOM host.
 
-### `preserve`
-Prevents specific legacy DOM components from being destroyed, reparenting them inside the new React layout.
-```scss
-reconstruct "#item-view" -> UiItemDetailsPage {
-    preserve {
-        sidebarSlot: ".sidebar"; // Reparents .sidebar into the React sidebarSlot
+*   **Role**: Performs full-viewport page overrides.
+*   **Rules**:
+    *   Targets a container using a CSS selector (which gets its legacy children hidden at injection).
+    *   Maps to a React layout component using the arrow syntax: `reconstruct "#container" -> LayoutComponent`.
+    *   Can configure constraints like `urlPattern` or `mediaQuery` so the layout only mounts on specific pages or device breakpoints.
+*   **Syntax**:
+    ```scss
+    reconstruct "#gallery" -> UiGridPage {
+        urlPattern: "page=gallery";
+        pageTitle: "Catalog Gallery";
     }
-}
-```
+    ```
+*   **Compiled Output**:
+    ```json
+    "reconstructs": [
+      {
+        "containerSelector": "#gallery",
+        "layoutComponent": "UiGridPage",
+        "urlPattern": "page=gallery",
+        "props": {
+          "pageTitle": "Catalog Gallery"
+        }
+      }
+    ]
+    ```
+
+---
 
 ### `child`
-Defines a nested data extraction rule. The compiler processes this as a property array passed to the parent component.
-```scss
-reconstruct "#gallery-container" -> UiGridPage {
-    child items {
-        selector: "#gallery-container .item";
-        bind imageUrl: "img | attr:src";
-        bind linkUrl: "a | attr:href";
+Defines a nested data array scraped from matching legacy elements inside the page.
+
+*   **Role**: Creates list arrays (like item grids, comments, tags, or nav lists) and sends them to the parent React layout as a prop array.
+*   **Rules**:
+    *   Declares a name that maps to the prop array key on the layout component (e.g. `child items` defines the `items` prop array).
+    *   Can extend a class to inherit pre-configured bindings.
+    *   Must specify a `selector` indicating which elements inside the container represent the list items.
+*   **Syntax**:
+    ```scss
+    reconstruct "#gallery" -> UiGridPage {
+        child items {
+            selector: "#gallery .item-card";
+            bind id: "self | attr:id";
+            bind imageUrl: "img | attr:src";
+        }
     }
-}
-```
+    ```
+*   **Compiled Output**:
+    ```json
+    "reconstructs": [
+      {
+        "containerSelector": "#gallery",
+        "layoutComponent": "UiGridPage",
+        "children": [
+          {
+            "name": "items",
+            "selector": "#gallery .item-card",
+            "propsMap": {
+              "id": "self | attr:id",
+              "imageUrl": "img | attr:src"
+            }
+          }
+        ]
+      }
+    ]
+    ```
+
+---
 
 ### `bind`
-Maps properties of a child element or component dynamically using extraction rules from the legacy HTML page.
-```scss
-bind count: "span.count-badge | text";
-```
+Sets up dynamic scraping instructions. 
+
+*   **Role**: Tells the engine how to extract a property value from the matched element's DOM at runtime.
+*   **Rules**:
+    *   Follows the pattern `bind <prop-name>: "<selector> | <operation>";`.
+    *   Compiles into the `"propsMap"` object of the target manifest item.
+*   **Syntax**:
+    ```scss
+    bind title: "h2 | text";
+    bind logoUrl: "img.brand | attr:src";
+    ```
+*   **Compiled Output**:
+    ```json
+    "propsMap": {
+      "title": "h2 | text",
+      "logoUrl": "img.brand | attr:src"
+    }
+    ```
+
+---
+
+### `preserve`
+Prevents specific interactive elements (like a legacy comment form or complex sidebar) from being hidden, reparenting them inside dedicated slot templates in the modern React Shadow DOM.
+
+*   **Role**: Links legacy interactive DOM structures into the new modern React layout without breaking their event handlers, cookies, or states.
+*   **Rules**:
+    *   Maps a React layout slot name (e.g. `sidebarSlot`) to the legacy element CSS selector (e.g. `.sidebar`).
+    *   Compiles into the `"preserve"` block of the target manifest reconstruct.
+*   **Syntax**:
+    ```scss
+    reconstruct "#item-view" -> UiItemDetailsPage {
+        preserve {
+            sidebarSlot: ".sidebar";
+        }
+    }
+    ```
+*   **Compiled Output**:
+    ```json
+    "reconstructs": [
+      {
+        "containerSelector": "#item-view",
+        "layoutComponent": "UiItemDetailsPage",
+        "preserve": {
+          "sidebarSlot": ".sidebar"
+        }
+      }
+    ]
+    ```
+
+---
 
 ### `scope`
-Controls the query lookup container. Default is `"container"` (searches only within the parent component's DOM container). Set to `"document"` to run queries from the global root document (useful for pagination or headers outside the main layout container).
-```scss
-child pageLinks {
-    scope: "document";
-    selector: "#paginator .pagination a";
-}
-```
+Configures the boundary limits of the CSS selector query.
+
+*   **Role**: Tells the runtime engine whether it should search for elements only within the container element's boundary (`scope: "container"`) or search the entire page (`scope: "document"`).
+*   **Rules**:
+    *   The default scope is `"container"` (meaning selectors inside child nodes only query descendants of the parent reconstruct container).
+    *   Setting `scope: "document";` is useful for items like global pagination elements or secondary search bars located outside the main layout container.
+    *   If `"container"` is configured, the compiler omits the key in the compiled output to keep the JSON clean.
+*   **Syntax**:
+    ```scss
+    child pageLinks {
+        scope: "document";
+        selector: "#paginator .pagination a";
+    }
+    ```
+*   **Compiled Output**:
+    ```json
+    "children": [
+      {
+        "name": "pageLinks",
+        "selector": "#paginator .pagination a",
+        "scope": "document"
+      }
+    ]
+    ```
 
 ---
 
-## 2. Raw String Literals
+## 4. Delimiters & Type Rules
 
-To prevent syntax noise and backslash escaping for regular expressions or inline JSON configurations (like grid column structures or navigation links), the compiler supports raw C++ string literals:
+### Raw String Literals: `R"delim(content)delim"`
+In standard string literal syntax, special characters like backslashes (`\`) or double quotes (`"`) must be escaped (e.g. `"\\w+"` or `"\"value\""`). This makes regex rules and complex JSON configurations difficult to read.
 
-$$\text{R"delim(content)delim"}$$
+Veneer Spec supports C++ style **Raw String Literals**, which treat everything inside `R"delim(...)delim"` as a raw, unescaped string.
+*   **Usage**: Recommended for compiling regular expressions (like `urlPattern`) and inline JSON blocks (like table `columns` or array data sets).
+*   **Syntax**:
+    ```scss
+    urlPattern: R"(example\.com\/?(?:index\.html)?$)";
+    
+    columns: R"([
+      { "key": "id", "header": "ID", "width": "50px" },
+      { "key": "name", "header": "Item Title", "type": "text" }
+    ])";
+    ```
 
-### Examples
-
-**A. Regex Patterns without Backslash Escaping:**
-Instead of writing `"example\\.com\\\\/?(?:index\\.html)?$"` (which requires double escaping in JSON), you write:
-```scss
-urlPattern: R"(example\.com\/?(?:index\.html)?$)";
-```
-
-**B. Inline Complex Column Configurations:**
-Instead of encoding arrays as strings, use raw string blocks to pass pure JSON payloads:
-```scss
-columns: R"([
-  { "key": "pending", "header": "Pending", "width": "60px", "type": "checkbox" },
-  { "key": "aliasName", "header": "Alias", "type": "link", "urlKey": "aliasUrl" },
-  { "key": "toName", "header": "To Tag", "type": "link", "urlKey": "toUrl" }
-])";
-```
+### Implicit JSON Type Deserialization
+When emitting properties to the manifest JSON, the compiler automatically runs a deserialization check on all values:
+- If a value represents a valid JSON type (a number `3`, a boolean `true`, an array `[...]`, or an object `{...}`), it parses and emits it as a **native JSON type** instead of a string.
+- If it fails parsing (like `"280px"`), it is emitted as a standard string.
 
 ---
 
-## 3. Advanced Compiler Features
+## 5. Advanced Workspace Features
 
-### Recursive Nested Children
-The compiler supports arbitrary nesting of `child` nodes within parent `child` blocks.
-- **Resolver**: Inheritance is recursively applied down the child chain.
-- **Emitter**: Serializes nested objects inside a `"children"` array attribute of the child node.
-This is heavily used to represent deep structural layouts like threaded comment trees (`threads` containing `tags` and `comments` arrays).
+### Workspace directory compilation
+When executing `spm compile <directory_path> -o manifest.json`, the compiler recursively searches all `.vnr` files under the target path, concatenates their source contents, and resolves class blueprints globally. This lets you organize your spec files logically:
+- `classes.vnr`: Blueprint templates.
+- `theme.vnr`: Global branding variables.
+- `navigation.vnr`: Selective header/footer replacements.
+- `pages.vnr`: Full page reconstructions.
 
-### Workspace Compilation vs Single File Linting
-- **Directory Mode (`spm compile <dir> -o manifest.json`)**: Concatenates all `.vnr` files, registers all classes globally, and outputs the merged manifest layout.
-- **Sibling Class Autoloading (`spm compile <file.vnr> -o output.json`)**: When compiling a single `.vnr` file, the compiler automatically locates all sibling `.vnr` files in the same directory, parses their `class` definitions, and merges them into the resolver's inheritance graph. This allows you to compile or lint single files (e.g. `tables.vnr`) referencing classes declared in other files (e.g. `classes.vnr`) in absolute isolation without resolver failures.
-
----
-
-## 4. VS Code Developer Experience (IntelliSense)
-
-The VS Code extension `vscode-theme-manifest-intellisense` provides:
-
-1.  **Syntax Highlighting**: Real-time syntax coloring for keywords, CSS variables, operators, selectors, and raw string delimiters.
-2.  **Smart Autocomplete**:
-    *   Reconstruct Arrow Completion: Typing `->` suggests all layout components available in the SPM registry.
-    *   Contextual Property Suggestions: Inside a reconstruct block, it offers type-safe property names matching the component's TypeScript props contract.
-    *   Child Autocomplete: Nesting inside `child` blocks triggers property suggestions matching the list items (e.g. inside `child items` of `UiGridPage`, it suggests `imageUrl` and `linkUrl`).
-3.  **Background Diagnostics (Linter)**:
-    Whenever a `.vnr` file is modified, the extension executes the background linter. Any compiler parsing error or resolver validation error (like inheritance loops or undefined classes) is reflected directly as a red squiggly line in the editor at the exact line of the error.
+### Sibling Class Autoloading
+When compiling a single file (like `pages.vnr`), the compiler automatically inspects its directory context. If it detects that a class is referenced as a base but not declared in the current file, it loads and parses sibling `.vnr` files in the background to import their class blueprints. This resolves the classes automatically, allowing isolated background validation for syntax linters.
 
 ---
 
-## 5. Complete Theme: Agnostic Example
+## 6. Complete Theme: Agnostic Example
 
-Here is a complete modular layout structure for an agnostic website theme project.
+The following is a modular layout configuration for a generic catalog page.
 
-### 1. `classes.vnr`
-Declares shared schemas and scopes.
+### `classes.vnr`
 ```scss
 class StandardLink {
     bind label: "self | text";
@@ -177,8 +342,7 @@ class TagItem {
 }
 ```
 
-### 2. `theme.vnr`
-Defines visual custom properties and notices.
+### `theme.vnr`
 ```scss
 theme "ModernDark" {
     variables {
@@ -197,8 +361,7 @@ theme "ModernDark" {
 }
 ```
 
-### 3. `navigation.vnr`
-Defines standard header replacements and links.
+### `navigation.vnr`
 ```scss
 selector "#header-container, #navbar, header" -> UiNavHeader {
     action: replace;
@@ -239,8 +402,7 @@ selector "#sidebar-search form, .search-container form" -> UiSearchBar {
 }
 ```
 
-### 4. `pages.vnr`
-Defines full pages layouts using primary components.
+### `pages.vnr`
 ```scss
 reconstruct "#home-landing" -> UiHeroLanding {
     urlPattern: R"(example\.com\/?(?:index\.html)?$)";
