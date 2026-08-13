@@ -347,7 +347,16 @@ function Popup() {
 
   const activePackageId = spmActivePackages[currentDomain] || domainConfig?.defaultPackage || '';
   const pkgInfo = packages[activePackageId];
-  const versionHistory = pkgInfo?.history || [];
+  const versionHistory = (pkgInfo?.history || []).slice().sort((a: any, b: any) => {
+    const pa = (a.version || '0.0.0').split('.').map(Number);
+    const pb = (b.version || '0.0.0').split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+      const numA = pa[i] || 0;
+      const numB = pb[i] || 0;
+      if (numA !== numB) return numB - numA;
+    }
+    return 0;
+  });
   const pinnedVersion = spmPinnedVersions[currentDomain]?.[activePackageId] || pkgInfo?.activeVersion || '';
   const isDevMode = !!spmDevModeHosts[currentDomain];
 
