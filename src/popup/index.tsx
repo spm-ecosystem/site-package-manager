@@ -65,6 +65,7 @@ function Popup() {
                   let firstThemeName = '';
 
                   for (const item of data.themes) {
+                    if (!item.version) continue;
                     const parts = (item.key || '').split('/');
                     const themeName = parts.length >= 3 ? parts[2] : (item.key || 'default');
                     if (!firstThemeName) firstThemeName = themeName;
