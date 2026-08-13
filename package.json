@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build:registry": "node scripts/build-registry.js",
-    "build:css": "node scripts/compile-css.js",
-    "build": "npm run build:registry && npm run build:css && tsc && vite build",
+    "build": "npm run build:registry && tsc && vite build",
     "test": "vitest run"
   },
   "dependencies": {
