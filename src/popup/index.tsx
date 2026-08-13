@@ -7,6 +7,7 @@ import { Header } from './components/Header';
 import { ActiveSiteBar } from './components/ActiveSiteBar';
 import { ThemeTab } from './components/ThemeTab';
 import { ColorsTab } from './components/ColorsTab';
+import { DevTab } from './components/DevTab';
 
 const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
@@ -14,7 +15,7 @@ function Popup() {
   const [globalEnabled, setGlobalEnabled]   = useState<boolean>(true);
   const [currentDomain, setCurrentDomain]   = useState<string>('');
   const [activeTabId, setActiveTabId]       = useState<number | undefined>(undefined);
-  const [activeTab, setActiveTab]           = useState<'theme' | 'colors'>('theme');
+  const [activeTab, setActiveTab]           = useState<'theme' | 'colors' | 'dev'>('theme');
   const [themeVars, setThemeVars]           = useState<Record<string, string>>({});
   const [defaultThemeVars, setDefaultThemeVars] = useState<Record<string, string>>({});
 
@@ -395,7 +396,7 @@ function Popup() {
 
         {/* Tabs Navigation */}
         <div className="flex border-b border-[#333333]">
-          {(['theme', 'colors'] as const).map(tab => (
+          {(['theme', 'colors', 'dev'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -403,7 +404,7 @@ function Popup() {
                 activeTab === tab ? 'text-white border-b-2 border-white' : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              {tab === 'theme' ? 'Theme' : 'Colors'}
+              {tab === 'theme' ? 'Theme' : tab === 'colors' ? 'Colors' : 'Dev'}
             </button>
           ))}
         </div>
@@ -413,8 +414,6 @@ function Popup() {
           <ThemeTab
             globalEnabled={globalEnabled}
             isSupportedDomain={isSupportedDomain}
-            isDevMode={isDevMode}
-            onToggleDevMode={toggleDevMode}
             packages={packages}
             filteredPackageKeys={filteredPackageKeys}
             activePackageId={activePackageId}
@@ -425,14 +424,6 @@ function Popup() {
             allTags={allTags}
             selectedTag={selectedTag}
             onSelectTag={setSelectedTag}
-            devDraftManifestRaw={devDraftManifestRaw}
-            devDraftLabel={devDraftLabel}
-            devDraftVersion={devDraftVersion}
-            devDraftCssRaw={devDraftCssRaw}
-            manifestPathInput={manifestPathInput}
-            onManifestPathInputChange={setManifestPathInput}
-            onWatchPath={handleWatchPath}
-            onOpenDevLoader={openDevLoader}
           />
         )}
 
@@ -442,6 +433,22 @@ function Popup() {
             themeVars={themeVars}
             onColorChange={handleColorChange}
             onResetColors={resetColors}
+          />
+        )}
+
+        {/* Tab: Dev */}
+        {activeTab === 'dev' && (
+          <DevTab
+            isDevMode={isDevMode}
+            onToggleDevMode={toggleDevMode}
+            devDraftManifestRaw={devDraftManifestRaw}
+            devDraftLabel={devDraftLabel}
+            devDraftVersion={devDraftVersion}
+            devDraftCssRaw={devDraftCssRaw}
+            manifestPathInput={manifestPathInput}
+            onManifestPathInputChange={setManifestPathInput}
+            onWatchPath={handleWatchPath}
+            onOpenDevLoader={openDevLoader}
           />
         )}
       </main>
