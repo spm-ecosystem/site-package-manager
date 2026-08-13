@@ -1,3 +1,6 @@
 [submodule "src/components"]
 	path = src/components
 	url = https://github.com/watashi-00/spm-components.git
+[submodule "spm-veneer"]
+	path = spm-veneer
+	url = https://github.com/watashi-00/spm-veneer.git
