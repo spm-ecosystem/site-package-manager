@@ -34,6 +34,7 @@ function Popup() {
 
   // Reconstructed registry and preferences
   const [registry, setRegistry] = useState<Record<string, any>>({});
+  const [selectedTag, setSelectedTag] = useState<string>('');
   const [spmActivePackages, setSpmActivePackages] = useState<Record<string, string>>({});
   const [spmPinnedVersions, setSpmPinnedVersions] = useState<Record<string, Record<string, string>>>({});
   const [spmDevModeHosts, setSpmDevModeHosts] = useState<Record<string, boolean>>({});
@@ -67,12 +68,17 @@ function Popup() {
                     const themeName = parts.length >= 3 ? parts[2] : (item.key || 'default');
                     if (!firstThemeName) firstThemeName = themeName;
 
+                    const tagsArray = item.tags
+                      ? item.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+                      : [];
+
                     if (!packagesMap[themeName]) {
                       packagesMap[themeName] = {
                         displayName: item.label || themeName,
                         activeVersion: item.version,
                         directory: themeName,
-                        history: []
+                        history: [],
+                        tags: tagsArray
                       };
                     }
                     packagesMap[themeName].activeVersion = item.version;
@@ -279,6 +285,18 @@ function Popup() {
   const domainConfig = registry[currentDomain];
   const packages = domainConfig?.packages || {};
   const packageKeys = Object.keys(packages);
+
+  // Extract all unique tags from packages
+  const allTags = Array.from(
+    new Set(Object.values(packages).flatMap((pkg: any) => pkg.tags || []))
+  ) as string[];
+
+  // Filter package keys by selected tag
+  const filteredPackageKeys = packageKeys.filter(pkgId => {
+    if (!selectedTag) return true;
+    return packages[pkgId].tags?.includes(selectedTag);
+  });
+
   const activePackageId = spmActivePackages[currentDomain] || domainConfig?.defaultPackage || '';
   const pkgInfo = packages[activePackageId];
   const versionHistory = pkgInfo?.history || [];
@@ -386,6 +404,37 @@ function Popup() {
             {/* Registry Info & Package Selection - hidden when dev draft is loaded */}
             {!isDevMode && isSupportedDomain && (
               <div className="flex flex-col gap-3">
+                {allTags.length > 0 && (
+                  <div>
+                    <label className="text-[11px] font-semibold text-zinc-400">Filter by Tag</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      <button
+                        onClick={() => setSelectedTag('')}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition ${
+                          !selectedTag
+                            ? 'bg-white text-black border-white'
+                            : 'bg-transparent text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-500'
+                        }`}
+                      >
+                        All
+                      </button>
+                      {allTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setSelectedTag(tag)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border transition ${
+                            selectedTag === tag
+                              ? 'bg-white text-black border-white'
+                              : 'bg-transparent text-zinc-400 border-zinc-700 hover:text-white hover:border-zinc-500'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="text-[11px] font-semibold text-zinc-400">Active Package</label>
                   <select
@@ -394,7 +443,7 @@ function Popup() {
                     onChange={e => handlePackageChange(e.target.value)}
                     className="w-full mt-1.5 bg-black border border-[#333333] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500 disabled:opacity-50"
                   >
-                    {packageKeys.map(pkgId => (
+                    {filteredPackageKeys.map(pkgId => (
                       <option key={pkgId} value={pkgId}>
                         {packages[pkgId].displayName || pkgId}
                       </option>
