@@ -14,8 +14,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PATHS = {
-    dedicated: path.join(__dirname, '../src/components/dedicated'),
-    primitives: path.join(__dirname, '../src/components/primitives/LayoutPrimitives.tsx'),
+    dedicated: path.join(__dirname, '../src/components/spm-components/dedicated'),
+    primitives: path.join(__dirname, '../src/components/spm-components/primitives/LayoutPrimitives.tsx'),
     output: path.join(__dirname, '../src/components/registry.ts'),
     outputSchema: path.join(__dirname, '../vscode-theme-manifest-intellisense/schemas/theme-manifest-schema.json'),
     tempTypes: path.join(__dirname, '../src/components/temp-schema-types.ts'),
@@ -57,11 +57,11 @@ log.info('Analyzing TypeScript interfaces for the VS Code Schema...');
 const typeImports = sources.map(source => {
     if (source.name === 'PRIMITIVE_COMPONENTS') {
         const props = source.components.map(c => `${c}Props`).join(', ');
-        return `export type { ${props} } from './primitives/LayoutPrimitives';`;
+        return `export type { ${props} } from './spm-components/primitives/LayoutPrimitives';`;
     }
     if (source.name === 'DEDICATED_COMPONENTS') {
         return source.components.map(c => 
-            `export type { ${c}Props } from './dedicated/${c}';`
+            `export type { ${c}Props } from './spm-components/dedicated/${c}';`
         ).join('\n');
     }
     return '';
