@@ -8,7 +8,7 @@ The `manifest.json` file is the compiled output configuration generated from Ven
 
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `targetUrl` | `string` | Yes | Matching URL glob pattern indicating which domains this theme should activate on (e.g. `*://safebooru.org/*`). |
+| `targetUrl` | `string` | Yes | Matching URL glob pattern indicating which domains this theme should activate on (e.g. `*://example.com/*`). |
 | `version` | `string` | No | Version of the theme package (e.g. `"1.0.0"`). |
 | `minEngineVersion` | `string` | No | Minimum compatible version of the SPM extension engine (e.g. `"1.0.0"`). |
 | `theme` | `object` | Yes | Defines global styling variables, custom styles overrides, and descriptive metadata. |
@@ -64,12 +64,12 @@ Replaces or hides targeted elements individually.
     "selector": ".sidebar form",
     "action": "replace",
     "props": {
-      "placeholder": "Search tags…",
-      "submitUrl": "https://safebooru.org/index.php?page=post&s=list",
-      "queryParamName": "tags"
+      "placeholder": "Search…",
+      "submitUrl": "https://example.com/search",
+      "queryParamName": "q"
     },
     "propsMap": {
-      "defaultValue": "input[name='tags'] | attr:value"
+      "defaultValue": "input[name='q'] | attr:value"
     }
   },
   {
@@ -98,16 +98,16 @@ Reconstructs entire sections or full page contents with isolated React structure
 ```json
 "reconstructs": [
   {
-    "containerSelector": "#post-list",
-    "layoutComponent": "UiModernGridPage",
-    "urlPattern": "page=post&s=list",
+    "containerSelector": "#gallery",
+    "layoutComponent": "UiGridPage",
+    "urlPattern": "page=gallery",
     "props": {
       "pageTitle": "Gallery",
       "mobileColumns": 2,
       "mobileGap": "8px"
     },
     "propsMap": {
-      "searchDefaultValue": ".sidebar form input[name='tags'] | attr:value"
+      "searchDefaultValue": ".sidebar form input[name='q'] | attr:value"
     },
     "preserve": {
       "sidebarSlot": ".sidebar"
@@ -115,7 +115,7 @@ Reconstructs entire sections or full page contents with isolated React structure
     "children": [
       {
         "name": "items",
-        "selector": "#post-list .thumb",
+        "selector": "#gallery .item",
         "propsMap": {
           "id": "self | attr:id",
           "imageUrl": "img | attr:src",
@@ -131,7 +131,7 @@ Reconstructs entire sections or full page contents with isolated React structure
 ### Properties
 *   `containerSelector` (string, required): CSS selector of the container element that will be replaced. The element will have its children hidden, and a Shadow DOM root host appended.
 *   `layoutComponent` (string, required): Name of the React component that acts as the container layout.
-*   `urlPattern` (string): JavaScript regular expression matched against the current page URL path/query (e.g. `page=post&s=list`). The reconstruct will only load if the pattern matches.
+*   `urlPattern` (string): JavaScript regular expression matched against the current page URL path/query (e.g. `page=gallery`). The reconstruct will only load if the pattern matches.
 *   `props` (object): Static prop values passed directly to the layout component.
 *   `propsMap` (object): Dynamic properties extracted from the container element's DOM before it is hidden.
 *   `preserve` (object): Map of slot names to selectors. Targeted nodes are removed from the legacy page before hiding the container and reparented inside the Shadow DOM (into elements having `id="{slotName}-container"`).

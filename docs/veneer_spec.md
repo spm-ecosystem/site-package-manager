@@ -9,14 +9,14 @@ The Veneer Spec (`.vnr`) configuration language is a custom declarative DSL buil
 ### `theme`
 Defines the main metadata, visual variables, and global CSS styles for a website package.
 ```scss
-theme "Obsidian" {
+theme "ModernDark" {
     variables {
         --spm-accent: "#7c6af5";
         --spm-bg-primary: "#000000";
         --spm-bg-secondary: "#111111";
         --spm-text-primary: "#ffffff";
     }
-    customStyles: "#notice { display: none !important; }";
+    customStyles: "#advertisement-banner { display: none !important; }";
 }
 ```
 
@@ -36,11 +36,11 @@ class DocumentLink extends LinkBase {
 ### `selector` & `action`
 Target and perform actions on individual elements. Typically used to hide ads or replace headers.
 ```scss
-selector "#subnavbar" {
+selector "#sub-navbar" {
     action: hide;
 }
 
-selector "#search-box" -> UiSearchBar {
+selector "#search-input-box" -> UiSearchBar {
     action: replace;
     placeholder: "Search…";
     submitUrl: "https://example.com/search";
@@ -52,17 +52,17 @@ selector "#search-box" -> UiSearchBar {
 ### `reconstruct`
 Transforms a large page container into a React layout component.
 ```scss
-reconstruct "#post-list" -> UiModernGridPage {
-    urlPattern: "page=post&s=list";
+reconstruct "#gallery-container" -> UiGridPage {
+    urlPattern: "page=gallery";
     pageTitle: "Gallery";
-    height: "calc(100vh - 78px)";
+    height: "calc(100vh - 80px)";
 }
 ```
 
 ### `preserve`
 Prevents specific legacy DOM components from being destroyed, reparenting them inside the new React layout.
 ```scss
-reconstruct "#comment-view" -> UiCommentListPage {
+reconstruct "#item-view" -> UiItemDetailsPage {
     preserve {
         sidebarSlot: ".sidebar"; // Reparents .sidebar into the React sidebarSlot
     }
@@ -72,9 +72,9 @@ reconstruct "#comment-view" -> UiCommentListPage {
 ### `child`
 Defines a nested data extraction rule. The compiler processes this as a property array passed to the parent component.
 ```scss
-reconstruct "#post-list" -> UiModernGridPage {
+reconstruct "#gallery-container" -> UiGridPage {
     child items {
-        selector: "#post-list .thumb";
+        selector: "#gallery-container .item";
         bind imageUrl: "img | attr:src";
         bind linkUrl: "a | attr:href";
     }
@@ -84,7 +84,7 @@ reconstruct "#post-list" -> UiModernGridPage {
 ### `bind`
 Maps properties of a child element or component dynamically using extraction rules from the legacy HTML page.
 ```scss
-bind count: "span.tag-count | text";
+bind count: "span.count-badge | text";
 ```
 
 ### `scope`
@@ -107,9 +107,9 @@ $$\text{R"delim(content)delim"}$$
 ### Examples
 
 **A. Regex Patterns without Backslash Escaping:**
-Instead of writing `"safebooru\\.org\\\\/?(?:index\\.php)?$"` (which requires double escaping in JSON), you write:
+Instead of writing `"example\\.com\\\\/?(?:index\\.html)?$"` (which requires double escaping in JSON), you write:
 ```scss
-urlPattern: R"(safebooru\.org\/?(?:index\.php)?$)";
+urlPattern: R"(example\.com\/?(?:index\.html)?$)";
 ```
 
 **B. Inline Complex Column Configurations:**
@@ -146,15 +146,15 @@ The VS Code extension `vscode-theme-manifest-intellisense` provides:
 2.  **Smart Autocomplete**:
     *   Reconstruct Arrow Completion: Typing `->` suggests all layout components available in the SPM registry.
     *   Contextual Property Suggestions: Inside a reconstruct block, it offers type-safe property names matching the component's TypeScript props contract.
-    *   Child Autocomplete: Nesting inside `child` blocks triggers property suggestions matching the list items (e.g. inside `child items` of `UiModernGridPage`, it suggests `imageUrl` and `linkUrl`).
+    *   Child Autocomplete: Nesting inside `child` blocks triggers property suggestions matching the list items (e.g. inside `child items` of `UiGridPage`, it suggests `imageUrl` and `linkUrl`).
 3.  **Background Diagnostics (Linter)**:
     Whenever a `.vnr` file is modified, the extension executes the background linter. Any compiler parsing error or resolver validation error (like inheritance loops or undefined classes) is reflected directly as a red squiggly line in the editor at the exact line of the error.
 
 ---
 
-## 5. Safebooru Obsidian Theme: Complete Example
+## 5. Complete Theme: Agnostic Example
 
-Here is the complete modular structure of the Safebooru Obsidian Dark theme project.
+Here is a complete modular layout structure for an agnostic website theme project.
 
 ### 1. `classes.vnr`
 Declares shared schemas and scopes.
@@ -171,7 +171,7 @@ class DocumentLink extends StandardLink {
 class TagItem {
     scope: "document";
     bind name: "a:last-of-type | text";
-    bind count: "span.tag-count | text";
+    bind count: "span.count-badge | text";
     bind type: "self | attr:class";
     bind url: "a:last-of-type | attr:href";
 }
@@ -180,7 +180,7 @@ class TagItem {
 ### 2. `theme.vnr`
 Defines visual custom properties and notices.
 ```scss
-theme "Obsidian" {
+theme "ModernDark" {
     variables {
         --spm-accent: "#7c6af5";
         --spm-accent-fg: "#ffffff";
@@ -193,92 +193,83 @@ theme "Obsidian" {
         --spm-text-muted: "#a1a1aa";
         --spm-text-primary: "#ffffff";
     }
-    customStyles: "#notice, #long-notice, #has-mail-notice, #safe-image-notice { display: none !important; }";
+    customStyles: "#system-banner, #cookie-consent-bar { display: none !important; }";
 }
 ```
 
 ### 3. `navigation.vnr`
 Defines standard header replacements and links.
 ```scss
-selector "#header, #navbar, header, .navbar, #topbar" -> UiNavHeader {
+selector "#header-container, #navbar, header" -> UiNavHeader {
     action: replace;
-    className: "safebooru-site-nav";
-    logoHref: "https://safebooru.org/";
+    className: "site-navigation-header";
+    logoHref: "https://example.com/";
     
     primaryLinks: R"([
-      { "label": "My Account", "url": "https://safebooru.org/index.php?page=account&s=home" },
-      { "label": "Posts", "url": "https://safebooru.org/index.php?page=post&s=list&tags=all" },
-      { "label": "Comments", "url": "https://safebooru.org/index.php?page=comment&s=list" },
-      { "label": "Wiki", "url": "https://safebooru.org/index.php?page=wiki&s=list" },
-      { "label": "Aliases", "url": "https://safebooru.org/index.php?page=alias&s=list" },
-      { "label": "Artists", "url": "https://safebooru.org/index.php?page=artist&s=list" },
-      { "label": "Tags", "url": "https://safebooru.org/index.php?page=tags&s=list" },
-      { "label": "Pools", "url": "https://safebooru.org/index.php?page=pool&s=list" },
-      { "label": "Forum", "url": "https://safebooru.org/index.php?page=forum&s=list" },
-      { "label": "Stats", "url": "https://safebooru.org/index.php?page=stats" },
-      { "label": "Help", "url": "https://safebooru.org/index.php?page=help" }
+      { "label": "My Account", "url": "https://example.com/account" },
+      { "label": "Items", "url": "https://example.com/items?action=list" },
+      { "label": "Comments", "url": "https://example.com/comments" },
+      { "label": "Wiki Pages", "url": "https://example.com/wiki" },
+      { "label": "Statistics", "url": "https://example.com/stats" },
+      { "label": "Help Desk", "url": "https://example.com/help" }
     ])";
 
     secondaryLinks: R"([
-      { "label": "Video", "url": "https://safebooru.org/index.php?page=post&s=list&tags=video" },
-      { "label": "Upload", "url": "https://safebooru.org/index.php?page=post&s=add" },
-      { "label": "My Favorites", "url": "https://safebooru.org/index.php?page=favorites&s=view" },
-      { "label": "Random", "url": "https://safebooru.org/index.php?page=post&s=random" },
-      { "label": "Contact Us", "url": "https://safebooru.org/index.php?page=contact" },
-      { "label": "DMCA", "url": "https://safebooru.org/index.php?page=dmca" },
-      { "label": "About", "url": "https://safebooru.org/index.php?page=about" },
-      { "label": "Help", "url": "https://safebooru.org/index.php?page=help&topic=post" },
-      { "label": "TOS", "url": "https://safebooru.org/index.php?page=tos" }
+      { "label": "Upload Item", "url": "https://example.com/items/upload" },
+      { "label": "My Favorites", "url": "https://example.com/favorites" },
+      { "label": "Random Item", "url": "https://example.com/items/random" },
+      { "label": "Contact Us", "url": "https://example.com/contact" },
+      { "label": "Terms of Service", "url": "https://example.com/tos" }
     ])";
 
-    bind logoUrl: "#site-title img | attr:src";
-    bind siteName: "#site-title a | text";
+    bind logoUrl: "#site-logo img | attr:src";
+    bind siteName: "#site-logo a | text";
 }
 
-selector "#subnavbar" {
+selector "#sub-navbar" {
     action: hide;
 }
 
-selector "#tag-sidebar form, .tag-search form, .sidebar form" -> UiSearchBar {
+selector "#sidebar-search form, .search-container form" -> UiSearchBar {
     action: replace;
-    placeholder: "Search tags…";
-    submitUrl: "https://safebooru.org/index.php?page=post&s=list";
-    queryParamName: "tags";
-    bind defaultValue: "input[name='tags'] | attr:value";
+    placeholder: "Search items…";
+    submitUrl: "https://example.com/items";
+    queryParamName: "q";
+    bind defaultValue: "input[name='q'] | attr:value";
 }
 ```
 
 ### 4. `pages.vnr`
 Defines full pages layouts using primary components.
 ```scss
-reconstruct "#static-index" -> UiHeroLanding {
-    urlPattern: R"(safebooru\.org\/?(?:index\.php)?$)";
-    tagline: "Anime picture search engine";
-    subtext: "Browse millions of safe anime illustrations, updated hourly.";
-    ctaLabel: "Browse Gallery";
-    ctaUrl: "https://safebooru.org/index.php?page=post&s=list&tags=all";
-    searchPlaceholder: "Search tags... (e.g. blue_hair 1girl)";
-    searchSubmitUrl: "https://safebooru.org/index.php?page=post&s=list";
-    searchParamName: "tags";
+reconstruct "#home-landing" -> UiHeroLanding {
+    urlPattern: R"(example\.com\/?(?:index\.html)?$)";
+    tagline: "The Modern Search Engine";
+    subtext: "Browse millions of cataloged resources, updated in real time.";
+    ctaLabel: "Browse Catalog";
+    ctaUrl: "https://example.com/items?action=list";
+    searchPlaceholder: "Search catalog... (e.g. category:news keyword)";
+    searchSubmitUrl: "https://example.com/items";
+    searchParamName: "q";
 
-    bind logoUrl: "img[alt='Safebooru'] | attr:src";
-    bind siteName: "img[alt='Safebooru'] | attr:alt";
+    bind logoUrl: "img[alt='Company Logo'] | attr:src";
+    bind siteName: "img[alt='Company Logo'] | attr:alt";
 
     child primaryLinks extends StandardLink {
-        selector: "#links a";
+        selector: "#quick-links a";
     }
 }
 
-reconstruct "#post-list" -> UiModernGridPage {
-    urlPattern: "page=post&s=list";
-    pageTitle: "Gallery";
-    className: "safebooru-gallery";
-    height: "calc(100vh - 78px)";
+reconstruct "#gallery-view" -> UiGridPage {
+    urlPattern: "page=gallery";
+    pageTitle: "Catalog Gallery";
+    className: "modern-grid-gallery";
+    height: "calc(100vh - 80px)";
     sidebarWidth: "260px";
     showSearch: true;
-    searchPlaceholder: "Search tags…";
-    searchSubmitUrl: "https://safebooru.org/index.php?page=post&s=list";
-    searchParamName: "tags";
+    searchPlaceholder: "Search items…";
+    searchSubmitUrl: "https://example.com/items";
+    searchParamName: "q";
     mobileColumns: 2;
     mobileGap: "8px";
     mobilePadding: "8px";
@@ -290,17 +281,16 @@ reconstruct "#post-list" -> UiModernGridPage {
     mobileBreakpoint: 720;
     
     tagGroups: R"([
-      { "title": "Artists", "typeKey": "artist" },
-      { "title": "Copyrights", "typeKey": "copyright" },
-      { "title": "Characters", "typeKey": "character" },
-      { "title": "General", "typeKey": "general" },
-      { "title": "Meta", "typeKey": "metadata" }
+      { "title": "Categories", "typeKey": "category" },
+      { "title": "Tags", "typeKey": "tag" },
+      { "title": "Creators", "typeKey": "creator" },
+      { "title": "System Data", "typeKey": "metadata" }
     ])";
 
-    bind searchDefaultValue: ".sidebar form input[name='tags'] | attr:value";
+    bind searchDefaultValue: ".sidebar-filter form input[name='q'] | attr:value";
 
     child items {
-        selector: "#post-list .thumb";
+        selector: "#gallery-view .item-card";
         bind id: "self | attr:id";
         bind imageUrl: "img | attr:src";
         bind linkUrl: "a | attr:href";
@@ -308,7 +298,7 @@ reconstruct "#post-list" -> UiModernGridPage {
     }
 
     child tags extends TagItem {
-        selector: "#tag-sidebar li";
+        selector: "#sidebar-tags li";
     }
 
     child pageLinks extends StandardLink {
