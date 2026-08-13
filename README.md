@@ -11,12 +11,8 @@ A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Sh
   - [How It Works](#how-it-works)
   - [Project Structure](#project-structure)
   - [Getting Started](#getting-started)
-  - [Manifest Schema](#manifest-schema)
-    - [Theme](#theme)
-    - [Components](#components)
-    - [Reconstructs](#reconstructs)
-    - [Prop Mapping Rules](#prop-mapping-rules)
-    - [Preservation Slots](#preservation-slots)
+  - [Veneer Spec Language](#veneer-spec-language)
+  - [Compiled Layout Manifest Schema](#compiled-layout-manifest-schema)
   - [Component System](#component-system)
     - [Primitives](#primitives)
     - [Dedicated Components](#dedicated-components)
@@ -77,12 +73,9 @@ extension/
 ├── scripts/
 │   ├── build-registry.js            # Auto-generates src/components/registry.ts
 │   └── compile-css.js               # Compiles content.css files using Tailwind + PostCSS
-├── websites/                        # GitOps theme packages
-│   └── safebooru.org/               # Website domain folder
-│       └── obsidian-dark/           # Theme package folder
-│           ├── manifest.json        # Theme configuration manifest
-│           ├── content.css          # Custom Tailwind styling tokens
-│           └── style.css            # Compiled static stylesheet (Vite-copied)
+├── docs/                            # Detailed architecture & spec docs
+│   ├── veneer_spec.md               # Veneer Spec syntax reference manual
+│   └── manifest_schema.md           # Target layout manifest JSON schema
 ├── src/
 │   ├── content/
 │   │   ├── index.iife.tsx           # Content script entry point (resolves dynamic themes)
@@ -120,173 +113,19 @@ npm run test     # run unit tests
 
 ---
 
-## Manifest Schema
+## Veneer Spec Language
 
-Every `.json` in `websites/` is a theme manifest. Full structure:
+Veneer Spec is a declarative DSL designed for authoring clean, modular, and type-safe theme layouts. Features include structural scoping, class inheritance, raw string literal blocks, and a real-time background compiler linter.
 
-```json
-{
-  "targetUrl": "*://example.com/*",
-  "version": "1.0.0",
-  "theme": { ... },
-  "components": [ ... ],
-  "reconstructs": [ ... ]
-}
-```
+For detailed syntax rules, inheritance paradigms, and modular structure examples, see the **[Veneer Spec Language Guide](file:///home/watashi/Projects/extension/docs/veneer_spec.md)**.
 
-### Theme
+---
 
-```json
-"theme": {
-  "label": "Dark",
-  "cssVariables": {
-    "--spm-bg-primary":    "#000000",
-    "--spm-bg-secondary":  "#111111",
-    "--spm-bg-tertiary":   "#222222",
-    "--spm-text-primary":  "#ffffff",
-    "--spm-text-muted":    "#a1a1aa",
-    "--spm-accent":        "#7c6af5",
-    "--spm-accent-hover":  "#9d8fff",
-    "--spm-accent-fg":     "#ffffff",
-    "--spm-border":        "#333333",
-    "--spm-radius":        "10px"
-  },
-  "customStyles": ".legacy-sidebar { display: none !important; }"
-}
-```
+## Compiled Layout Manifest Schema
 
-All components use exclusively `var(--spm-*)` variables. Changing these variables changes the entire theme with no component edits needed.
+When Veneer Spec sources are compiled via `spm compile`, they generate a single unified `manifest.json` layout manifest. This target manifest is resolved at runtime by the SPM extension.
 
-### Components
-
-The `components` array replaces or hides **individual elements** on the page.
-
-```json
-"components": [
-  {
-    "name": "UiSearchBar",
-    "selector": "#search-form",
-    "action": "replace",
-    "propsMap": {
-      "defaultValue": "input[name='q'] | attr:value"
-    },
-    "props": {
-      "placeholder": "Search…",
-      "submitUrl": "https://example.com/search",
-      "queryParamName": "q"
-    }
-  },
-  {
-    "name": "UiNavHeader",
-    "selector": "#subnavbar",
-    "action": "hide"
-  }
-]
-```
-
-| Field | Description |
-| --- | --- |
-| `name` | Component name (must exist in registry) |
-| `selector` | CSS selector of the legacy element to target |
-| `action` | `"replace"` - inject the component, `"hide"` - `display:none` |
-| `propsMap` | Prop values extracted live from the DOM at injection time |
-| `props` | Static prop values set directly in the JSON |
-| `children` | Named arrays of child elements to extract (same format as reconstructs) |
-
-### Reconstructs
-
-The `reconstructs` array replaces **entire page sections** with a React component inside a Shadow DOM.
-
-```json
-"reconstructs": [
-  {
-    "containerSelector": "#post-view",
-    "layoutComponent": "UiSplitLayout",
-    "propsMap": {
-      "statisticsHtml": "#stats ul | html"
-    },
-    "props": {
-      "sidebarWidth": "280px",
-      "sidebarSide": "left",
-      "imageFit": "contain",
-      "showSearch": true,
-      "searchSubmitUrl": "https://example.com/search",
-      "searchParamName": "tags"
-    },
-    "preserve": {
-      "sidebarSlot": "div.sidebar"
-    },
-    "mediaQuery": "(min-width: 768px)",
-    "children": [
-      {
-        "name": "imageSlot",
-        "selector": "#image",
-        "propsMap": {
-          "src": "self | attr:src",
-          "alt": "self | attr:alt"
-        }
-      },
-      {
-        "name": "tags",
-        "selector": "#tag-sidebar li.tag",
-        "scope": "document",
-        "propsMap": {
-          "name": "a:nth-child(2) | text",
-          "count": "span.tag-count | text",
-          "type": "self | attr:class",
-          "url":  "a:nth-child(2) | attr:href"
-        }
-      },
-      {
-        "name": "buttons",
-        "selector": ".link-list a",
-        "scope": "document",
-        "propsMap": {
-          "label": "self | text",
-          "url":   "self | attr:href"
-        }
-      }
-    ]
-  }
-]
-```
-
-| Field | Description |
-| --- | --- |
-| `containerSelector` | CSS selector of the legacy container to replace |
-| `layoutComponent` | Name of the React layout component (must exist in registry) |
-| `propsMap` | Props extracted from inside the container at injection time |
-| `props` | Static props passed directly - **supports all component props** |
-| `preserve` | Named slots: legacy nodes reparented into the React layout (see below) |
-| `mediaQuery` | Optional: only apply if this media query matches |
-| `children` | Named arrays of child elements. Each becomes a prop array on the component. |
-| `children[].scope` | `"document"` to query the full document instead of just the container |
-
-> **Prop merge order:** `props` (static) → `propsMap` (dynamic) → `children` (arrays).  
-> Dynamic values always override static ones.
-
-### Prop Mapping Rules
-
-Rules follow the format `"selector | operation"`:
-
-| Rule | Example | Result |
-| --- | --- | --- |
-| `selector \| text` | `"h2 \| text"` | Text content of the first matching descendant |
-| `selector \| attr:name` | `"img \| attr:src"` | Attribute value of first matching descendant |
-| `selector \| html` | `"ul \| html"` | Inner HTML of first matching descendant |
-| `self \| text` | `"self \| text"` | Text content of the element itself |
-| `self \| attr:name` | `"self \| attr:class"` | Attribute of the element itself |
-
-### Preservation Slots
-
-`preserve` maps slot names to CSS selectors. The engine extracts those nodes before hiding the container and reparents them into a `<div id="{slotName}-container">` inside the Shadow DOM after React mounts.
-
-The layout component must render a matching container element:
-
-```tsx
-// In your layout component:
-<aside id="sidebarSlot-container" />
-```
+For detailed properties, attributes, preservation slots, and extraction rules of the target schema, see the **[Compiled Layout Manifest Schema Reference](file:///home/watashi/Projects/extension/docs/manifest_schema.md)**.
 
 ---
 
@@ -491,7 +330,7 @@ To ensure a seamless visual experience, SPM includes a built-in **Anti-Flickerin
 
 ### Adding a New Site Theme
 
-To add support for a new site or create a new theme package under an existing site domain, please refer to the detailed **[Theme Development Guide](file:///home/watashi/Projects/extension/websites/README.md)**.
+Theme configurations are organized inside the `spm-websites` Git repository. Each theme is developed as a modular Veneer Spec project containing `.vnr` source files and is compiled using `spm compile`. To learn how to write and validate your theme, refer to the **[Veneer Spec Language Guide](file:///home/watashi/Projects/extension/docs/veneer_spec.md)**.
 
 ---
 
