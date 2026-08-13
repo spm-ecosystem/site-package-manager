@@ -40,6 +40,7 @@ function Popup() {
   const [spmDevModeHosts, setSpmDevModeHosts] = useState<Record<string, boolean>>({});
   const [devDraftManifestRaw, setDevDraftManifestRaw] = useState<string>('');
   const [devDraftCssRaw, setDevDraftCssRaw] = useState<string>('');
+  const [manifestPathInput, setManifestPathInput] = useState('');
   
 
 
@@ -281,6 +282,52 @@ function Popup() {
     }
   };
 
+  // Load saved path on mount/domain change
+  useEffect(() => {
+    if (currentDomain && typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.get([`spm_dev_manifest_path:${currentDomain}`], (res) => {
+        setManifestPathInput(res[`spm_dev_manifest_path:${currentDomain}`] || '');
+      });
+    }
+  }, [currentDomain]);
+
+  const handleWatchPath = () => {
+    if (!manifestPathInput) return;
+
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.set({
+        [`spm_dev_manifest_path:${currentDomain}`]: manifestPathInput
+      });
+    }
+
+    // Send watch command to C++ dev server via WebSocket
+    const ws = new WebSocket('ws://localhost:8080');
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        action: 'watch',
+        path: manifestPathInput
+      }));
+    };
+    ws.onmessage = (event) => {
+      try {
+        const res = JSON.parse(event.data);
+        if (res.status === 'success') {
+          console.log('[SPM Popup] Successfully set dev server watch path:', res.watching);
+          reloadTab();
+        } else if (res.status === 'error') {
+          alert(`Dev Server Error: ${res.message}`);
+        }
+      } catch (err) {
+        console.error('[SPM Popup] Error parsing watch response:', err);
+      }
+      ws.close();
+    };
+    ws.onerror = () => {
+      alert('Could not connect to SPM Dev Server (ws://localhost:8080). Make sure "spm dev" is running in your terminal.');
+      ws.close();
+    };
+  };
+
   const isSupportedDomain = !!registry[currentDomain];
   const domainConfig = registry[currentDomain];
   const packages = domainConfig?.packages || {};
@@ -513,12 +560,31 @@ function Popup() {
 
             {/* Dev Mode folder loader */}
             {isDevMode && (
-              <div className="flex flex-col gap-2 border-t border-[#222222] pt-3">
+              <div className="flex flex-col gap-2.5 border-t border-[#222222] pt-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-semibold text-zinc-400">Absolute Manifest Path</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="/path/to/manifest.json"
+                      value={manifestPathInput}
+                      onChange={e => setManifestPathInput(e.target.value)}
+                      className="flex-1 bg-black border border-[#333333] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500 font-mono"
+                    />
+                    <button
+                      onClick={handleWatchPath}
+                      className="px-3 py-1.5 text-xs font-semibold text-white bg-[#7c6af5] hover:bg-[#6855df] transition rounded"
+                    >
+                      Watch
+                    </button>
+                  </div>
+                </div>
+                <div className="text-[10px] text-zinc-600 text-center py-0.5">OR</div>
                 <button
                   onClick={openDevLoader}
-                  className="w-full py-2 text-xs font-semibold text-white bg-[#1a1a1a] border border-[#333333] hover:bg-[#2a2a2a] transition rounded"
+                  className="w-full py-2 text-xs font-semibold text-zinc-400 bg-transparent border border-[#333333] hover:border-zinc-500 hover:text-white transition rounded"
                 >
-                  Load Package Folder
+                  Browse Local Folder
                 </button>
               </div>
             )}
