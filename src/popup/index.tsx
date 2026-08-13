@@ -166,10 +166,15 @@ function Popup() {
   };
 
   const toggleGlobal = () => {
-    const next = !globalEnabled;
-    setGlobalEnabled(next);
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({ spm_global_enabled: next }, reloadTab);
+      chrome.storage.local.get(['spm_global_enabled'], (res) => {
+        const current = res.spm_global_enabled !== false;
+        const next = !current;
+        setGlobalEnabled(next);
+        chrome.storage.local.set({ spm_global_enabled: next }, reloadTab);
+      });
+    } else {
+      setGlobalEnabled(prev => !prev);
     }
   };
 
@@ -208,15 +213,20 @@ function Popup() {
   };
 
   const toggleDevMode = () => {
-    const isDevMode = !!spmDevModeHosts[currentDomain];
-    const nextDevHosts = { ...spmDevModeHosts, [currentDomain]: !isDevMode };
-    setSpmDevModeHosts(nextDevHosts);
-
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({
-        spm_dev_mode_hosts: nextDevHosts,
-        spm_dev_mode: nextDevHosts
-      }, reloadTab);
+      chrome.storage.local.get(['spm_dev_mode_hosts'], (res) => {
+        const devHosts = res.spm_dev_mode_hosts || {};
+        const isDev = !!devHosts[currentDomain];
+        const nextDevHosts = { ...devHosts, [currentDomain]: !isDev };
+        setSpmDevModeHosts(nextDevHosts);
+        chrome.storage.local.set({
+          spm_dev_mode_hosts: nextDevHosts,
+          spm_dev_mode: nextDevHosts
+        }, reloadTab);
+      });
+    } else {
+      const isDev = !!spmDevModeHosts[currentDomain];
+      setSpmDevModeHosts({ ...spmDevModeHosts, [currentDomain]: !isDev });
     }
   };
 
