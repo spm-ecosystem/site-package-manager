@@ -306,12 +306,12 @@ When emitting properties to the manifest JSON, the compiler automatically runs a
 
 ## 5. Advanced Workspace Features
 
-### Workspace directory compilation
-When executing `spm compile <directory_path> -o manifest.json`, the compiler recursively searches all `.vnr` files under the target path, concatenates their source contents, and resolves class blueprints globally. This lets you organize your spec files logically:
-- `classes.vnr`: Blueprint templates.
-- `theme.vnr`: Global branding variables.
-- `navigation.vnr`: Selective header/footer replacements.
-- `pages.vnr`: Full page reconstructions.
+### Workspace directory compilation & Package structures
+When executing `spm compile <directory_path> -o manifest.json`, the compiler recursively searches all `.vnr` files under the target path, concatenates their source contents, and resolves class blueprints globally. 
+
+*   **Arbitrary File Naming**: File names are completely arbitrary; they do not need to follow standard names like `navigation.vnr` or `classes.vnr`. The compiler will read and parse any file ending with the `.vnr` extension.
+*   **Nested Package Structures (Java-style)**: You are not restricted to keeping files in a single flat directory. You can organize your theme configuration into deeply nested folders and subpackages (e.g. `core/models/blueprints.vnr`, `layout/headers/top_nav.vnr`, `pages/gallery/grid_layout.vnr`). The compiler traverses all subfolders recursively, merging all declarations into a single global compilation context. This allows developers to build large-scale, modular theme packages.
+
 
 ### Sibling Class Autoloading
 When compiling a single file (like `pages.vnr`), the compiler automatically inspects its directory context. If it detects that a class is referenced as a base but not declared in the current file, it loads and parses sibling `.vnr` files in the background to import their class blueprints. This resolves the classes automatically, allowing isolated background validation for syntax linters.
