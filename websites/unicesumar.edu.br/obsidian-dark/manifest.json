@@ -1,8 +1,10 @@
 {
     "targetUrl": "*://unicesumar.edu.br/*",
     "version": "1.0.0",
+    "minEngineVersion": "1.0.0",
     "theme": {
         "label": "Unicesumar Dark",
+        "author": "watashi-00",
         "cssVariables": {
             "--spm-bg-primary": "#0f1420",
             "--spm-bg-secondary": "#15203a",

@@ -1,8 +1,10 @@
 {
   "targetUrl": "*://safebooru.org/*",
   "version": "1.14.0",
+  "minEngineVersion": "1.0.0",
   "theme": {
     "label": "Obsidian",
+    "author": "watashi-00",
     "cssVariables": {
       "--spm-bg-primary": "#000000",
       "--spm-bg-secondary": "#111111",
