@@ -388,10 +388,10 @@ function Popup() {
   const devDraftVersion = devDraftParsed?.version || '-';
 
   return (
-    <div className="flex flex-col min-h-[460px] font-sans select-none bg-black text-[#d4d4d4]" style={{ width: '320px' }}>
+    <div className="flex flex-col h-[480px] font-sans select-none bg-black text-[#d4d4d4] overflow-hidden" style={{ width: '320px' }}>
       <Header globalEnabled={globalEnabled} onToggleGlobal={toggleGlobal} />
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col overflow-hidden">
         <ActiveSiteBar domain={currentDomain} />
 
         {/* Tabs Navigation */}

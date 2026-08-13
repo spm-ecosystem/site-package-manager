@@ -31,27 +31,26 @@ export const ColorsTab: React.FC<ColorsTabProps> = ({
   return (
     <div className="flex flex-col gap-0 flex-1 overflow-y-auto">
       {THEME_VARIABLE_META.map(({ key, label }) => (
-        <div key={key} className="flex items-center justify-between px-4 py-2.5 border-b border-[#1a1a1a] hover:bg-[#111111] transition">
+        <div key={key} className="flex items-center justify-between px-4 py-2 border-b border-[#111111] hover:bg-[#070707] transition">
           <div>
-            <div className="text-xs font-medium text-white">{label}</div>
-            <div className="text-[10px] font-mono text-zinc-600">{key}</div>
+            <div className="text-xs font-semibold text-white">{label}</div>
+            <div className="text-[9px] font-mono text-zinc-600 mt-0.5">{key}</div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-zinc-500">{themeVars[key] || '-'}</span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] font-mono text-zinc-500 uppercase">{themeVars[key] || '-'}</span>
             <input
               type="color"
               value={themeVars[key] || '#000000'}
               onChange={e => onColorChange(key, e.target.value)}
-              className="w-7 h-7 rounded cursor-pointer border border-[#333333] bg-transparent p-0"
-              style={{ padding: '1px', borderRadius: '6px' }}
+              className="w-5 h-5 rounded-full cursor-pointer border border-zinc-700 bg-transparent p-0 outline-none appearance-none overflow-hidden"
             />
           </div>
         </div>
       ))}
-      <div className="p-4">
+      <div className="p-3">
         <button
           onClick={onResetColors}
-          className="w-full py-2 text-xs font-semibold text-zinc-400 border border-[#333333] rounded hover:bg-[#111111] transition"
+          className="w-full py-1.5 text-xs font-semibold text-zinc-400 border border-[#333333] rounded hover:border-zinc-500 hover:text-white transition"
         >
           Reset to Default
         </button>
