@@ -117,10 +117,14 @@ try {
         properties: {
             targetUrl: { type: "string" },
             version: { type: "string" },
+            minEngineVersion: { type: "string" },
             theme: {
                 type: "object",
                 properties: {
                     label: { type: "string" },
+                    author: { type: "string" },
+                    description: { type: "string" },
+                    tags: { type: "array", items: { type: "string" } },
                     cssVariables: { type: "object", additionalProperties: { type: "string" } },
                     customStyles: { type: "string" },
                     noticeSelector: { type: "string" }
