@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { extractValue, revealPage } from './engine';
-import { COMPONENT_REGISTRY } from '../components/registry';
-import { UiToastContainer } from '../components/spm-components/dedicated/UiToast';
+import { COMPONENT_REGISTRY } from '../components-registry';
+import { UiToastContainer } from '../components/dedicated/UiToast';
 
 const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
