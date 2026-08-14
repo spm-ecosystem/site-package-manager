@@ -44,6 +44,19 @@ export function extractValue(element: Element, queryRule: string): string | null
     return next ? next.textContent : null;
   }
 
+  if (extractor === 'hiddenInputs') {
+    const inputs = targetEl.querySelectorAll('input[type="hidden"]');
+    const list: { name: string; value: string }[] = [];
+    inputs.forEach((input) => {
+      const name = input.getAttribute('name');
+      const value = input.getAttribute('value') || '';
+      if (name) {
+        list.push({ name, value });
+      }
+    });
+    return JSON.stringify(list);
+  }
+
   return null;
 }
 
