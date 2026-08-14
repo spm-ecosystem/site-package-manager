@@ -1,5 +1,7 @@
 # Site Package Manager (SPM)
 
+[![Documentation Portal](https://img.shields.io/badge/docs-spm--portal-blue?style=for-the-badge)](https://spm-ecosystem.github.io/spm-portal/)
+
 Site Package Manager (SPM) is a data-driven web modernization platform that allows developers to reconstruct legacy website interfaces using React 18 + Shadow DOM—without altering the original site's codebase. 
 
 ---
@@ -22,6 +24,7 @@ The SPM platform is composed of 5 decoupled, specialized repositories. Below is 
 
 To find specific rules, grammar specs, or guidelines, refer to the dedicated documentation files:
 
+*   🌐 [**Interactive SPM Documentation Portal**](https://spm-ecosystem.github.io/spm-portal/): The central live documentation hub.
 *   📖 [**Layout Manifest Schema Reference**](https://github.com/spm-ecosystem/spm-cli/blob/main/docs/manifest_schema.md): Details the compiled JSON manifest fields (`theme`, `components`, `reconstructs`), and dynamic prop extraction mapping rules.
 *   💻 [**Veneer Spec Language Reference**](https://github.com/spm-ecosystem/spm-cli/blob/main/docs/veneer_spec.md): The syntax manual for the `.vnr` layout definition language, explaining classes, inheritance, scopes, and delimiters.
 *   🎨 [**Component Development & API Reference**](https://github.com/spm-ecosystem/spm-components/blob/main/docs/components.md): Contains coding blueprints, design conventions, auto-registration scripts, and lists of all Primitives vs Dedicated UI components.
