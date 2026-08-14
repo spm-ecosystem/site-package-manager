@@ -151,6 +151,9 @@ Generic building blocks in `src/components/primitives/LayoutPrimitives.tsx`.
 | `UiImage` | `<img>` | `src`, `alt` |
 | `UiLink` | `<a>` | `href` |
 
+For the list of dedicated layout components and their property contract APIs, see the **[Component Development Guide & API Reference](file:///home/watashi/Projects/extension/docs/components.md)**.
+
+
 
 ## spm-cli & Local Watcher (C++ Dev Server)
 
