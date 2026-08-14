@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "Site Package Manager Engine",
+  "version": "1.0.1",
+  "description": "Modernizes old web interfaces using React and Shadow DOM",
+  "content_scripts": [
+    {
+      "js": [
+        "src/content/index.iife.js"
+      ],
+      "matches": [
+        "*://*/*"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "js": [
+        "src/content/interceptor.iife.js"
+      ],
+      "matches": [
+        "*://*/*"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_popup": "index.html"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "resources": [
+        "devloader.html"
+      ],
+      "use_dynamic_url": false
+    }
+  ]
+}
