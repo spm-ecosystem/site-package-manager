@@ -225,3 +225,18 @@ For component unit tests that query DOM elements or interact with shadow roots, 
 ```ts
 // @vitest-environment jsdom
 ```
+
+---
+
+## 7. Component Design Checklist (Agnostic Guidelines)
+
+To keep the component library generic and portable across any host website or domain, all components must follow this design checklist:
+
+1. **Zero Hardcoded Metadata:**
+   - Never hardcode site titles, company names, logos, or URLs.
+   - All texts (like `"Search..."`, titles, placeholders) must be received via props with sensible, neutral defaults (e.g. `pageTitle = "Dashboard"`).
+2. **CSS Variables for Themes:**
+   - Do not hardcode specific hex colors or styles unless they are neutral layouts.
+   - Use design token variables (`var(--spm-bg-primary)`, `var(--spm-accent)`, etc.) to style components so they adapt natively to user color themes.
+3. **Container-Fluid Sizing:**
+   - Components must not have hardcoded fixed width parameters (like `width: "800px"`) on outer boundaries. They should fill their parent container natively (`width: "100%"`) and let the theme layout control sizing.
