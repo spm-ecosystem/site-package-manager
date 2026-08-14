@@ -21,7 +21,11 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: spm-ecosystem/spm-vscode
-        path: ../vscode-theme-manifest-intellisense
+        path: vscode-theme-manifest-intellisense
+
+    - name: Symlink vscode-theme-manifest-intellisense to parent directory
+      run: |
+        ln -s ${{ github.workspace }}/vscode-theme-manifest-intellisense ${{ github.workspace }}/../vscode-theme-manifest-intellisense
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -34,7 +38,7 @@ jobs:
 
     - name: Install dependencies in spm-vscode
       run: |
-        cd ../vscode-theme-manifest-intellisense
+        cd vscode-theme-manifest-intellisense
         npm ci
         cd -
 
