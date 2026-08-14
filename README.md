@@ -45,7 +45,7 @@ A Chrome MV3 extension that modernizes legacy web interfaces using React 18 + Sh
 Legacy Site HTML
       │
       ▼
-Content Script (src/content/index.tsx)
+Content Script (src/content/index.iife.tsx)
   ├── Reads active theme manifest from chrome.storage.local
   ├── Applies CSS variables and customStyles to the main document
   ├── Processes "components" array → replaces / hides individual elements
@@ -71,7 +71,7 @@ extension/
 ├── index.html                       # Popup entry point
 ├── devloader.html                   # Dedicated local devloader page
 ├── scripts/
-│   ├── build-registry.js            # Auto-generates src/components/registry.ts
+│   ├── build-registry.js            # Auto-generates src/components-registry.ts
 │   └── compile-css.js               # Compiles content.css files using Tailwind + PostCSS
 ├── docs/                            # Detailed architecture & spec docs
 │   ├── veneer_spec.md               # Veneer Spec syntax reference manual
@@ -84,9 +84,8 @@ extension/
 │   │   └── engine.ts                # Selector / data-attribute extraction parser
 │   ├── popup/
 │   │   └── index.tsx                # Popup React UI (supports dev folder load & dynamic Worker listing)
-│   └── components/
-│       ├── registry.ts              # Component registry (AUTO-GENERATED)
-│       └── spm-components/          # Shared components submodule pointer (dedicated & primitives)
+│   ├── components/                  # Shared components submodule pointer (dedicated & primitives)
+│   └── components-registry.ts       # Component registry (AUTO-GENERATED)
 └── tests/
     ├── engine.test.ts               # Unit tests for extractValue
     └── hot-reload.test.ts           # Unit tests for WebSocket client hot-reloading
@@ -374,7 +373,7 @@ export function UiMyComponent({
 
 ### Auto-Registration
 
-You do **not** need to edit `src/components/registry.ts` manually!
+You do **not** need to edit `src/components-registry.ts` manually!
 During compilation, the pre-build script `scripts/build-registry.js` scans all components under `src/components/` and packages them automatically. Simply write your component file, run `npm run build`, and it will be ready to be used in manifests.
 
 
