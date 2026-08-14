@@ -1,13 +1,15 @@
-name: Extension CI
+name: Extension Tag Release
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
-  build-and-test:
+  release-draft:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,7 +29,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 18
-        cache: 'npm'
 
     - name: Install dependencies in extension
       run: npm ci
@@ -38,8 +39,19 @@ jobs:
         npm ci
         cd -
 
-    - name: Run Build
+    - name: Build Extension (regenerates registry & VS Code schema)
       run: npm run build
 
-    - name: Run Tests
-      run: npm run test
+    - name: Package extension to ZIP
+      run: |
+        cd dist
+        zip -r ../spm-extension-${{ github.ref_name }}.zip .
+        cd ..
+
+    - name: Create GitHub Release Draft
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: true
+        files: spm-extension-${{ github.ref_name }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
