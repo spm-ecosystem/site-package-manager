@@ -7,13 +7,15 @@
     {
       "matches": ["*://*/*"],
       "js": ["src/content/index.iife.tsx"],
-      "run_at": "document_start"
+      "run_at": "document_start",
+      "all_frames": true
     },
     {
       "matches": ["*://*/*"],
       "js": ["src/content/interceptor.iife.ts"],
       "run_at": "document_start",
-      "world": "MAIN"
+      "world": "MAIN",
+      "all_frames": true
     }
   ],
   "action": {

@@ -217,9 +217,15 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
     const showToast = (text: string) => {
       if (!text || text === lastText) return;
       lastText = text;
-      window.dispatchEvent(new CustomEvent('spm-show-toast', {
-        detail: { message: text, type: 'info' }
-      }));
+      const detail = { message: text, type: 'info' };
+      window.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
+      if (window.top && window.top !== window) {
+        try {
+          window.top.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
+        } catch (e) {
+          window.top.postMessage({ type: 'spm-show-toast', message: text, toastType: 'info' }, '*');
+        }
+      }
     };
 
     // Show initial text if present and not explicitly hidden
