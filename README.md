@@ -331,73 +331,19 @@ To ensure a seamless visual experience, SPM includes a built-in **Anti-Flickerin
 
 Theme configurations are organized inside the `spm-websites` Git repository. Each theme is developed as a modular Veneer Spec project containing `.vnr` source files and is compiled using `spm compile`. To learn how to write and validate your theme, refer to the **[Veneer Spec Language Guide](file:///home/watashi/Projects/extension/docs/veneer_spec.md)**.
 
----
-
 ### Creating a New Component
 
-Components must follow the system contract:
+To learn how to design, develop, and register React UI components in the SPM engine, refer to the **[Component Development Guide](file:///home/watashi/Projects/extension/docs/components.md)**.
 
-```tsx
-// 1. Interface first - all props optional with sensible defaults
-interface UiMyComponentProps {
-  items?: { label: string; url: string }[];
-  title?: string;
-  className?: string;
-  style?: React.CSSProperties;
-}
+---
 
-// 2. Export a named function - no default exports
-export function UiMyComponent({
-  items = [],
-  title,
-  className = '',
-  style = {},
-}: UiMyComponentProps) {
-  return (
-    <div
-      className={className}
-      style={{
-        background: 'var(--spm-bg-primary)',  // Always use CSS vars
-        color: 'var(--spm-text-primary)',
-        ...style,                              // Always spread style last
-      }}
-    >
-      {title && <h2>{title}</h2>}             {/* Conditional - no orphan markup */}
-      {items.map((item, i) => (
-        <a key={i} href={item.url}>{item.label}</a>
-      ))}
-    </div>
-  );
-}
-```
+### Contribution & Code Style Guidelines
 
-### Auto-Registration
+- **Language**: English (code, comments, commits, files).
+- **Commits**: Conventional Commits style (e.g. `feat:`, `fix:`, `docs:`, `refactor:`).
+- **TypeScript**: Strict checks enabled (no implicit `any`, no unused variables).
+- **Testing**: Run unit tests using `npm run test`.
 
-You do **not** need to edit `src/components-registry.ts` manually!
-During compilation, the pre-build script `scripts/build-registry.js` scans all components under `src/components/` and packages them automatically. Simply write your component file, run `npm run build`, and it will be ready to be used in manifests.
-
-
-
-### Running Tests
-
-```bash
-npm run test
-```
-
-All test files that use DOM APIs must include:
-
-```ts
-// @vitest-environment jsdom
-```
-
-### Code Style
-
-- **Language**: English - code, comments, commits, file names
-- **Colors**: CSS variables only (`var(--spm-*)`) - never hardcoded `#rgb` values
-- **Props**: Always include `className` and `style` for external override
-- **Rendering**: All component sections must be conditional on data presence
-- **Commits**: Conventional Commits (`feat:`, `fix:`, `refactor:`, `chore:`)
-- **TypeScript**: Strict mode, no unused locals
 
 ---
 
