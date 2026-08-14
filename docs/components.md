@@ -207,7 +207,7 @@ You do **not** need to register your new components in registry files manually. 
 1.  When you run `npm run build` or `npm run dev`, the compiler executes `scripts/build-registry.js`.
 2.  The script scans all component files under `src/components/` recursively.
 3.  It extracts the component names, analyzes their TypeScript `Props` interface declarations, and generates:
-    *   [`src/components-registry.ts`](file:///home/watashi/Projects/extension/src/components-registry.ts): The runtime registry mapping component names to their lazy-loaded TSX wrappers.
+    *   [`src/components-registry.ts`](../src/components-registry.ts): The runtime registry mapping component names to their lazy-loaded TSX wrappers.
     *   `schemas/theme-manifest-schema.json`: The layout JSON validation schema used by VS Code to validate property configurations.
 
 ---

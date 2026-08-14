@@ -22,10 +22,10 @@ The SPM platform is composed of 5 decoupled, specialized repositories. Below is 
 
 To find specific rules, grammar specs, or guidelines, refer to the dedicated documentation files:
 
-*   📖 [**Layout Manifest Schema Reference**](file:///home/watashi/Projects/extension/docs/manifest_schema.md): Details the compiled JSON manifest fields (`theme`, `components`, `reconstructs`), and dynamic prop extraction mapping rules.
-*   💻 [**Veneer Spec Language Reference**](file:///home/watashi/Projects/extension/docs/veneer_spec.md): The syntax manual for the `.vnr` layout definition language, explaining classes, inheritance, scopes, and delimiters.
-*   🎨 [**Component Development & API Reference**](file:///home/watashi/Projects/extension/docs/components.md): Contains coding blueprints, design conventions, auto-registration scripts, and lists of all Primitives vs Dedicated UI components.
-*   🧭 [**Contribution & Developer Guide**](file:///home/watashi/Projects/extension/docs/contribution_guide.md): The step-by-step roadmap guiding you on how to contribute to site themes, React UI libraries, C++ parsers, or editor tools.
+*   📖 [**Layout Manifest Schema Reference**](./docs/manifest_schema.md): Details the compiled JSON manifest fields (`theme`, `components`, `reconstructs`), and dynamic prop extraction mapping rules.
+*   💻 [**Veneer Spec Language Reference**](./docs/veneer_spec.md): The syntax manual for the `.vnr` layout definition language, explaining classes, inheritance, scopes, and delimiters.
+*   🎨 [**Component Development & API Reference**](./docs/components.md): Contains coding blueprints, design conventions, auto-registration scripts, and lists of all Primitives vs Dedicated UI components.
+*   🧭 [**Contribution & Developer Guide**](./docs/contribution_guide.md): The step-by-step roadmap guiding you on how to contribute to site themes, React UI libraries, C++ parsers, or editor tools.
 
 ---
 
@@ -86,4 +86,4 @@ SPM features an automatic Anti-Flickering mechanism that prevents bright white f
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](file:///home/watashi/Projects/extension/LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
