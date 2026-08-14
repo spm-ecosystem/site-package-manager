@@ -265,7 +265,8 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
       const container = rootContext.querySelector(containerSelector);
 
-      if (container) {
+      if (container && !container.hasAttribute('data-spm-modernized')) {
+        container.setAttribute('data-spm-modernized', 'true');
         // Extract properties
         const pageProps: Record<string, any> = {};
         for (const [propName, rule] of Object.entries(propsMap || {})) {
@@ -395,6 +396,8 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
       if (!Component) continue;
 
       originalElements.forEach((originalEl) => {
+        if (originalEl.hasAttribute('data-spm-modernized')) return;
+        originalEl.setAttribute('data-spm-modernized', 'true');
         const extractedProps: Record<string, any> = {};
         for (const [propName, rule] of Object.entries(compConfig.propsMap)) {
           extractedProps[propName] = extractValue(originalEl as HTMLElement, rule);

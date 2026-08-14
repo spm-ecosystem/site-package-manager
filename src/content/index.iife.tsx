@@ -6,6 +6,17 @@ const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
 let hasRunModernizer = false;
 
+let modernizationTimeout: number | null = null;
+
+function scheduleModernization(manifest: SiteManifest, cssText: string) {
+  if (modernizationTimeout !== null) {
+    clearTimeout(modernizationTimeout);
+  }
+  modernizationTimeout = window.setTimeout(() => {
+    runModernizer(document, manifest, stylesText, cssText);
+  }, 50);
+}
+
 declare global {
   interface Window {
     __spm_last_manifest?: SiteManifest;
@@ -96,6 +107,33 @@ async function init() {
                 if (!hasRunModernizer) {
                   hasRunModernizer = true;
                   runModernizer(document, devManifest, stylesText, devCss);
+
+                  const observer = new MutationObserver((mutations) => {
+                    let shouldRun = false;
+                    for (const mutation of mutations) {
+                      for (const node of Array.from(mutation.addedNodes)) {
+                        if (node.nodeType === 1) {
+                          const el = node as HTMLElement;
+                          const className = typeof el.className === 'string' ? el.className : '';
+                          // Ignore changes inside our own shadow hosts and components
+                          if (!className.includes('modern-') && el.id !== 'spm-global-toast-host') {
+                            shouldRun = true;
+                            break;
+                          }
+                        }
+                      }
+                      if (shouldRun) break;
+                    }
+                    if (shouldRun) {
+                      console.log('[SPM Engine] DOM mutation detected. Scheduling modernization...');
+                      scheduleModernization(devManifest, devCss);
+                    }
+                  });
+
+                  observer.observe(document.body || document.documentElement, {
+                    childList: true,
+                    subtree: true
+                  });
                 }
               };
 
@@ -299,6 +337,33 @@ async function init() {
           if (!hasRunModernizer) {
             hasRunModernizer = true;
             runModernizer(document, manifestData, stylesText, cssTextData);
+
+            const observer = new MutationObserver((mutations) => {
+              let shouldRun = false;
+              for (const mutation of mutations) {
+                for (const node of Array.from(mutation.addedNodes)) {
+                  if (node.nodeType === 1) {
+                    const el = node as HTMLElement;
+                    const className = typeof el.className === 'string' ? el.className : '';
+                    // Ignore changes inside our own shadow hosts and components
+                    if (!className.includes('modern-') && el.id !== 'spm-global-toast-host') {
+                      shouldRun = true;
+                      break;
+                    }
+                  }
+                }
+                if (shouldRun) break;
+              }
+              if (shouldRun) {
+                console.log('[SPM Engine] DOM mutation detected. Scheduling modernization...');
+                scheduleModernization(manifestData, cssTextData);
+              }
+            });
+
+            observer.observe(document.body || document.documentElement, {
+              childList: true,
+              subtree: true
+            });
           }
         };
 
