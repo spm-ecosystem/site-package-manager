@@ -86,3 +86,125 @@ For component unit tests that query DOM elements or interact with shadow roots, 
 ```ts
 // @vitest-environment jsdom
 ```
+
+---
+
+## 5. Dedicated Components & Prop Contracts Reference
+
+This section documents the standard catalog of components located in `src/components/dedicated/` and their respective property contract APIs.
+
+### Dedicated Components Directory
+
+| Component | Purpose | Key Props |
+| --- | --- | --- |
+| `UiNavHeader` | Site navigation header | `siteName`, `logoUrl`, `logoHref`, `primaryLinks`, `secondaryLinks`, `layout` |
+| `UiHeroLanding` | Full-viewport landing page hero | `siteName`, `logoUrl`, `logoHref`, `tagline`, `subtext`, `ctaLabel`, `ctaUrl`, `searchSubmitUrl`, `searchParamName`, `primaryLinks` |
+| `UiSearchBar` | Search input field | `placeholder`, `defaultValue`, `submitUrl`, `queryParamName` |
+| `UiImageCard` | Single image card with link | `imageUrl`, `linkUrl`, `title`, `id`, `width`, `aspectRatio`, `imageFit`, `showTitle` |
+| `UiTagBadge` | Tag pill with post count | `label`, `count`, `href` |
+| `UiPaginationBar` | Page navigation links | `pageLinks`, `paramName` |
+| `UiModernGridPage` | Gallery page with sidebar slot | `pageTitle`, `items`, `pageLinks` |
+| `UiImageViewer` | Full-height image that fills its container | `src`, `alt`, `fit` (`contain`\|`cover`), `background` |
+| `UiScrollPanel` | Scrollable sidebar panel with search, tags, buttons, stats | `tags`, `buttons`, `statisticsHtml`, `showSearch`, `searchSubmitUrl`, `searchParamName`, `width` |
+| `UiSplitLayout` | Two-column full-height layout shell | `imageSlot`, `tags`, `buttons`, `statisticsHtml`, `sidebarWidth`, `sidebarSide`, `imageFit`, `showSearch`, `searchSubmitUrl` |
+| `UiCommentListPage` | Comment threads list with optional sidebar | `pageTitle`, `threads`, `pageLinks`, `height` |
+| `UiDashboardPage` | List panel layout for options/actions | `pageTitle`, `subTitle`, `cards`, `height` |
+| `UiStatsDashboard` | Metric tables/rankings blocks dashboard | `pageTitle`, `dateRangeText`, `navLinks`, `sections`, `height` |
+| `UiTable` | Isolated tabular grid with row callback | `columns`, `data`, `onRowClick` |
+| `UiTableListPage` | Search results page layout inside a `UiTable` | `pageTitle`, `tableRows`, `columns`, `pageLinks`, `height`, `onLoadMore` |
+| `UiToastContainer` | Toast feedback overlays & confirmation portals | - |
+| `UiPostDetails` | *(legacy)* Booru post page (monolith) | - |
+
+---
+
+### Component Contracts (Props)
+
+#### `UiCommentListPage`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `pageTitle` | `string` | `'Comments'` | Title of the comments page |
+| `threads` | `CommentThread[]` | `[]` | Array of comment threads (`id`, `thumbnailUrl`, `postUrl`, `postDate`, `postUser`, `postRating`, `postScore`, `tags`, `comments`) |
+| `pageLinks` | `PageLink[]` | `[]` | Array of page links for pagination (`label`, `url`) |
+| `height` | `string` | `'100vh'` | Layout height |
+
+#### `UiDashboardPage`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `pageTitle` | `string` | `'Account Control Panel'` | Header title text |
+| `subTitle` | `string` | - | Subtitle description |
+| `cards` | `DashboardCard[]` | `[]` | Custom action cards (`title`, `description`, `url`, `urlLabel`) |
+| `height` | `string` | `'100vh'` | Layout height |
+
+#### `UiStatsDashboard`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `pageTitle` | `string` | `'Statistics'` | Header title text |
+| `dateRangeText` | `string` | `'All time'` | Range label tag |
+| `navLinks` | `NavLink[]` | `[]` | Navigation links (`label`, `url`) |
+| `sections` | `StatSection[]` | `[]` | Stat card groups (`title`, list of `items` with `place`, `amount`, `name`, `profileUrl`) |
+| `height` | `string` | `'100vh'` | Layout height |
+
+#### `UiTableListPage`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `pageTitle` | `string` | `'Wiki Pages'` | Header title text |
+| `tableRows` | `any[]` | `[]` | Data row list |
+| `columns` | `TableColumnConfig[]` | - | Configuration of columns (`key`, `header`, `width`, `align`, `type`, `urlKey`, `badgeStyleKey`) |
+| `pageLinks` | `PageLink[]` | `[]` | Pagination links |
+| `height` | `string` | `'100vh'` | Layout height |
+| `onLoadMore` | `() => Promise<{tableRows, hasMore}>` | - | Async infinite scroll trigger callback |
+
+#### `UiImageViewer`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `src` | `string` | - | Image URL |
+| `alt` | `string` | `''` | Alt text |
+| `fit` | `'contain' \| 'cover'` | `'contain'` | CSS `object-fit` |
+| `background` | `string` | `var(--spm-bg-primary)` | Container background |
+
+#### `UiScrollPanel`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `tags` | `TagItem[]` | `[]` | Tags array (`name`, `count`, `type`, `url`) - grouped by `type` automatically |
+| `buttons` | `ButtonItem[]` | `[]` | Button array (`label`, `url`) - auto-classified into nav/primary/ghost by label keywords |
+| `statisticsHtml` | `string` | - | Raw HTML rendered in a statistics section |
+| `showSearch` | `boolean` | `false` | Show UiSearchBar at the top |
+| `searchSubmitUrl` | `string` | - | URL to submit searches to |
+| `searchParamName` | `string` | `'q'` | Query parameter name |
+| `width` | `string` | `'280px'` | Panel width |
+
+#### `UiSplitLayout`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `imageSlot` | `{src, alt}[]` | `[]` | Image data - first item is rendered via `UiImageViewer` |
+| `tags` | `TagItem[]` | `[]` | Forwarded to `UiScrollPanel` |
+| `buttons` | `ButtonItem[]` | `[]` | Forwarded to `UiScrollPanel` |
+| `statisticsHtml` | `string` | - | Forwarded to `UiScrollPanel` |
+| `sidebarWidth` | `string` | `'280px'` | Panel width |
+| `sidebarSide` | `'left' \| 'right'` | `'left'` | Panel position |
+| `imageFit` | `'contain' \| 'cover'` | `'contain'` | Forwarded to `UiImageViewer` |
+| `showSearch` | `boolean` | `false` | Show search in panel |
+| `searchSubmitUrl` | `string` | - | Search URL |
+| `searchParamName` | `string` | `'q'` | Search param name |
+
+#### `UiHeroLanding`
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `siteName` | `string` | `'Site'` | Fallback text if no logo |
+| `logoUrl` | `string` | - | Logo image URL |
+| `logoHref` | `string` | `'/'` | Logo link URL |
+| `tagline` | `string` | - | Heading below logo |
+| `subtext` | `string` | - | Subtitle paragraph |
+| `ctaLabel` | `string` | `'Browse'` | CTA button text |
+| `ctaUrl` | `string` | `'/'` | CTA button URL |
+| `searchSubmitUrl` | `string` | - | If set, renders a search bar |
+| `searchParamName` | `string` | `'q'` | Search param name |
+| `primaryLinks` | `{label, url}[]` | `[]` | Pill nav links below CTA |
