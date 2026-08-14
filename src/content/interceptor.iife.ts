@@ -69,9 +69,15 @@
   let lastConfirmMessage = '';
 
   window.alert = function(msg) {
-    window.dispatchEvent(new CustomEvent('spm-show-toast', { 
-      detail: { message: String(msg), type: 'info' } 
-    }));
+    const detail = { message: String(msg), type: 'info' };
+    window.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
+    if (window.top && window.top !== window) {
+      try {
+        window.top.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
+      } catch (e) {
+        window.top.postMessage({ type: 'spm-show-toast', message: String(msg), toastType: 'info' }, '*');
+      }
+    }
   };
 
   const originalConfirm = window.confirm;
