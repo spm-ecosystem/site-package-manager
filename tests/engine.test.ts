@@ -193,4 +193,47 @@ describe('runModernizer Idempotency and Mutation Observation', () => {
     modernEl.remove();
     regularEl.remove();
   });
+
+  test('window.alert bubbles up events to top window in nested environment', () => {
+    const originalAlert = window.alert;
+
+    const fakeTop = {
+      dispatchEvent: vi.fn(),
+      postMessage: vi.fn()
+    };
+
+    const originalTop = window.top;
+    Object.defineProperty(window, 'top', {
+      value: fakeTop,
+      writable: true,
+      configurable: true
+    });
+
+    window.alert = function(msg) {
+      const detail = { message: String(msg), type: 'info' };
+      window.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
+      if (window.top && window.top !== window) {
+        try {
+          window.top.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
+        } catch (e) {
+          window.top.postMessage({ type: 'spm-show-toast', message: String(msg), toastType: 'info' }, '*');
+        }
+      }
+    };
+
+    const spy = vi.fn();
+    window.addEventListener('spm-show-toast', spy);
+
+    window.alert('Test Message');
+
+    expect(spy).toHaveBeenCalled();
+    expect(fakeTop.dispatchEvent).toHaveBeenCalled();
+
+    window.removeEventListener('spm-show-toast', spy);
+    Object.defineProperty(window, 'top', {
+      value: originalTop,
+      configurable: true
+    });
+    window.alert = originalAlert;
+  });
 });
