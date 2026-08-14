@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, test } from 'vitest';
 import { extractValue } from '../src/content/engine';
 
 describe('extractValue engine helper', () => {
@@ -51,5 +51,23 @@ describe('extractValue engine helper', () => {
     div.innerHTML = '<h4>Title</h4><p>Description text here</p>';
     const result = extractValue(div, 'h4 | nextSiblingText');
     expect(result).toBe('Description text here');
+  });
+
+  test('extractValue extracts all hidden inputs inside a container', () => {
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <form>
+        <input type="hidden" name="csrfmiddlewaretoken" value="abc123csrf" />
+        <input type="hidden" name="session_id" value="xyz987" />
+        <input type="text" name="tags" value="hello" />
+      </form>
+    `;
+    const result = extractValue(container, 'form | hiddenInputs');
+    expect(result).not.toBeNull();
+    const list = JSON.parse(result!);
+    expect(list).toEqual([
+      { name: 'csrfmiddlewaretoken', value: 'abc123csrf' },
+      { name: 'session_id', value: 'xyz987' }
+    ]);
   });
 });
