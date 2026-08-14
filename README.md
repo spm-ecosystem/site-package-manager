@@ -10,11 +10,11 @@ The SPM platform is composed of 5 decoupled, specialized repositories. Below is 
 
 | Repository | Purpose | Primary Tech | Links |
 | :--- | :--- | :--- | :--- |
-| **`site-package-manager`** *(This repo)* | The extension engine that loads JSON manifests, intercepts page loads, and mounts components. | TypeScript, React, Vite | [GitHub Repository](https://github.com/watashi-00/site-package-manager) |
-| **`spm-cli`** | High-performance compiler and watcher. Compiles Veneer DSL spec folders into unified manifests and hosts WebSocket dev sync servers. | C++17, WebSockets | [GitHub Repository](https://github.com/watashi-00/spm-cli) |
-| **`spm-vscode`** | VS Code extension providing real-time syntax coloring, autocompletion, and linter diagnostics for Veneer `.vnr` layouts. | TypeScript, VS Code API | [GitHub Repository](https://github.com/watashi-00/spm-vscode) |
-| **`spm-websites`** | GitOps theme registry hosting compiled layouts and Veneer spec designs for target websites. | Veneer Spec, CSS | [GitHub Repository](https://github.com/watashi-00/spm-websites) |
-| **`spm-components`** | Reusable UI design system (primitives and dedicated page structures) injected into legacy pages. | React 18, CSS | [GitHub Repository](https://github.com/watashi-00/spm-components) |
+| **`site-package-manager`** *(This repo)* | The extension engine that loads JSON manifests, intercepts page loads, and mounts components. | TypeScript, React, Vite | [GitHub Repository](https://github.com/spm-ecosystem/site-package-manager) |
+| **`spm-cli`** | High-performance compiler and watcher. Compiles Veneer DSL spec folders into unified manifests and hosts WebSocket dev sync servers. | C++17, WebSockets | [GitHub Repository](https://github.com/spm-ecosystem/spm-cli) |
+| **`spm-vscode`** | VS Code extension providing real-time syntax coloring, autocompletion, and linter diagnostics for Veneer `.vnr` layouts. | TypeScript, VS Code API | [GitHub Repository](https://github.com/spm-ecosystem/spm-vscode) |
+| **`spm-websites`** | GitOps theme registry hosting compiled layouts and Veneer spec designs for target websites. | Veneer Spec, CSS | [GitHub Repository](https://github.com/spm-ecosystem/spm-websites) |
+| **`spm-components`** | Reusable UI design system (primitives and dedicated page structures) injected into legacy pages. | React 18, CSS | [GitHub Repository](https://github.com/spm-ecosystem/spm-components) |
 
 ---
 

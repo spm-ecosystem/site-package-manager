@@ -24,7 +24,7 @@ Defines styling variables (custom property mappings) and custom CSS rules inject
 ```json
 "theme": {
   "label": "Obsidian",
-  "author": "watashi-00",
+  "author": "spm-ecosystem",
   "description": "Auto-versioning Obsidian dark theme on pipeline",
   "cssVariables": {
     "--spm-bg-primary": "#000000",
