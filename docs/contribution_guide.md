@@ -27,7 +27,7 @@ graph TD
 ## 🧭 Path 1: Contributing to Site Themes & Layouts
 If you are adding a theme for a new website or updating layouts for an existing site:
 
-1.  **Repository**: [**`spm-websites`**](../../spm-websites)
+1.  **Repository**: [**`spm-websites`**](https://github.com/watashi-00/spm-websites)
 2.  **Workflow**:
     *   Navigate to your target site directory (e.g. `safebooru.org/`).
     *   Modify or write modular `.vnr` design templates inside the `vnr_project/` directory.
@@ -50,7 +50,7 @@ If you are adding a theme for a new website or updating layouts for an existing 
 ## 🎨 Path 2: Contributing to Shared UI Components
 If you want to add a new reusable design block or fix a bug in a layout primitive:
 
-1.  **Repository**: [**`spm-components`**](../../spm-components) (linked as a submodule inside `src/components/` in the main extension repository).
+1.  **Repository**: [**`spm-components`**](https://github.com/watashi-00/spm-components) (linked as a submodule inside `src/components/` in the main extension repository).
 2.  **Prerequisites**: React 18, vanilla CSS variables.
 3.  **Coding Rules**:
     *   **Named Exports Only**: Always export components as named functions (e.g., `export function UiMyCard() {}`).
@@ -68,7 +68,7 @@ If you want to add a new reusable design block or fix a bug in a layout primitiv
 ## ⚙️ Path 3: Contributing to the Compiler Toolchain
 If you want to enhance the C++ parser, fix resolver bugs, or update the WebSocket dev server:
 
-1.  **Repository**: [**`spm-cli`**](../../spm-cli)
+1.  **Repository**: [**`spm-cli`**](https://github.com/watashi-00/spm-cli)
 2.  **Prerequisites**: C++17 compatible compiler, CMake 3.12+, Make.
 3.  **Workflow**:
     *   Modify lexer, parser, resolver, or emitter header files under `src/veneer/`.
@@ -85,7 +85,7 @@ If you want to enhance the C++ parser, fix resolver bugs, or update the WebSocke
 ## 🔌 Path 4: Contributing to VS Code Developer Tools
 If you want to update the editor syntax highlighter or background linter helper:
 
-1.  **Repository**: [**`spm-vscode`**](../../spm-vscode)
+1.  **Repository**: [**`spm-vscode`**](https://github.com/watashi-00/spm-vscode)
 2.  **Workflow**:
     *   Clone the extension source and link it to your local editor extensions folder.
     *   Update TextMate grammar configurations for `.vnr` scopes.
@@ -99,7 +99,7 @@ If you want to update the editor syntax highlighter or background linter helper:
 ## 📦 Path 5: Contributing to the Browser Extension Core
 If you want to modify the runtime loader, the Shadow DOM injector, or the popups:
 
-1.  **Repository**: [**`site-package-manager`**](../README.md) (This repository)
+1.  **Repository**: [**`site-package-manager`**](https://github.com/watashi-00/site-package-manager) (This repository)
 2.  **Architecture Guidelines**:
     *   **Anti-Flickering System**: Ensure updates do not bypass the body visibility opacity control (`revealPage()`).
     *   **Performance**: Keep the content script parser light; avoid parsing overhead or DOM traversals inside recursive loops.
