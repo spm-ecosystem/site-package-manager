@@ -80,8 +80,12 @@ export function triggerProxyClick(targetSelector: string) {
   // 1. Put interceptor in dry-run mode
   window.dispatchEvent(new CustomEvent('spm-set-confirm-mode', { detail: { mode: 'dry-run' } }));
 
-  // 2. Trigger click
-  (originalEl as HTMLElement).click();
+  // 2. Trigger click with mouse event to support listeners + standard click
+  const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+  originalEl.dispatchEvent(clickEvent);
+  if (originalEl instanceof HTMLElement) {
+    originalEl.click();
+  }
 
   // 3. Reset to idle
   window.dispatchEvent(new CustomEvent('spm-set-confirm-mode', { detail: { mode: 'idle' } }));
@@ -97,13 +101,46 @@ export function triggerProxyClick(targetSelector: string) {
           // Put interceptor in force-true mode to auto-approve confirm
           window.dispatchEvent(new CustomEvent('spm-set-confirm-mode', { detail: { mode: 'force-true' } }));
           // Click again
-          (originalEl as HTMLElement).click();
+          const forceClickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+          originalEl.dispatchEvent(forceClickEvent);
+          if (originalEl instanceof HTMLElement) {
+            originalEl.click();
+          }
           // Reset to idle
           window.dispatchEvent(new CustomEvent('spm-set-confirm-mode', { detail: { mode: 'idle' } }));
         }
       }
     }));
   }
+}
+
+export function triggerProxyEvent(targetSelector: string, eventName: string, value?: string) {
+  const originalEl = document.querySelector(targetSelector);
+  if (!originalEl) return;
+
+  if (originalEl instanceof HTMLInputElement || originalEl instanceof HTMLTextAreaElement || originalEl instanceof HTMLSelectElement) {
+    if (value !== undefined) {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        Object.getPrototypeOf(originalEl),
+        'value'
+      )?.set;
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(originalEl, value);
+      } else {
+        originalEl.value = value;
+      }
+    }
+  }
+
+  let event: Event;
+  if (['click', 'mousedown', 'mouseup'].includes(eventName)) {
+    event = new MouseEvent(eventName, { bubbles: true, cancelable: true });
+  } else if (['keydown', 'keyup', 'keypress'].includes(eventName)) {
+    event = new KeyboardEvent(eventName, { bubbles: true, cancelable: true });
+  } else {
+    event = new Event(eventName, { bubbles: true, cancelable: true });
+  }
+  originalEl.dispatchEvent(event);
 }
 
 export function revealPage() {

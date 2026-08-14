@@ -454,7 +454,10 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         createRoot(rootContainer).render(<Component {...allProps} />);
 
         if (compConfig.action === 'replace') {
-          originalEl.replaceWith(host);
+          if (originalEl instanceof HTMLElement) {
+            originalEl.style.setProperty('display', 'none', 'important');
+          }
+          originalEl.after(host);
         } else {
           originalEl.appendChild(host);
         }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, test, vi } from 'vitest';
-import { extractValue } from '../src/content/engine';
+import { extractValue, triggerProxyClick, triggerProxyEvent } from '../src/content/engine';
 import { runModernizer } from '../src/content/modernizer';
 
 describe('extractValue engine helper', () => {
@@ -235,5 +235,50 @@ describe('runModernizer Idempotency and Mutation Observation', () => {
       configurable: true
     });
     window.alert = originalAlert;
+  });
+
+  test('triggerProxyClick and triggerProxyEvent correctly dispatch events to original elements', () => {
+    // 1. Setup button with click listener and onclick attribute
+    const btn = document.createElement('button');
+    btn.id = 'legacy-btn';
+    btn.setAttribute('onclick', 'window.__legacy_click_attribute = true;');
+    // Set onclick property directly for JSDOM runtime compatibility
+    btn.onclick = () => {
+      (window as any).__legacy_click_attribute = true;
+    };
+    
+    let listenerCalled = false;
+    btn.addEventListener('click', () => {
+      listenerCalled = true;
+    });
+    
+    document.body.appendChild(btn);
+
+    // Call triggerProxyClick using selector
+    triggerProxyClick('#legacy-btn');
+
+    expect(listenerCalled).toBe(true);
+    expect((window as any).__legacy_click_attribute).toBe(true);
+
+    // 2. Setup input element with change / input listener
+    const input = document.createElement('input');
+    input.id = 'legacy-input';
+    document.body.appendChild(input);
+
+    let inputChanged = false;
+    input.addEventListener('change', () => {
+      inputChanged = true;
+    });
+
+    // Call triggerProxyEvent
+    triggerProxyEvent('#legacy-input', 'change', 'New Value');
+
+    expect(input.value).toBe('New Value');
+    expect(inputChanged).toBe(true);
+
+    // Clean up
+    btn.remove();
+    input.remove();
+    delete (window as any).__legacy_click_attribute;
   });
 });
