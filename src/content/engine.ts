@@ -51,36 +51,29 @@ export function extractValue(element: Element, queryRule: string): string | null
       }
     });
     val = JSON.stringify(list);
+  } else {
+    return null;
   }
 
-  // Process subsequent pipes
+  // Process subsequent pipes sequentially
   for (let i = 2; i < parts.length; i++) {
+    if (val === null || val === undefined) return null;
     const pipe = parts[i];
     if (pipe === 'number') {
-      if (val === null || val === undefined || val.trim() === '') {
-        val = null;
-        continue;
-      }
-      const numVal = Number(val.trim());
-      if (isNaN(numVal)) {
-        val = null;
-      } else {
-        val = String(numVal);
-      }
+      const trimmed = val.trim();
+      const numVal = Number(trimmed);
+      val = isNaN(numVal) || trimmed === '' ? null : String(numVal);
     } else if (pipe === 'cleanNumber') {
-      if (val === null || val === undefined || val.trim() === '') {
-        val = null;
-        continue;
-      }
-      const cleaned = val
-        .replace(/[, \s]/g, '')
-        .replace(/[^0-9.-]/g, '');
+      const cleaned = val.replace(/[, \s]/g, '').replace(/[^0-9.-]/g, '');
       const numVal = parseFloat(cleaned);
-      if (isNaN(numVal)) {
-        val = null;
-      } else {
-        val = String(numVal);
-      }
+      val = isNaN(numVal) || cleaned === '' ? null : String(numVal);
+    } else if (pipe === 'split') {
+      val = JSON.stringify(val.split(/\s+/).filter(item => item.length > 0));
+    } else if (pipe.startsWith('split:')) {
+      const delim = pipe.substring(6);
+      val = JSON.stringify(val.split(delim).map(s => s.trim()));
+    } else {
+      return null;
     }
   }
 

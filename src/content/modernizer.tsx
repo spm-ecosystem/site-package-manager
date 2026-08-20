@@ -119,6 +119,19 @@ export function applyThemeGlobally(variables: Record<string, string>, customStyl
   `;
 }
 
+export function parsePropValue(val: string | null): any {
+  if (val === null) return null;
+  const trimmed = val.trim();
+  if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+    try {
+      return JSON.parse(trimmed);
+    } catch (e) {
+      // ignore parsing errors and return raw string
+    }
+  }
+  return val;
+}
+
 function extractChildren(
   rootContext: Document | HTMLElement,
   container: Element,
@@ -133,7 +146,7 @@ function extractChildren(
     itemElements.forEach((itemEl) => {
       const itemProps: Record<string, any> = {};
       for (const [propName, propRule] of Object.entries(rule.propsMap || {})) {
-        itemProps[propName] = extractValue(itemEl as HTMLElement, propRule);
+        itemProps[propName] = parsePropValue(extractValue(itemEl as HTMLElement, propRule));
       }
       if (rule.children && rule.children.length > 0) {
         const subChildren = extractChildren(rootContext, itemEl, rule.children);
@@ -276,7 +289,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         // Extract properties
         const pageProps: Record<string, any> = {};
         for (const [propName, rule] of Object.entries(propsMap || {})) {
-          pageProps[propName] = extractValue(container as HTMLElement, rule);
+          pageProps[propName] = parsePropValue(extractValue(container as HTMLElement, rule));
         }
 
         // Extract children lists (supports scope:'document' for external elements)
@@ -406,7 +419,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         originalEl.setAttribute('data-spm-modernized', 'true');
         const extractedProps: Record<string, any> = {};
         for (const [propName, rule] of Object.entries(compConfig.propsMap)) {
-          extractedProps[propName] = extractValue(originalEl as HTMLElement, rule);
+          extractedProps[propName] = parsePropValue(extractValue(originalEl as HTMLElement, rule));
         }
 
         // Extract children arrays (supports scope:'document' for sibling elements)
@@ -418,7 +431,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
           childEls.forEach(childEl => {
             const itemProps: Record<string, any> = {};
             for (const [propName, rule] of Object.entries(childRule.propsMap)) {
-              itemProps[propName] = extractValue(childEl as HTMLElement, rule);
+              itemProps[propName] = parsePropValue(extractValue(childEl as HTMLElement, rule));
             }
             list.push(itemProps);
           });
