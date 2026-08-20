@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, test, vi } from 'vitest';
 import { extractValue, triggerProxyClick, triggerProxyEvent } from '../src/content/engine';
-import { runModernizer } from '../src/content/modernizer';
+import { runModernizer, parsePropValue } from '../src/content/modernizer';
 
 describe('extractValue engine helper', () => {
   it('should extract text content from child', () => {
@@ -70,6 +70,53 @@ describe('extractValue engine helper', () => {
       { name: 'csrfmiddlewaretoken', value: 'abc123csrf' },
       { name: 'session_id', value: 'xyz987' }
     ]);
+  });
+
+  describe('sequential pipe execution and split pipe', () => {
+    it('should split string by space by default', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>1girl blue_hair  short_hair</span>';
+      const result = extractValue(div, 'span | text | split');
+      expect(result).toBe('["1girl","blue_hair","short_hair"]');
+    });
+
+    it('should split string by custom delimiter and trim values', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>1girl, blue_hair , short_hair</span>';
+      const result = extractValue(div, 'span | text | split:,');
+      expect(result).toBe('["1girl","blue_hair","short_hair"]');
+    });
+
+    it('should support multiple sequential pipes and return null on unknown pipe', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>1girl_blue short_hair</span>';
+      const resultUnknown = extractValue(div, 'span | text | split | unknown');
+      expect(resultUnknown).toBeNull();
+    });
+
+    it('should return null if base value is null', () => {
+      const div = document.createElement('div');
+      const result = extractValue(div, 'p | text | split');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('parsePropValue helper', () => {
+    it('should parse valid JSON arrays into JS arrays', () => {
+      const arrayStr = '["1girl","blue_hair"]';
+      expect(parsePropValue(arrayStr)).toEqual(['1girl', 'blue_hair']);
+    });
+
+    it('should parse valid JSON objects into JS objects', () => {
+      const objStr = '{"name":"csrf","value":"abc"}';
+      expect(parsePropValue(objStr)).toEqual({ name: 'csrf', value: 'abc' });
+    });
+
+    it('should return raw string if not valid JSON or not array/object', () => {
+      expect(parsePropValue('hello world')).toBe('hello world');
+      expect(parsePropValue('123')).toBe('123');
+      expect(parsePropValue(null)).toBeNull();
+    });
   });
 });
 
