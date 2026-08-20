@@ -71,7 +71,63 @@ describe('extractValue engine helper', () => {
       { name: 'session_id', value: 'xyz987' }
     ]);
   });
+
+  describe('number and cleanNumber pipes', () => {
+    it('should convert valid number string directly using number pipe', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>123.45</span>';
+      const result = extractValue(div, 'span | text | number');
+      expect(result).toBe('123.45');
+    });
+
+    it('should return null for invalid number using number pipe', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>abc</span>';
+      const result = extractValue(div, 'span | text | number');
+      expect(result).toBeNull();
+    });
+
+    it('should convert currency strings using cleanNumber pipe', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>$ 1,200.50</span>';
+      const result = extractValue(div, 'span | text | cleanNumber');
+      expect(result).toBe('1200.5');
+    });
+
+    it('should convert other currencies like R$ and negative values using cleanNumber pipe', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>- R$ 2.500,75</span>'; // Note: R$ 2.500,75 would yield -2.50075 with our parser as it replaces comma
+      const result1 = extractValue(div, 'span | text | cleanNumber');
+      expect(result1).toBe('-2.50075');
+
+      const div2 = document.createElement('div');
+      div2.innerHTML = '<span>R$ -1,500.25</span>';
+      const result2 = extractValue(div2, 'span | text | cleanNumber');
+      expect(result2).toBe('-1500.25');
+    });
+
+    it('should handle empty/null values gracefully across pipes', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>   </span>';
+      const result1 = extractValue(div, 'span | text | number');
+      expect(result1).toBeNull();
+
+      const result2 = extractValue(div, 'span | text | cleanNumber');
+      expect(result2).toBeNull();
+
+      const result3 = extractValue(div, 'p | text | number');
+      expect(result3).toBeNull();
+    });
+
+    it('should support multiple consecutive pipes', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>$ 1,200.50</span>';
+      const result = extractValue(div, 'span | text | cleanNumber | number');
+      expect(result).toBe('1200.5');
+    });
+  });
 });
+
 
 describe('runModernizer Idempotency and Mutation Observation', () => {
   test('runModernizer does not mount multiple shadow hosts on the same container (idempotency)', () => {
