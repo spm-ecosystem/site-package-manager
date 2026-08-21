@@ -17,7 +17,7 @@ export interface ChildrenConfig {
 export interface ComponentConfig {
   name: string;
   selector: string;
-  action: 'replace' | 'append' | 'hide';
+  action: 'replace' | 'hide';
   propsMap: Record<string, string>;
   props?: Record<string, any>;
   children?: ChildrenConfig[];
