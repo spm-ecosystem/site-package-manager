@@ -1,5 +1,18 @@
-(function() {
+(function(){
+  let isGloballyEnabled = true;
 
+  try {
+    isGloballyEnabled = window.localStorage.getItem('__spm_global_enabled_cache') !== 'false';
+  } catch (e) {
+    isGloballyEnabled   = true;
+  }
+
+  if(isGloballyEnabled)
+    init()
+
+});
+
+function init() {
   // antiFlicker element
   const antiFlickerStyle = document.createElement('style');
   antiFlickerStyle.id = 'spm-anti-flicker';
@@ -107,4 +120,4 @@
       confirmMode = customEvent.detail.mode;
     }
   });
-})();
+}

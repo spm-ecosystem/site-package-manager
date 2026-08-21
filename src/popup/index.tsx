@@ -165,17 +165,41 @@ function Popup() {
     }
   };
 
-  const toggleGlobal = () => {
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.get(['spm_global_enabled'], (res) => {
-        const current = res.spm_global_enabled !== false;
-        const next = !current;
-        setGlobalEnabled(next);
-        chrome.storage.local.set({ spm_global_enabled: next }, reloadTab);
-      });
-    } else {
+  const toggleGlobal = async () => {
+    if (typeof chrome === 'undefined' || !chrome.storage) {
       setGlobalEnabled(prev => !prev);
+      return;
     }
+
+    try {
+
+      const res = await chrome.storage.local.get(['spm_global_enabled']);
+      const nextState = res.spm_global_enabled === false;
+
+      setGlobalEnabled(nextState);
+
+      await chrome.storage.local.set({ spm_global_enabled: nextState })
+
+      const [activeTab] = await chrome.tabs.query({active: true, currentWindow: true});
+
+    if (activeTab?.id) {
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTab.id },
+        func: (isEnabled) => {
+          try {
+            window.localStorage.setItem('__spm_global_enabled_cache', String(isEnabled));
+          } catch (e) {}
+        },
+        args: [nextState]
+      });
+    }
+
+    reloadTab();
+
+    } catch (e) {
+      console.error('[SPM] Error on alternate globally state', e)
+    }
+
   };
 
   const handlePackageChange = (newPkgId: string) => {

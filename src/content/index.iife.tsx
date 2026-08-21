@@ -52,6 +52,10 @@ async function init() {
     return;
   }
 
+  try {
+    document.documentElement.setAttribute('data-spm-extension-id', chrome.runtime.id);
+  } catch (e) {}
+
   const domain = window.location.hostname;
 
   // 1. Retrieve required keys from local storage

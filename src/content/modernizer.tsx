@@ -293,7 +293,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         }
 
         // Extract children lists (supports scope:'document' for external elements)
-        const childrenLists = extractChildren(rootContext, container, children);
+        const childrenLists = extractChildren(rootContext, container, children || []);
 
         // Cache preserved original DOM element references
         const preservedNodes: Record<string, Element> = {};
@@ -418,7 +418,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         if (originalEl.hasAttribute('data-spm-modernized')) return;
         originalEl.setAttribute('data-spm-modernized', 'true');
         const extractedProps: Record<string, any> = {};
-        for (const [propName, rule] of Object.entries(compConfig.propsMap)) {
+        for (const [propName, rule] of Object.entries(compConfig.propsMap || {})) {
           extractedProps[propName] = parsePropValue(extractValue(originalEl as HTMLElement, rule));
         }
 
@@ -430,7 +430,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
           const list: any[] = [];
           childEls.forEach(childEl => {
             const itemProps: Record<string, any> = {};
-            for (const [propName, rule] of Object.entries(childRule.propsMap)) {
+            for (const [propName, rule] of Object.entries(childRule.propsMap || {})) {
               itemProps[propName] = parsePropValue(extractValue(childEl as HTMLElement, rule));
             }
             list.push(itemProps);
