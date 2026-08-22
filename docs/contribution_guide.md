@@ -31,7 +31,6 @@ If you are adding a theme for a new website or updating layouts for an existing 
 2.  **Workflow**:
     *   Navigate to your target site directory (e.g. `safebooru.org/`).
     *   Modify or write modular `.vnr` design templates inside the `vnr_project/` directory.
-    *   Ensure all selectors and domain patterns are **generic and agnostic** in documentation examples.
 3.  **Local Testing (Hot-Reload)**:
     *   Launch the local dev watcher from the CLI tool:
         ```bash
