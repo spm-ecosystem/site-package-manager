@@ -3,6 +3,7 @@ import { extractValue, revealPage } from './engine';
 import { COMPONENT_REGISTRY } from '../components-registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
 import { SpmErrorBoundary } from './SpmErrorBoundary';
+import { sanitizeComponentProps } from './sanitizeProps';
 
 const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
@@ -386,11 +387,18 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
             };
           }
 
+          const safeProps = sanitizeComponentProps({
+            ...(staticProps || {}),
+            ...pageProps,
+            ...childrenLists,
+            onLoadMore
+          });
+
           console.log('[SPM Engine] Reconstructing:', layoutComponent, { staticProps, pageProps, childrenLists, hasInfiniteScroll: !!onLoadMore });
           const root = createRoot(rootContainer);
           root.render(
             <SpmErrorBoundary componentName={layoutComponent}>
-              <Component {...(staticProps || {})} {...pageProps} {...childrenLists} onLoadMore={onLoadMore} />
+              <Component {...safeProps} />
             </SpmErrorBoundary>
           );
 
@@ -447,7 +455,11 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
           childrenLists[childRule.name] = list;
         }
 
-        const allProps = { ...extractedProps, ...childrenLists, ...(compConfig.props || {}) };
+        const allProps = sanitizeComponentProps({
+          ...extractedProps,
+          ...childrenLists,
+          ...(compConfig.props || {})
+        });
 
         const originalDisplay = window.getComputedStyle(originalEl as HTMLElement).display;
 
