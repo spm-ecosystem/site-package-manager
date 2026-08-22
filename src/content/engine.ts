@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 export function parseCleanNumber(val: string | null | undefined): string | null {
   if (val === null || val === undefined) return null;
   const raw = String(val).trim();
@@ -63,7 +65,13 @@ export function extractValue(element: Element, queryRule: string): string | null
   } else if (extractor === 'text') {
     val = targetEl.textContent;
   } else if (extractor === 'html') {
-    val = targetEl.innerHTML;
+    const rawHtml = targetEl.innerHTML;
+    val = typeof window !== 'undefined' && DOMPurify && typeof DOMPurify.sanitize === 'function'
+      ? DOMPurify.sanitize(rawHtml, {
+          FORBID_TAGS: ['script', 'iframe', 'object', 'embed'],
+          FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover']
+        })
+      : rawHtml;
   } else if (extractor === 'hrefOrOnclick') {
     const href = targetEl.getAttribute('href');
     if (href && href !== '#' && !href.startsWith('javascript:')) {

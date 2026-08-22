@@ -502,7 +502,21 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
   revealPage();
 }
 
-export async function fetchThemeFiles(domain: string, themeName: string, version: string) {
+export async function computeSha256(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function verifyManifestIntegrity(rawManifestText: string, expectedHash?: string | null): Promise<boolean> {
+  if (!expectedHash) return true;
+  const computed = await computeSha256(rawManifestText);
+  return computed.toLowerCase() === expectedHash.toLowerCase();
+}
+
+export async function fetchThemeFiles(domain: string, themeName: string, version: string, expectedIntegrity?: string) {
   const manifestUrl = `${WORKER_ORIGIN}/spm/v1/api/themes/${domain}/${themeName}/${version}/manifest.json`;
   const cssUrl = `${WORKER_ORIGIN}/spm/v1/api/themes/${domain}/${themeName}/${version}/content.css`;
 
@@ -517,7 +531,20 @@ export async function fetchThemeFiles(domain: string, themeName: string, version
     throw new Error(`Failed to fetch theme manifest from ${manifestUrl}: ${manifestRes.statusText}`);
   }
 
-  const manifest: SiteManifest = await manifestRes.json();
+  const rawManifestText = await manifestRes.text();
+  const headerIntegrity = manifestRes.headers.get('x-spm-integrity');
+  const targetIntegrity = expectedIntegrity || headerIntegrity;
+
+  if (targetIntegrity && targetIntegrity.startsWith('sha256-')) {
+    const expectedHash = targetIntegrity.substring(7);
+    const isValid = await verifyManifestIntegrity(rawManifestText, expectedHash);
+    if (!isValid) {
+      throw new Error(`[SPM Security] Manifest SHA-256 integrity verification failed for ${themeName}@${version}`);
+    }
+    console.log(`[SPM Security] Manifest SHA-256 integrity verified for ${themeName}@${version}`);
+  }
+
+  const manifest: SiteManifest = JSON.parse(rawManifestText);
   let cssText = '';
   if (cssRes.ok) {
     cssText = await cssRes.text();

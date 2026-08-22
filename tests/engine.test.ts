@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, test, vi } from 'vitest';
 import { extractValue, triggerProxyClick, triggerProxyEvent } from '../src/content/engine';
-import { runModernizer, parsePropValue } from '../src/content/modernizer';
+import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity } from '../src/content/modernizer';
 
 describe('extractValue engine helper', () => {
   it('should extract text content from child', () => {
@@ -45,6 +45,15 @@ describe('extractValue engine helper', () => {
     expect(result).toMatch(/^\[data-spm-id="spm-id-[a-z0-9]+"\]$/);
     const span = div.querySelector('span');
     expect(span?.getAttribute('data-spm-id')).toBeTruthy();
+  });
+
+  it('should sanitize raw html extracted via html extractor using DOMPurify', () => {
+    const div = document.createElement('div');
+    div.innerHTML = '<div class="content">Hello <script>alert("xss")</script><img src="x" onerror="alert(1)"> world</div>';
+    const result = extractValue(div, '.content | html');
+    expect(result).not.toContain('<script>');
+    expect(result).not.toContain('onerror');
+    expect(result).toContain('Hello');
   });
 
   it('should extract text from the next sibling element', () => {
@@ -398,5 +407,25 @@ describe('runModernizer Idempotency and Mutation Observation', () => {
     btn.remove();
     input.remove();
     delete (window as any).__legacy_click_attribute;
+  });
+});
+
+describe('Manifest Security & Integrity Verification', () => {
+  it('should compute valid SHA-256 hash for manifest string', async () => {
+    const jsonStr = '{"name":"test-manifest"}';
+    const hash = await computeSha256(jsonStr);
+    expect(hash).toHaveLength(64);
+    expect(hash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('should verify matching integrity hash and reject mismatching hash', async () => {
+    const jsonStr = '{"name":"test-manifest"}';
+    const hash = await computeSha256(jsonStr);
+
+    const isValid = await verifyManifestIntegrity(jsonStr, hash);
+    expect(isValid).toBe(true);
+
+    const isInvalid = await verifyManifestIntegrity(jsonStr, 'badhash1234567890');
+    expect(isInvalid).toBe(false);
   });
 });
