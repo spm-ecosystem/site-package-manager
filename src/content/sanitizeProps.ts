@@ -1,7 +1,8 @@
 /**
  * Generic, agnostic component props sanitizer.
  * Guarantees that no React component receives `undefined` or `null` for array/object props,
- * protecting against runtime exceptions (e.g. `Cannot read properties of undefined (reading 'length')`).
+ * protecting against runtime exceptions (e.g. `Cannot read properties of undefined (reading 'length')`)
+ * while strictly preserving scalar string, number, and boolean properties.
  */
 export function sanitizeComponentProps<T extends Record<string, any>>(rawProps: T): T {
   if (!rawProps || typeof rawProps !== 'object') {
@@ -12,7 +13,7 @@ export function sanitizeComponentProps<T extends Record<string, any>>(rawProps: 
 
   for (const [key, value] of Object.entries(safeProps)) {
     if (value === undefined || value === null) {
-      // Heuristic matching for array props across primitive and dedicated components
+      // Precise matching for collection/array props across primitive and dedicated components
       if (
         key === 'items' ||
         key === 'tags' ||
@@ -27,10 +28,12 @@ export function sanitizeComponentProps<T extends Record<string, any>>(rawProps: 
         key === 'actions' ||
         key === 'children' ||
         key === 'customStyles' ||
-        key.endsWith('s') ||
         key.endsWith('List') ||
         key.endsWith('Array') ||
-        key.endsWith('Items')
+        key.endsWith('Items') ||
+        key.endsWith('Rows') ||
+        key.endsWith('Tags') ||
+        key.endsWith('Links')
       ) {
         safeProps[key] = [];
       }

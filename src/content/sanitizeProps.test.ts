@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { sanitizeComponentProps } from './sanitizeProps';
 
-describe('sanitizeComponentProps', () => {
+describe('sanitizeComponentProps (Real Data & Edge Case Validation)', () => {
   it('should return empty object for null or undefined input', () => {
     expect(sanitizeComponentProps(null as any)).toEqual({});
     expect(sanitizeComponentProps(undefined as any)).toEqual({});
@@ -27,15 +27,39 @@ describe('sanitizeComponentProps', () => {
     });
   });
 
-  it('should preserve existing populated array props', () => {
+  it('should preserve real extracted data from Safebooru manifest without mutation', () => {
+    const realSafebooruProps = {
+      pageTitle: 'Safebooru',
+      gridItems: [
+        { imageUrl: 'https://safebooru.org/thumbnails/1000/thumbnail_1001.jpg', postUrl: 'index.php?page=post&s=view&id=1001', itemSelector: '#s1001' },
+        { imageUrl: 'https://safebooru.org/thumbnails/1000/thumbnail_1002.jpg', postUrl: 'index.php?page=post&s=view&id=1002', itemSelector: '#s1002' }
+      ],
+      tags: [
+        { tagName: 'artist_name', tagUrl: 'index.php?page=post&s=list&tags=artist_name', count: '1.2k' },
+        { tagName: 'character_name', tagUrl: 'index.php?page=post&s=list&tags=character_name', count: '5.4k' }
+      ]
+    };
+
+    const clean = sanitizeComponentProps(realSafebooruProps);
+
+    expect(clean.pageTitle).toBe('Safebooru');
+    expect(clean.gridItems).toHaveLength(2);
+    expect(clean.gridItems[0].imageUrl).toContain('thumbnail_1001.jpg');
+    expect(clean.tags).toHaveLength(2);
+    expect(clean.tags[0].tagName).toBe('artist_name');
+  });
+
+  it('should NOT convert scalar string props ending in "s" (e.g. status, address) to empty arrays when undefined', () => {
     const rawProps = {
-      items: [{ id: '1', title: 'Card 1' }],
-      tags: [{ name: 'tag1' }]
+      status: undefined,
+      address: undefined,
+      pageTitle: 'Sample'
     };
 
     const clean = sanitizeComponentProps(rawProps);
 
-    expect(clean.items).toHaveLength(1);
-    expect(clean.tags).toHaveLength(1);
+    expect(clean.status).toBeUndefined();
+    expect(clean.address).toBeUndefined();
+    expect(clean.pageTitle).toBe('Sample');
   });
 });
