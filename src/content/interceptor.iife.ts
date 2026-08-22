@@ -10,7 +10,7 @@
   if(isGloballyEnabled)
     init()
 
-});
+})();
 
 function init() {
   // antiFlicker element
@@ -88,7 +88,7 @@ function init() {
       try {
         window.top.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
       } catch (e) {
-        window.top.postMessage({ type: 'spm-show-toast', message: String(msg), toastType: 'info' }, '*');
+        window.top.postMessage({ type: 'spm-show-toast', message: String(msg), toastType: 'info' }, window.location.origin);
       }
     }
   };

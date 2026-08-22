@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { extractValue, revealPage } from './engine';
 import { COMPONENT_REGISTRY } from '../components-registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
+import { SpmErrorBoundary } from './SpmErrorBoundary';
 
 const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
@@ -219,7 +220,11 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
     const toastRoot = rootDoc.createElement('div');
     shadowRoot.appendChild(toastRoot);
-    createRoot(toastRoot).render(<UiToastContainer />);
+    createRoot(toastRoot).render(
+      <SpmErrorBoundary componentName="UiToastContainer">
+        <UiToastContainer />
+      </SpmErrorBoundary>
+    );
   }
 
   const noticeSelector = manifest.theme?.noticeSelector || '#notice';
@@ -236,7 +241,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         try {
           window.top.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
         } catch (e) {
-          window.top.postMessage({ type: 'spm-show-toast', message: text, toastType: 'info' }, '*');
+          window.top.postMessage({ type: 'spm-show-toast', message: text, toastType: 'info' }, window.location.origin);
         }
       }
     };
@@ -383,7 +388,11 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
 
           console.log('[SPM Engine] Reconstructing:', layoutComponent, { staticProps, pageProps, childrenLists, hasInfiniteScroll: !!onLoadMore });
           const root = createRoot(rootContainer);
-          root.render(<Component {...(staticProps || {})} {...pageProps} {...childrenLists} onLoadMore={onLoadMore} />);
+          root.render(
+            <SpmErrorBoundary componentName={layoutComponent}>
+              <Component {...(staticProps || {})} {...pageProps} {...childrenLists} onLoadMore={onLoadMore} />
+            </SpmErrorBoundary>
+          );
 
           // Execute DOM reparenting in microtask loop once React finishes mounting layout
           setTimeout(() => {
@@ -464,7 +473,18 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         rootContainer.style.width = '100%';
         shadowRoot.appendChild(rootContainer);
 
-        createRoot(rootContainer).render(<Component {...allProps} />);
+        createRoot(rootContainer).render(
+          <SpmErrorBoundary
+            componentName={compConfig.name}
+            onCatchError={() => {
+              if (compConfig.action === 'replace' && originalEl instanceof HTMLElement) {
+                originalEl.style.removeProperty('display');
+              }
+            }}
+          >
+            <Component {...allProps} />
+          </SpmErrorBoundary>
+        );
 
         if (compConfig.action === 'replace') {
           if (originalEl instanceof HTMLElement) {
