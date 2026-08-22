@@ -20,6 +20,7 @@ function scheduleModernization(manifest: SiteManifest, cssText: string) {
 declare global {
   interface Window {
     __spm_last_manifest?: SiteManifest;
+    __spm_dev_manifest?: SiteManifest;
   }
 }
 
@@ -49,6 +50,14 @@ export function updateShadowStyleTags(cssVarsString: string, _newCss: string, st
 
 async function init() {
   if (typeof chrome === 'undefined' || !chrome.storage) {
+    const devManifest = window.__spm_dev_manifest;
+    if (devManifest) {
+      console.log('[SPM] Standalone Dev Mode active via window.__spm_dev_manifest');
+      const cssVars = devManifest.theme?.cssVariables || {};
+      const devCss = devManifest.theme?.customStyles || '';
+      applyThemeGlobally(cssVars, devCss, devManifest.theme?.noticeSelector);
+      runModernizer(document, devManifest, stylesText, devCss);
+    }
     return;
   }
 
