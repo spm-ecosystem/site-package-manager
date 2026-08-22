@@ -1,3 +1,50 @@
+export function parseCleanNumber(val: string | null | undefined): string | null {
+  if (val === null || val === undefined) return null;
+  const raw = String(val).trim();
+  if (!raw) return null;
+
+  // 1. Multiplier suffix (e.g. 2.4k, 1.5M, 3b)
+  let multiplier = 1;
+  let workStr = raw;
+  const suffixMatch = raw.match(/([0-9.,]+)\s*([kKmMbB])\b/);
+  if (suffixMatch) {
+    const unit = suffixMatch[2].toLowerCase();
+    if (unit === 'k') multiplier = 1000;
+    else if (unit === 'm') multiplier = 1000000;
+    else if (unit === 'b') multiplier = 1000000000;
+    workStr = suffixMatch[1];
+  }
+
+  // 2. Negative sign detection (e.g. "-$50", "- 2.5", "R$ -100")
+  const isNegative = /^\s*-\s*[\$€R£\d]/.test(raw) || /[\$€R£\s]-\s*[\d.]/.test(raw);
+
+  // 3. Extract numeric characters and separators (. and ,)
+  let numStr = workStr.replace(/[^0-9.,]/g, '');
+  if (!numStr) return null;
+
+  // 4. Handle European/BR (1.299,50) vs US (1,299.50) separator conventions
+  if (numStr.includes(',') && numStr.includes('.')) {
+    if (numStr.lastIndexOf(',') > numStr.lastIndexOf('.')) {
+      numStr = numStr.replace(/\./g, '').replace(',', '.');
+    } else {
+      numStr = numStr.replace(/,/g, '');
+    }
+  } else if (numStr.includes(',')) {
+    const parts = numStr.split(',');
+    if (parts.length === 2 && parts[1].length <= 2) {
+      numStr = parts[0] + '.' + parts[1];
+    } else {
+      numStr = numStr.replace(/,/g, '');
+    }
+  }
+
+  const numVal = parseFloat(numStr);
+  if (isNaN(numVal)) return null;
+
+  const result = (isNegative ? -1 : 1) * numVal * multiplier;
+  return String(result);
+}
+
 export function extractValue(element: Element, queryRule: string): string | null {
   const parts = queryRule.split('|').map((s) => s.trim());
   const selector = parts[0];
@@ -64,9 +111,7 @@ export function extractValue(element: Element, queryRule: string): string | null
       const numVal = Number(trimmed);
       val = isNaN(numVal) || trimmed === '' ? null : String(numVal);
     } else if (pipe === 'cleanNumber') {
-      const cleaned = val.replace(/[, \s]/g, '').replace(/[^0-9.-]/g, '');
-      const numVal = parseFloat(cleaned);
-      val = isNaN(numVal) || cleaned === '' ? null : String(numVal);
+      val = parseCleanNumber(val);
     } else if (pipe === 'split') {
       val = JSON.stringify(val.split(/\s+/).filter(item => item.length > 0));
     } else if (pipe.startsWith('split:')) {

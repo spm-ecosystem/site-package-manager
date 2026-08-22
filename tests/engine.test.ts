@@ -97,12 +97,28 @@ describe('extractValue engine helper', () => {
       const div = document.createElement('div');
       div.innerHTML = '<span>- R$ 2.500,75</span>';
       const result1 = extractValue(div, 'span | text | cleanNumber');
-      expect(result1).toBe('-2.50075');
+      expect(result1).toBe('-2500.75');
 
       const div2 = document.createElement('div');
       div2.innerHTML = '<span>R$ -1,500.25</span>';
       const result2 = extractValue(div2, 'span | text | cleanNumber');
       expect(result2).toBe('-1500.25');
+    });
+
+    it('should parse metric multiplier suffixes (k, m, b) correctly with cleanNumber', () => {
+      const div1 = document.createElement('div');
+      div1.innerHTML = '<span>2.4k views</span>';
+      expect(extractValue(div1, 'span | text | cleanNumber')).toBe('2400');
+
+      const div2 = document.createElement('div');
+      div2.innerHTML = '<span>1.5M followers</span>';
+      expect(extractValue(div2, 'span | text | cleanNumber')).toBe('1500000');
+    });
+
+    it('should not treat hyphens inside string prefixes as negative signs', () => {
+      const div = document.createElement('div');
+      div.innerHTML = '<span>q-12345</span>';
+      expect(extractValue(div, 'span | text | cleanNumber')).toBe('12345');
     });
 
     it('should handle empty/null values gracefully across pipes', () => {
