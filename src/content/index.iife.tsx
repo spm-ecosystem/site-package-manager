@@ -296,15 +296,18 @@ async function init() {
           return;
         }
 
-        // 4. Fetch manifest JSON from edge Worker (with local caching)
+        // 4. Fetch manifest JSON from edge Worker (with local caching & pinned integrity verification)
         const manifestCacheKey = `theme_manifest:${domain}:${themeName}:${version}`;
         const cacheTimeKey = `theme_cache_time:${domain}:${themeName}:${version}`;
+        const pinnedIntegrityKey = `spm_pinned_integrity:${domain}:${themeName}:${version}`;
+        const domainIntegrityKey = `spm_pinned_integrity:${domain}`;
 
         const cacheRes = await new Promise<Record<string, any>>((resolve) => {
-          chrome.storage.local.get([manifestCacheKey, cacheTimeKey], resolve);
+          chrome.storage.local.get([manifestCacheKey, cacheTimeKey, pinnedIntegrityKey, domainIntegrityKey], resolve);
         });
         const cachedManifest = cacheRes[manifestCacheKey];
         const cachedTime = cacheRes[cacheTimeKey] || 0;
+        const pinnedIntegrity = cacheRes[pinnedIntegrityKey] || cacheRes[domainIntegrityKey];
         const isCacheValid = cachedManifest && cachedTime && (Date.now() - cachedTime < 3600000);
 
         let manifestData: SiteManifest = cachedManifest;
@@ -312,7 +315,7 @@ async function init() {
         if (!isCacheValid) {
           try {
             console.log(`[SPM] Fetching theme ${themeName}@${version} from edge Worker...`);
-            const fetched = await fetchThemeFiles(domain, themeName, version);
+            const fetched = await fetchThemeFiles(domain, themeName, version, pinnedIntegrity);
             manifestData = fetched.manifest;
 
             // Save to cache

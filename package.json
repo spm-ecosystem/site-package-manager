@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build:registry": "node ../vscode-theme-manifest-intellisense/scripts/build-registry.js",
+    "build:registry": "node scripts/build-registry-safe.js",
     "build": "npm run build:registry && tsc && vite build",
     "test": "vitest run"
   },

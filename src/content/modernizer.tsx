@@ -242,7 +242,7 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
         try {
           window.top.dispatchEvent(new CustomEvent('spm-show-toast', { detail }));
         } catch (e) {
-          window.top.postMessage({ type: 'spm-show-toast', message: text, toastType: 'info' }, window.location.origin);
+          window.top.postMessage({ type: 'spm-show-toast', message: text, toastType: 'info' }, '*');
         }
       }
     };
