@@ -544,16 +544,35 @@ export async function fetchThemeFiles(domain: string, themeName: string, version
   }
 
   const rawManifestText = await manifestRes.text();
+  const rawHash = await computeSha256(rawManifestText);
+  const computedIntegrity = `sha256-${rawHash}`;
   const headerIntegrity = manifestRes.headers.get('x-spm-integrity');
-  const targetIntegrity = expectedIntegrity || headerIntegrity;
 
-  if (targetIntegrity && targetIntegrity.startsWith('sha256-')) {
-    const expectedHash = targetIntegrity.substring(7);
-    const isValid = await verifyManifestIntegrity(rawManifestText, expectedHash);
+  // If pinned integrity was passed, enforce strict hash match
+  if (expectedIntegrity && expectedIntegrity.startsWith('sha256-')) {
+    const expectedHash = expectedIntegrity.substring(7);
+    const isValid = rawHash.toLowerCase() === expectedHash.toLowerCase();
     if (!isValid) {
-      throw new Error(`[SPM Security] Manifest SHA-256 integrity verification failed for ${themeName}@${version}`);
+      throw new Error(`[SPM Security Error] Pinned SHA-256 integrity mismatch for ${domain} (${themeName}@${version})! Expected: ${expectedHash}, Got: ${rawHash}`);
     }
-    console.log(`[SPM Security] Manifest SHA-256 integrity verified for ${themeName}@${version}`);
+    console.log(`[SPM Security] Pinned SHA-256 integrity verified for ${themeName}@${version}`);
+  } else if (headerIntegrity && headerIntegrity.startsWith('sha256-')) {
+    const expectedHash = headerIntegrity.substring(7);
+    const isValid = rawHash.toLowerCase() === expectedHash.toLowerCase();
+    if (!isValid) {
+      throw new Error(`[SPM Security Error] Manifest header SHA-256 integrity mismatch for ${themeName}@${version}`);
+    }
+    console.log(`[SPM Security] Manifest header SHA-256 integrity verified for ${themeName}@${version}`);
+  }
+
+  // Save/pin computed integrity hash to local storage
+  if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+    const pinnedIntegrityKey = `spm_pinned_integrity:${domain}:${themeName}:${version}`;
+    const domainIntegrityKey = `spm_pinned_integrity:${domain}`;
+    chrome.storage.local.set({
+      [pinnedIntegrityKey]: computedIntegrity,
+      [domainIntegrityKey]: computedIntegrity
+    });
   }
 
   const manifest: SiteManifest = JSON.parse(rawManifestText);

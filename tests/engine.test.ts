@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, test, vi } from 'vitest';
 import { extractValue, triggerProxyClick, triggerProxyEvent } from '../src/content/engine';
-import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity } from '../src/content/modernizer';
+import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity, fetchThemeFiles } from '../src/content/modernizer';
 
 describe('extractValue engine helper', () => {
   it('should extract text content from child', () => {
@@ -427,5 +427,83 @@ describe('Manifest Security & Integrity Verification', () => {
 
     const isInvalid = await verifyManifestIntegrity(jsonStr, 'badhash1234567890');
     expect(isInvalid).toBe(false);
+  });
+
+  it('should verify and pin SHA-256 integrity in fetchThemeFiles', async () => {
+    const manifestJson = JSON.stringify({ theme: { noticeSelector: '#notice' }, components: [] });
+    const rawHash = await computeSha256(manifestJson);
+    const expectedIntegrity = `sha256-${rawHash}`;
+
+    const mockStorage: Record<string, any> = {};
+    (globalThis as any).chrome = {
+      storage: {
+        local: {
+          set: vi.fn((obj: Record<string, any>) => {
+            Object.assign(mockStorage, obj);
+          })
+        }
+      }
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.endsWith('manifest.json')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(manifestJson),
+          headers: new Headers({ 'x-spm-integrity': expectedIntegrity })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('/* css */')
+      });
+    });
+
+    try {
+      const { manifest, cssText } = await fetchThemeFiles('test.example.com', 'modern-theme', '1.0.0', expectedIntegrity);
+      expect(manifest).toBeDefined();
+      expect(cssText).toBe('/* css */');
+      expect((globalThis as any).chrome.storage.local.set).toHaveBeenCalledWith({
+        'spm_pinned_integrity:test.example.com:modern-theme:1.0.0': expectedIntegrity,
+        'spm_pinned_integrity:test.example.com': expectedIntegrity
+      });
+      expect(mockStorage['spm_pinned_integrity:test.example.com:modern-theme:1.0.0']).toBe(expectedIntegrity);
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete (globalThis as any).chrome;
+    }
+  });
+
+  it('should throw error when pinned integrity does not match manifest hash', async () => {
+    const manifestJson = JSON.stringify({ theme: {}, components: [] });
+    const badIntegrity = 'sha256-0000000000000000000000000000000000000000000000000000000000000000';
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.endsWith('manifest.json')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(manifestJson),
+          headers: new Headers()
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('')
+      });
+    });
+
+    try {
+      await expect(
+        fetchThemeFiles('test.example.com', 'modern-theme', '1.0.0', badIntegrity)
+      ).rejects.toThrow(/Pinned SHA-256 integrity mismatch/);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
