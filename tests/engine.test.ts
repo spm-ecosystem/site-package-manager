@@ -2,6 +2,7 @@
 import { describe, it, expect, test, vi } from 'vitest';
 import { extractValue, triggerProxyClick, triggerProxyEvent } from '../src/content/engine';
 import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity, fetchThemeFiles } from '../src/content/modernizer';
+import { computeManifestIntegrity } from '../src/popup/index';
 
 describe('extractValue engine helper', () => {
   it('should extract text content from child', () => {
@@ -502,6 +503,37 @@ describe('Manifest Security & Integrity Verification', () => {
       await expect(
         fetchThemeFiles('test.example.com', 'modern-theme', '1.0.0', badIntegrity)
       ).rejects.toThrow(/Pinned SHA-256 integrity mismatch/);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('should compute SHA-256 integrity hash correctly in popup helper', async () => {
+    const manifestJson = JSON.stringify({ name: 'theme', version: '1.0.0' });
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(manifestJson));
+    const expectedHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    const expectedIntegrity = `sha256-${expectedHex}`;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('manifest.json')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(manifestJson)
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404 });
+    });
+
+    try {
+      const integrity = await computeManifestIntegrity('test.example.com', 'theme', '1.0.0');
+      expect(integrity).toBe(expectedIntegrity);
+
+      // Return null on failure
+      const missing = await computeManifestIntegrity('', 'theme', '1.0.0');
+      expect(missing).toBeNull();
     } finally {
       globalThis.fetch = originalFetch;
     }

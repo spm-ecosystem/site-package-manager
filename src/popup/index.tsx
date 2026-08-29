@@ -11,6 +11,25 @@ import { DevTab } from './components/DevTab';
 
 const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
+export async function computeManifestIntegrity(domain: string, themeName: string, version: string): Promise<string | null> {
+  if (!domain || !themeName || !version) return null;
+  try {
+    const res = await fetch(`${WORKER_ORIGIN}/spm/v1/api/themes/${domain}/${themeName}/${version}/manifest.json`);
+    if (!res.ok) return null;
+    const rawText = await res.text();
+    if (!rawText) return null;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(rawText);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return `sha256-${hex}`;
+  } catch (e) {
+    console.error('[SPM Popup] Error fetching manifest integrity:', e);
+    return null;
+  }
+}
+
 function Popup() {
   const [globalEnabled, setGlobalEnabled]   = useState<boolean>(true);
   const [currentDomain, setCurrentDomain]   = useState<string>('');
@@ -202,19 +221,35 @@ function Popup() {
 
   };
 
-  const handlePackageChange = (newPkgId: string) => {
+  const handlePackageChange = async (newPkgId: string) => {
     const nextActivePkgs = { ...spmActivePackages, [currentDomain]: newPkgId };
     setSpmActivePackages(nextActivePkgs);
 
+    const selectedVersion = spmPinnedVersions[currentDomain]?.[newPkgId] || packages[newPkgId]?.activeVersion || '';
+    const activePkgKey = `spm_pinned_package:${currentDomain}`;
+    const activeVerKey = `spm_pinned_version:${currentDomain}`;
+    const domainIntegrityKey = `spm_pinned_integrity:${currentDomain}`;
+
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({
+      const storageUpdate: Record<string, any> = {
         spm_active_packages: nextActivePkgs,
-        [`spm_pinned_package:${currentDomain}`]: newPkgId
-      }, reloadTab);
+        [activePkgKey]: newPkgId
+      };
+
+      if (selectedVersion) {
+        storageUpdate[activeVerKey] = selectedVersion;
+        const integrityVal = await computeManifestIntegrity(currentDomain, newPkgId, selectedVersion);
+        if (integrityVal) {
+          storageUpdate[`spm_pinned_integrity:${currentDomain}:${newPkgId}:${selectedVersion}`] = integrityVal;
+          storageUpdate[domainIntegrityKey] = integrityVal;
+        }
+      }
+
+      chrome.storage.local.set(storageUpdate, reloadTab);
     }
   };
 
-  const handleVersionChange = (newVersion: string) => {
+  const handleVersionChange = async (newVersion: string) => {
     const currentPkg = spmActivePackages[currentDomain] || registry[currentDomain]?.defaultPackage || '';
     if (!currentPkg) return;
 
@@ -229,10 +264,23 @@ function Popup() {
     setSpmPinnedVersions(nextPinnedVers);
 
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.set({
+      const activePkgKey = `spm_pinned_package:${currentDomain}`;
+      const activeVerKey = `spm_pinned_version:${currentDomain}`;
+      const domainIntegrityKey = `spm_pinned_integrity:${currentDomain}`;
+
+      const storageUpdate: Record<string, any> = {
         spm_pinned_versions: nextPinnedVers,
-        [`spm_pinned_version:${currentDomain}`]: newVersion
-      }, reloadTab);
+        [activePkgKey]: currentPkg,
+        [activeVerKey]: newVersion
+      };
+
+      const integrityVal = await computeManifestIntegrity(currentDomain, currentPkg, newVersion);
+      if (integrityVal) {
+        storageUpdate[`spm_pinned_integrity:${currentDomain}:${currentPkg}:${newVersion}`] = integrityVal;
+        storageUpdate[domainIntegrityKey] = integrityVal;
+      }
+
+      chrome.storage.local.set(storageUpdate, reloadTab);
     }
   };
 
