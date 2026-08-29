@@ -11,6 +11,7 @@ import { UiImageCard } from './components/dedicated/UiImageCard';
 import { UiImageViewer } from './components/dedicated/UiImageViewer';
 import { UiModernGridPage } from './components/dedicated/UiModernGridPage';
 import { UiNavHeader } from './components/dedicated/UiNavHeader';
+import { UiNestedTreeTable } from './components/dedicated/UiNestedTreeTable';
 import { UiPaginationBar } from './components/dedicated/UiPaginationBar';
 import { UiPostDetails } from './components/dedicated/UiPostDetails';
 import { UiScrollPanel } from './components/dedicated/UiScrollPanel';
@@ -20,6 +21,7 @@ import { UiStatsDashboard } from './components/dedicated/UiStatsDashboard';
 import { UiTable } from './components/dedicated/UiTable';
 import { UiTableListPage } from './components/dedicated/UiTableListPage';
 import { UiTagBadge } from './components/dedicated/UiTagBadge';
+import { UiTerminalConsole } from './components/dedicated/UiTerminalConsole';
 import { UiToast } from './components/dedicated/UiToast';
 
 export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
@@ -39,6 +41,7 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiImageViewer,
   UiModernGridPage,
   UiNavHeader,
+  UiNestedTreeTable,
   UiPaginationBar,
   UiPostDetails,
   UiScrollPanel,
@@ -48,6 +51,7 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiTable,
   UiTableListPage,
   UiTagBadge,
+  UiTerminalConsole,
   UiToast
 };
 
@@ -71,6 +75,7 @@ export const DEDICATED_COMPONENTS = [
   'UiImageViewer',
   'UiModernGridPage',
   'UiNavHeader',
+  'UiNestedTreeTable',
   'UiPaginationBar',
   'UiPostDetails',
   'UiScrollPanel',
@@ -80,5 +85,6 @@ export const DEDICATED_COMPONENTS = [
   'UiTable',
   'UiTableListPage',
   'UiTagBadge',
+  'UiTerminalConsole',
   'UiToast'
 ];
