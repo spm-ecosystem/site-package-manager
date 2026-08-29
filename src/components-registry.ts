@@ -5,6 +5,7 @@ import React from 'react';
 import { UiBox, UiFlexColumn, UiFlexRow, UiGrid, UiImage, UiLink, UiScrollBox, UiText } from './components/primitives/LayoutPrimitives';
 import { UiCommentListPage } from './components/dedicated/UiCommentListPage';
 import { UiDashboardPage } from './components/dedicated/UiDashboardPage';
+import { UiFormContainer } from './components/dedicated/UiFormContainer';
 import { UiHeroLanding } from './components/dedicated/UiHeroLanding';
 import { UiImageCard } from './components/dedicated/UiImageCard';
 import { UiImageViewer } from './components/dedicated/UiImageViewer';
@@ -32,6 +33,7 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiText,
   UiCommentListPage,
   UiDashboardPage,
+  UiFormContainer,
   UiHeroLanding,
   UiImageCard,
   UiImageViewer,
@@ -63,6 +65,7 @@ export const PRIMITIVE_COMPONENTS = [
 export const DEDICATED_COMPONENTS = [
   'UiCommentListPage',
   'UiDashboardPage',
+  'UiFormContainer',
   'UiHeroLanding',
   'UiImageCard',
   'UiImageViewer',
