@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, test, vi } from 'vitest';
 import { extractValue, triggerProxyClick, triggerProxyEvent } from '../src/content/engine';
-import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity, fetchThemeFiles } from '../src/content/modernizer';
+import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity, fetchThemeFiles, findElementWithShadow, findAllElementsWithShadow } from '../src/content/modernizer';
 import { computeManifestIntegrity } from '../src/popup/index';
 
 describe('extractValue engine helper', () => {
@@ -539,3 +539,194 @@ describe('Manifest Security & Integrity Verification', () => {
     }
   });
 });
+
+describe('findElementWithShadow and findAllElementsWithShadow helper', () => {
+  it('resolves normal selectors cleanly', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<div class="target-item"><span id="inner-span">Text</span></div>';
+
+    const el = findElementWithShadow(root, '.target-item');
+    expect(el).not.toBeNull();
+    expect(el?.className).toBe('target-item');
+
+    const span = findElementWithShadow(root, '#inner-span');
+    expect(span).not.toBeNull();
+    expect(span?.textContent).toBe('Text');
+
+    const notFound = findElementWithShadow(root, '.non-existent');
+    expect(notFound).toBeNull();
+  });
+
+  it('handles invalid selector string without throwing uncaught error', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<div class="test"></div>';
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const el = findElementWithShadow(root, ':::invalid[selector==bad:::');
+    expect(el).toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+
+    const list = findAllElementsWithShadow(root, ':::invalid[selector==bad:::');
+    expect(list).toEqual([]);
+
+    warnSpy.mockRestore();
+  });
+
+  it('resolves shadow host and inner selector using explicit parameters', () => {
+    const root = document.createElement('div');
+    const host = document.createElement('div');
+    host.id = 'shadow-host-1';
+    const shadow = host.attachShadow({ mode: 'open' });
+    const inner = document.createElement('div');
+    inner.className = 'shadow-inner';
+    inner.textContent = 'Shadow Content';
+    shadow.appendChild(inner);
+    root.appendChild(host);
+
+    const found = findElementWithShadow(root, '', true, '#shadow-host-1', '.shadow-inner');
+    expect(found).not.toBeNull();
+    expect(found?.textContent).toBe('Shadow Content');
+
+    // Without innerSelector, returns host
+    const foundHost = findElementWithShadow(root, '', true, '#shadow-host-1');
+    expect(foundHost).toBe(host);
+
+    // If host not found, returns null
+    const notFound = findElementWithShadow(root, '', true, '#non-existent-host', '.shadow-inner');
+    expect(notFound).toBeNull();
+  });
+
+  it('resolves shadow host and inner selector using shadow: prefix syntax', () => {
+    const root = document.createElement('div');
+    const host = document.createElement('div');
+    host.className = 'custom-widget-host';
+    const shadow = host.attachShadow({ mode: 'open' });
+    const button = document.createElement('button');
+    button.className = 'btn-inside-shadow';
+    button.textContent = 'Click Me';
+    shadow.appendChild(button);
+    root.appendChild(host);
+
+    const found = findElementWithShadow(root, 'shadow: .custom-widget-host -> .btn-inside-shadow');
+    expect(found).not.toBeNull();
+    expect(found?.textContent).toBe('Click Me');
+
+    // Without arrow / inner selector
+    const hostOnly = findElementWithShadow(root, 'shadow: .custom-widget-host');
+    expect(hostOnly).toBe(host);
+
+    // If host not found
+    const notFound = findElementWithShadow(root, 'shadow: .missing-host -> .btn');
+    expect(notFound).toBeNull();
+  });
+
+  it('findAllElementsWithShadow returns array of matching elements inside shadow root and normal DOM', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<div class="normal-item">1</div><div class="normal-item">2</div>';
+
+    const normalList = findAllElementsWithShadow(root, '.normal-item');
+    expect(normalList).toHaveLength(2);
+
+    const host = document.createElement('div');
+    host.id = 'multi-shadow-host';
+    const shadow = host.attachShadow({ mode: 'open' });
+    shadow.innerHTML = '<span class="item">A</span><span class="item">B</span><span class="item">C</span>';
+    root.appendChild(host);
+
+    const shadowListExplicit = findAllElementsWithShadow(root, '', true, '#multi-shadow-host', '.item');
+    expect(shadowListExplicit).toHaveLength(3);
+    expect(shadowListExplicit.map(el => el.textContent)).toEqual(['A', 'B', 'C']);
+
+    const shadowListSyntax = findAllElementsWithShadow(root, 'shadow: #multi-shadow-host -> .item');
+    expect(shadowListSyntax).toHaveLength(3);
+    expect(shadowListSyntax.map(el => el.textContent)).toEqual(['A', 'B', 'C']);
+
+    // Non-existent host returns empty array
+    expect(findAllElementsWithShadow(root, 'shadow: #missing-host -> .item')).toEqual([]);
+    expect(findAllElementsWithShadow(root, '', true, '#missing-host', '.item')).toEqual([]);
+  });
+});
+
+describe('runModernizer Error Isolation', () => {
+  it('isolates errors in reconstruct configs and continues processing other reconstructs', () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const container1 = document.createElement('div');
+    container1.className = 'recon-container-1';
+    const container2 = document.createElement('div');
+    container2.className = 'recon-container-2';
+    document.body.appendChild(container1);
+    document.body.appendChild(container2);
+
+    const manifest: any = {
+      reconstructs: [
+        {
+          containerSelector: ':::invalid-bad-selector:::',
+          layoutComponent: 'UiSearchBar',
+          children: []
+        },
+        {
+          containerSelector: '.recon-container-2',
+          layoutComponent: 'UiSearchBar',
+          children: []
+        }
+      ]
+    };
+
+    expect(() => {
+      runModernizer(document, manifest, '');
+    }).not.toThrow();
+
+    // container2 should have been reconstructed successfully
+    expect(container2.getAttribute('data-spm-modernized')).toBe('true');
+
+    // Clean up
+    container1.remove();
+    container2.remove();
+    document.querySelectorAll('[class^="modern-reconstruct-host-"]').forEach(h => h.remove());
+    errSpy.mockRestore();
+  });
+
+  it('isolates errors in component configs and continues processing other components', () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const compEl1 = document.createElement('div');
+    compEl1.className = 'comp-el-1';
+    const compEl2 = document.createElement('div');
+    compEl2.className = 'comp-el-2';
+    document.body.appendChild(compEl1);
+    document.body.appendChild(compEl2);
+
+    const manifest: any = {
+      components: [
+        {
+          name: 'UiSearchBar',
+          selector: ':::invalid-comp-selector:::',
+          action: 'replace',
+          propsMap: {}
+        },
+        {
+          name: 'UiSearchBar',
+          selector: '.comp-el-2',
+          action: 'replace',
+          propsMap: {}
+        }
+      ]
+    };
+
+    expect(() => {
+      runModernizer(document, manifest, '');
+    }).not.toThrow();
+
+    // compEl2 should have been modernized
+    expect(compEl2.getAttribute('data-spm-modernized')).toBe('true');
+
+    // Clean up
+    compEl1.remove();
+    compEl2.remove();
+    document.querySelectorAll('[class^="modern-host-"]').forEach(h => h.remove());
+    errSpy.mockRestore();
+  });
+});
+
