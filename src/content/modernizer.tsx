@@ -675,6 +675,13 @@ export function markActiveNavigationLinks() {
       const rawHref = link.getAttribute('href');
       if (!rawHref || rawHref.startsWith('javascript:')) return;
 
+      // Skip logo, brand, and site title links from category nav highlighting
+      if (link.closest('.hnname, .logo, .brand, [class*="logo"], [class*="brand"]')) {
+        link.classList.remove('spm-active');
+        link.removeAttribute('data-active');
+        return;
+      }
+
       try {
         if (rawHref.startsWith('#')) {
           if (currentHash === rawHref) {

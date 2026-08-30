@@ -788,5 +788,11 @@ describe('markActiveNavigationLinks & setupActiveLinkListeners', () => {
     expect(sec2?.getAttribute('data-active')).toBe('true');
     expect(sec1?.classList.contains('spm-active')).toBe(false);
   });
+
+  it('initializes listeners via setupActiveLinkListeners without throwing', () => {
+    expect(() => {
+      setupActiveLinkListeners();
+    }).not.toThrow();
+  });
 });
 
