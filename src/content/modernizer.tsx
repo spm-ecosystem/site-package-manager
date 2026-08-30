@@ -4,6 +4,7 @@ import { COMPONENT_REGISTRY } from '../components-registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
 import { SpmErrorBoundary } from './SpmErrorBoundary';
 import { sanitizeComponentProps } from './sanitizeProps';
+import { DevDiagnosticCollector } from './devDiagnostics';
 
 const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
@@ -265,7 +266,13 @@ function getNextPageUrl(context: Document | HTMLElement, config?: InfiniteScroll
   return null;
 }
 
-export function runModernizer(rootContext: Document | HTMLElement, manifest: SiteManifest, stylesText: string, _styleCSS: string = '') {
+export function runModernizer(
+  rootContext: Document | HTMLElement,
+  manifest: SiteManifest,
+  stylesText: string,
+  _styleCSS: string = '',
+  isDev: boolean = false
+) {
   // Helper queries targeting scoped parent
   const rootDoc = rootContext instanceof Document ? rootContext : document;
 
@@ -370,6 +377,19 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
           reconConfig.shadowHost,
           reconConfig.innerSelector
         );
+
+        if (!container) {
+          if (isDev) {
+            DevDiagnosticCollector.addDiagnostic({
+              type: 'MISSING_SELECTOR',
+              severity: 'warning',
+              title: `Missing Container: ${layoutComponent}`,
+              message: `Reconstruct container selector "${containerSelector}" matched 0 elements.`,
+              details: JSON.stringify({ layoutComponent, containerSelector, isShadow: reconConfig.isShadow, shadowHost: reconConfig.shadowHost })
+            });
+          }
+          continue;
+        }
 
         if (container && !container.hasAttribute('data-spm-modernized')) {
           container.setAttribute('data-spm-modernized', 'true');
@@ -512,6 +532,19 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
           compConfig.shadowHost,
           compConfig.innerSelector
         );
+
+        if (originalElements.length === 0) {
+          if (isDev) {
+            DevDiagnosticCollector.addDiagnostic({
+              type: 'MISSING_SELECTOR',
+              severity: 'warning',
+              title: `Missing Component Selector: ${compConfig.name}`,
+              message: `Component "${compConfig.name}" selector "${compConfig.selector}" matched 0 elements.`,
+              details: JSON.stringify({ component: compConfig.name, selector: compConfig.selector, action: compConfig.action })
+            });
+          }
+          continue;
+        }
 
         // action:hide - simply hide the element, no React mount
         if (compConfig.action === 'hide') {

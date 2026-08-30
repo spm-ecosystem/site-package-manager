@@ -8,12 +8,12 @@ let hasRunModernizer = false;
 
 let modernizationTimeout: number | null = null;
 
-function scheduleModernization(manifest: SiteManifest, cssText: string) {
+function scheduleModernization(manifest: SiteManifest, cssText: string, isDev: boolean = false) {
   if (modernizationTimeout !== null) {
     clearTimeout(modernizationTimeout);
   }
   modernizationTimeout = window.setTimeout(() => {
-    runModernizer(document, manifest, stylesText, cssText);
+    runModernizer(document, manifest, stylesText, cssText, isDev);
   }, 50);
 }
 
@@ -56,7 +56,7 @@ async function init() {
       const cssVars = devManifest.theme?.cssVariables || {};
       const devCss = devManifest.theme?.customStyles || '';
       applyThemeGlobally(cssVars, devCss, devManifest.theme?.noticeSelector);
-      runModernizer(document, devManifest, stylesText, devCss);
+      runModernizer(document, devManifest, stylesText, devCss, true);
     }
     return;
   }
@@ -119,7 +119,7 @@ async function init() {
               const runDevEngine = () => {
                 if (!hasRunModernizer) {
                   hasRunModernizer = true;
-                  runModernizer(document, devManifest, stylesText, devCss);
+                  runModernizer(document, devManifest, stylesText, devCss, true);
 
                   const observer = new MutationObserver((mutations) => {
                     let shouldRun = false;
@@ -139,7 +139,7 @@ async function init() {
                     }
                     if (shouldRun) {
                       console.log('[SPM Engine] DOM mutation detected. Scheduling modernization...');
-                      scheduleModernization(devManifest, devCss);
+                      scheduleModernization(devManifest, devCss, true);
                     }
                   });
 
