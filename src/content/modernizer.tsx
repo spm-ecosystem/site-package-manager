@@ -675,8 +675,8 @@ export function markActiveNavigationLinks() {
       const rawHref = link.getAttribute('href');
       if (!rawHref || rawHref.startsWith('javascript:')) return;
 
-      // Skip logo, brand, and site title links from category nav highlighting
-      if (link.closest('.hnname, .logo, .brand, [class*="logo"], [class*="brand"]')) {
+      // Skip logo and brand links from active navigation highlighting
+      if (link.closest('.logo, .brand, [class*="logo"], [class*="brand"], [data-spm-no-active]')) {
         link.classList.remove('spm-active');
         link.removeAttribute('data-active');
         return;
