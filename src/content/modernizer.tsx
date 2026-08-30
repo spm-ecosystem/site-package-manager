@@ -604,8 +604,40 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
     }
   }
 
-  // 3. Anti flickering reveal
+  // 3. Mark active navigation links
+  markActiveNavigationLinks();
+
+  // 4. Anti flickering reveal
   revealPage();
+}
+
+export function markActiveNavigationLinks() {
+  try {
+    const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+    const currentSearch = window.location.search;
+
+    document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => {
+      const rawHref = link.getAttribute('href');
+      if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:')) return;
+
+      try {
+        const linkUrl = new URL(link.href, window.location.origin);
+        const linkPath = linkUrl.pathname.replace(/\/$/, '') || '/';
+        const linkSearch = linkUrl.search;
+
+        const isExactMatch = linkPath === currentPath && (linkSearch === currentSearch || (!linkSearch && !currentSearch));
+        const isPathMatch = linkPath !== '/' && linkPath === currentPath && !linkSearch;
+
+        if (isExactMatch || isPathMatch) {
+          link.classList.add('spm-active');
+          link.setAttribute('data-active', 'true');
+        } else {
+          link.classList.remove('spm-active');
+          link.removeAttribute('data-active');
+        }
+      } catch (e) {}
+    });
+  } catch (err) {}
 }
 
 export async function computeSha256(content: string): Promise<string> {
