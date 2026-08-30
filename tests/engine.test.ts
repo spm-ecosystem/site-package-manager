@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, test, vi } from 'vitest';
 import { extractValue, triggerProxyClick, triggerProxyEvent } from '../src/content/engine';
-import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity, fetchThemeFiles, findElementWithShadow, findAllElementsWithShadow } from '../src/content/modernizer';
+import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity, fetchThemeFiles, findElementWithShadow, findAllElementsWithShadow, markActiveNavigationLinks, setupActiveLinkListeners } from '../src/content/modernizer';
 import { computeManifestIntegrity } from '../src/popup/index';
 
 describe('extractValue engine helper', () => {
@@ -727,6 +727,66 @@ describe('runModernizer Error Isolation', () => {
     compEl2.remove();
     document.querySelectorAll('[class^="modern-host-"]').forEach(h => h.remove());
     errSpy.mockRestore();
+  });
+});
+
+describe('markActiveNavigationLinks & setupActiveLinkListeners', () => {
+  it('adds spm-active and data-active="true" to link matching current pathname', () => {
+    document.body.innerHTML = `
+      <nav class="pagetop">
+        <a id="link-news" href="/news">News</a>
+        <a id="link-newest" href="/newest">New</a>
+        <a id="link-comments" href="/newcomments">Comments</a>
+      </nav>
+    `;
+
+    // Mock window.location
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: {
+        origin: 'https://news.ycombinator.com',
+        pathname: '/newest',
+        search: '',
+        hash: ''
+      }
+    });
+
+    markActiveNavigationLinks();
+
+    const newestLink = document.getElementById('link-newest');
+    const newsLink = document.getElementById('link-news');
+
+    expect(newestLink?.classList.contains('spm-active')).toBe(true);
+    expect(newestLink?.getAttribute('data-active')).toBe('true');
+    expect(newsLink?.classList.contains('spm-active')).toBe(false);
+  });
+
+  it('marks active anchor link matching location.hash', () => {
+    document.body.innerHTML = `
+      <nav>
+        <a id="link-sec1" href="#section1">Section 1</a>
+        <a id="link-sec2" href="#section2">Section 2</a>
+      </nav>
+    `;
+
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: {
+        origin: 'https://example.com',
+        pathname: '/doc',
+        search: '',
+        hash: '#section2'
+      }
+    });
+
+    markActiveNavigationLinks();
+
+    const sec1 = document.getElementById('link-sec1');
+    const sec2 = document.getElementById('link-sec2');
+
+    expect(sec2?.classList.contains('spm-active')).toBe(true);
+    expect(sec2?.getAttribute('data-active')).toBe('true');
+    expect(sec1?.classList.contains('spm-active')).toBe(false);
   });
 });
 
