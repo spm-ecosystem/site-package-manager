@@ -20,6 +20,7 @@ import { UiSplitLayout } from './components/dedicated/UiSplitLayout';
 import { UiStatsDashboard } from './components/dedicated/UiStatsDashboard';
 import { UiTable } from './components/dedicated/UiTable';
 import { UiTableListPage } from './components/dedicated/UiTableListPage';
+import { UiTabs } from './components/dedicated/UiTabs';
 import { UiTagBadge } from './components/dedicated/UiTagBadge';
 import { UiTerminalConsole } from './components/dedicated/UiTerminalConsole';
 import { UiToast } from './components/dedicated/UiToast';
@@ -50,6 +51,7 @@ export const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   UiStatsDashboard,
   UiTable,
   UiTableListPage,
+  UiTabs,
   UiTagBadge,
   UiTerminalConsole,
   UiToast
@@ -84,6 +86,7 @@ export const DEDICATED_COMPONENTS = [
   'UiStatsDashboard',
   'UiTable',
   'UiTableListPage',
+  'UiTabs',
   'UiTagBadge',
   'UiTerminalConsole',
   'UiToast'
