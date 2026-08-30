@@ -345,8 +345,8 @@ In order to be iterable, non-array objects must have a [Symbol.iterator]() metho
     }
 
     body.spm-reconstructed {
-      overflow: hidden !important;
-      height: 100vh !important;
+      height: auto !important;
+      min-height: 100vh !important;
     }
 
     a {
