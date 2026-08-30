@@ -604,28 +604,97 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
     }
   }
 
-  // 3. Mark active navigation links
+  // 3. Mark active navigation links & setup listeners (including # anchors & scrollspy)
   markActiveNavigationLinks();
+  setupActiveLinkListeners();
 
   // 4. Anti flickering reveal
   revealPage();
+}
+
+let activeLinkListenersInitialized = false;
+
+export function setupActiveLinkListeners() {
+  if (activeLinkListenersInitialized) return;
+  activeLinkListenersInitialized = true;
+
+  window.addEventListener('hashchange', () => markActiveNavigationLinks());
+  window.addEventListener('popstate', () => markActiveNavigationLinks());
+
+  if (typeof IntersectionObserver !== 'undefined') {
+    const hashLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'));
+    const targetMap = new Map<Element, string>();
+
+    hashLinks.forEach(link => {
+      const hash = link.getAttribute('href');
+      if (hash && hash.length > 1 && hash !== '#') {
+        try {
+          const targetEl = document.querySelector(hash);
+          if (targetEl) {
+            targetMap.set(targetEl, hash);
+          }
+        } catch (e) {}
+      }
+    });
+
+    if (targetMap.size > 0) {
+      const observer = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const matchedHash = targetMap.get(entry.target);
+              if (matchedHash) {
+                hashLinks.forEach(l => {
+                  if (l.getAttribute('href') === matchedHash) {
+                    l.classList.add('spm-active');
+                    l.setAttribute('data-active', 'true');
+                  } else if (l.getAttribute('href')?.startsWith('#')) {
+                    l.classList.remove('spm-active');
+                    l.removeAttribute('data-active');
+                  }
+                });
+              }
+            }
+          });
+        },
+        { threshold: 0.4 }
+      );
+
+      targetMap.forEach((_, el) => observer.observe(el));
+    }
+  }
 }
 
 export function markActiveNavigationLinks() {
   try {
     const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
     const currentSearch = window.location.search;
+    const currentHash = window.location.hash;
 
     document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => {
       const rawHref = link.getAttribute('href');
-      if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:')) return;
+      if (!rawHref || rawHref.startsWith('javascript:')) return;
 
       try {
+        if (rawHref.startsWith('#')) {
+          if (currentHash === rawHref) {
+            link.classList.add('spm-active');
+            link.setAttribute('data-active', 'true');
+          } else {
+            link.classList.remove('spm-active');
+            link.removeAttribute('data-active');
+          }
+          return;
+        }
+
         const linkUrl = new URL(link.href, window.location.origin);
         const linkPath = linkUrl.pathname.replace(/\/$/, '') || '/';
         const linkSearch = linkUrl.search;
+        const linkHash = linkUrl.hash;
 
-        const isExactMatch = linkPath === currentPath && (linkSearch === currentSearch || (!linkSearch && !currentSearch));
+        const isExactMatch = linkPath === currentPath &&
+                             (linkSearch === currentSearch || (!linkSearch && !currentSearch)) &&
+                             (!linkHash || linkHash === currentHash);
         const isPathMatch = linkPath !== '/' && linkPath === currentPath && !linkSearch;
 
         if (isExactMatch || isPathMatch) {
