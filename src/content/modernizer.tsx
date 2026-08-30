@@ -347,6 +347,20 @@ export function runModernizer(rootContext: Document | HTMLElement, manifest: Sit
     });
   }
 
+  // Auto-enhance search forms lacking explicit submit buttons
+  try {
+    const searchForms = rootContext.querySelectorAll('form[action*="algolia"], form[action*="search"]');
+    searchForms.forEach((form) => {
+      if (!form.querySelector('button[type="submit"], input[type="submit"], .spm-search-submit-btn')) {
+        const submitBtn = document.createElement('button');
+        submitBtn.type = 'submit';
+        submitBtn.className = 'spm-search-submit-btn';
+        submitBtn.textContent = 'Search';
+        form.appendChild(submitBtn);
+      }
+    });
+  } catch (e) {}
+
   // 1. Process Reconstruction array
   if (manifest.reconstructs && manifest.reconstructs.length > 0) {
     for (const reconConfig of manifest.reconstructs) {
