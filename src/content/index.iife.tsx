@@ -25,7 +25,7 @@ declare global {
 }
 
 export function updateShadowStyleTags(cssVarsString: string, _newCss: string, stylesTextVal = '') {
-  const hosts = document.querySelectorAll('[class^="modern-reconstruct-host-"], [class^="modern-host-"], #spm-global-toast-host');
+  const hosts = document.querySelectorAll('[class^="modern-reconstruct-host-"], [class^="modern-host-"], #spm-global-toast-host, #spm-dev-diagnostic-host');
   hosts.forEach((host) => {
     if (host.shadowRoot) {
       const styleTags = host.shadowRoot.querySelectorAll('style');
@@ -129,7 +129,7 @@ async function init() {
                           const el = node as HTMLElement;
                           const className = typeof el.className === 'string' ? el.className : '';
                           // Ignore changes inside our own shadow hosts and components
-                          if (!className.includes('modern-') && el.id !== 'spm-global-toast-host') {
+                          if (!className.includes('modern-') && el.id !== 'spm-global-toast-host' && el.id !== 'spm-dev-diagnostic-host') {
                             shouldRun = true;
                             break;
                           }
@@ -362,7 +362,7 @@ async function init() {
                     const el = node as HTMLElement;
                     const className = typeof el.className === 'string' ? el.className : '';
                     // Ignore changes inside our own shadow hosts and components
-                    if (!className.includes('modern-') && el.id !== 'spm-global-toast-host') {
+                    if (!className.includes('modern-') && el.id !== 'spm-global-toast-host' && el.id !== 'spm-dev-diagnostic-host') {
                       shouldRun = true;
                       break;
                     }

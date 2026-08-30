@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { extractValue, revealPage } from './engine';
 import { COMPONENT_REGISTRY } from '../components-registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
+import { UiDevDiagnosticPanel } from '../components/dedicated/UiDevDiagnosticPanel';
 import { SpmErrorBoundary } from './SpmErrorBoundary';
 import { sanitizeComponentProps } from './sanitizeProps';
 import { DevDiagnosticCollector } from './devDiagnostics';
@@ -305,6 +306,38 @@ export function runModernizer(
     createRoot(toastRoot).render(
       <SpmErrorBoundary componentName="UiToastContainer">
         <UiToastContainer />
+      </SpmErrorBoundary>
+    );
+  }
+
+  // Mount Dev Diagnostic Panel in Dev Mode
+  const isDevActive = isDev || (typeof window !== 'undefined' && Boolean((window as any).__spm_dev_manifest));
+  const devDiagnosticHostId = 'spm-dev-diagnostic-host';
+  if (isDevActive && !rootDoc.getElementById(devDiagnosticHostId) && rootDoc.body) {
+    const devHost = rootDoc.createElement('div');
+    devHost.id = devDiagnosticHostId;
+    devHost.style.position = 'fixed';
+    devHost.style.bottom = '0';
+    devHost.style.right = '0';
+    devHost.style.zIndex = '999999';
+    devHost.style.pointerEvents = 'none';
+
+    rootDoc.body.appendChild(devHost);
+
+    const shadowRoot = devHost.attachShadow({ mode: 'open' });
+    const styleTag = rootDoc.createElement('style');
+    styleTag.textContent = stylesText;
+    shadowRoot.appendChild(styleTag);
+
+    if (manifest.theme?.cssVariables) {
+      applyTheme(shadowRoot, manifest.theme.cssVariables);
+    }
+
+    const devRoot = rootDoc.createElement('div');
+    shadowRoot.appendChild(devRoot);
+    createRoot(devRoot).render(
+      <SpmErrorBoundary componentName="UiDevDiagnosticPanel">
+        <UiDevDiagnosticPanel />
       </SpmErrorBoundary>
     );
   }
