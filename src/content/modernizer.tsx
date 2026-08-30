@@ -169,8 +169,8 @@ export function applyThemeGlobally(variables: Record<string, string>, customStyl
     }
 
     body.spm-reconstructed {
-      overflow: hidden !important;
-      height: 100vh !important;
+      height: auto !important;
+      min-height: 100vh !important;
     }
 
     a {
