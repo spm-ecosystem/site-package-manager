@@ -2,10 +2,9 @@ import { createRoot } from 'react-dom/client';
 import { extractValue, revealPage } from './engine';
 import { COMPONENT_REGISTRY } from '../components-registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
-import { UiDevDiagnosticPanel } from '../components/dedicated/UiDevDiagnosticPanel';
 import { SpmErrorBoundary } from './SpmErrorBoundary';
 import { sanitizeComponentProps } from './sanitizeProps';
-import { DevDiagnosticCollector } from './devDiagnostics';
+import { DevDiagnosticCollector, SpmDevDiagnosticBridge } from './devDiagnostics';
 
 const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
 
@@ -337,7 +336,7 @@ export function runModernizer(
     shadowRoot.appendChild(devRoot);
     createRoot(devRoot).render(
       <SpmErrorBoundary componentName="UiDevDiagnosticPanel">
-        <UiDevDiagnosticPanel />
+        <SpmDevDiagnosticBridge />
       </SpmErrorBoundary>
     );
   }

@@ -1,12 +1,10 @@
-export interface DevDiagnosticItem {
-  id: string;
-  type: 'MISSING_SELECTOR' | 'BUILD_ERROR' | 'DEV_SERVER_DISCONNECTED' | 'INVALID_PROP';
-  severity: 'warning' | 'error';
-  title: string;
-  message: string;
-  details?: string;
-  timestamp: number;
-}
+import React, { useState, useEffect } from 'react';
+import {
+  UiDevDiagnosticPanel,
+  DevDiagnosticItem,
+} from '../components/dedicated/UiDevDiagnosticPanel';
+
+export type { DevDiagnosticItem };
 
 export type DevDiagnosticListener = (items: DevDiagnosticItem[]) => void;
 
@@ -15,7 +13,7 @@ export class DevDiagnosticCollectorClass {
   private listeners: Set<DevDiagnosticListener> = new Set();
   private nextId: number = 1;
 
-  public addDiagnostic(item: Omit<DevDiagnosticItem, 'id' | 'timestamp'>): void {
+  public addDiagnostic(item: Omit<DevDiagnosticItem, 'id' | 'timestamp' | 'occurrenceCount'> & { occurrenceCount?: number }): void {
     const existingIndex = this.items.findIndex(
       (existing) =>
         existing.type === item.type &&
@@ -28,20 +26,23 @@ export class DevDiagnosticCollectorClass {
     const timestamp = Date.now();
 
     if (existingIndex !== -1) {
-      // Deduplicate: update existing item timestamp
+      const existing = this.items[existingIndex];
       this.items[existingIndex] = {
-        ...this.items[existingIndex],
-        timestamp
+        ...existing,
+        timestamp,
+        occurrenceCount: (existing.occurrenceCount || 1) + 1,
       };
     } else {
-      const id = typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `diag_${this.nextId++}_${Date.now()}`;
+      const id =
+        typeof crypto !== 'undefined' && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `diag_${this.nextId++}_${Date.now()}`;
 
       const newItem: DevDiagnosticItem = {
         ...item,
         id,
-        timestamp
+        timestamp,
+        occurrenceCount: item.occurrenceCount || 1,
       };
       this.items.push(newItem);
     }
@@ -81,3 +82,31 @@ export class DevDiagnosticCollectorClass {
 }
 
 export const DevDiagnosticCollector = new DevDiagnosticCollectorClass();
+
+export interface SpmDevDiagnosticBridgeProps {
+  initialExpanded?: boolean;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export function SpmDevDiagnosticBridge(props: SpmDevDiagnosticBridgeProps) {
+  const [items, setItems] = useState<DevDiagnosticItem[]>(() => DevDiagnosticCollector.getItems());
+
+  useEffect(() => {
+    setItems(DevDiagnosticCollector.getItems());
+    const unsubscribe = DevDiagnosticCollector.subscribe((newItems) => {
+      setItems([...newItems]);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  return (
+    <UiDevDiagnosticPanel
+      items={items}
+      onClear={() => DevDiagnosticCollector.clear()}
+      {...props}
+    />
+  );
+}
