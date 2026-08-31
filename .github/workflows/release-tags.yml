@@ -19,17 +19,17 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    - name: Checkout spm-vscode intellisense repository
+    - name: Checkout spm-vscode repository
       uses: actions/checkout@v4
       with:
         repository: spm-ecosystem/spm-vscode
         path: vscode-theme-manifest-intellisense
 
-    - name: Symlink vscode-theme-manifest-intellisense to parent directory
+    - name: Symlink VS Code intellisense schema directory
       run: |
         ln -s ${{ github.workspace }}/vscode-theme-manifest-intellisense ${{ github.workspace }}/../vscode-theme-manifest-intellisense
 
-    - name: Setup Node.js
+    - name: Setup Node.js Environment
       uses: actions/setup-node@v4
       with:
         node-version: 20
@@ -43,10 +43,10 @@ jobs:
         npm ci
         cd -
 
-    - name: Build Extension (regenerates registry & VS Code schema)
+    - name: Build Extension Bundle
       run: npm run build
 
-    - name: Package extension to ZIP
+    - name: Compress Release Archive
       run: |
         cd dist
         zip -r ../spm-extension-${{ github.ref_name }}.zip .
