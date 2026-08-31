@@ -237,33 +237,181 @@ function extractChildren(
   return result;
 }
 
-function getNextPageUrl(context: Document | HTMLElement, config?: InfiniteScrollConfig): string | null {
+export function isClientSideAnchor(href: string | null | undefined): boolean {
+  if (href === null || href === undefined) return true;
+  const trimmed = href.trim().toLowerCase();
+  if (trimmed === '' || trimmed === '#' || trimmed === '#;') return true;
+  if (trimmed.startsWith('javascript:')) return true;
+  return false;
+}
+
+export function getNextPageElement(
+  context: Document | HTMLElement,
+  config?: InfiniteScrollConfig
+): HTMLAnchorElement | HTMLElement | null {
   if (!config || !config.nextPageSelector) return null;
-  const elements = context.querySelectorAll(config.nextPageSelector);
+  const elements = context.querySelectorAll<HTMLElement>(config.nextPageSelector);
   for (const el of Array.from(elements)) {
     const text = el.textContent?.trim();
-    const href = el.getAttribute('href');
     const alt = el.getAttribute('alt')?.toLowerCase();
     const title = el.getAttribute('title')?.toLowerCase();
     const rel = el.getAttribute('rel')?.toLowerCase();
     
-    if (!href) continue;
-
     // Direct attribute indicators for "next page"
     if (alt === 'next' || title === 'next' || rel === 'next' || alt === 'next page') {
-      return href;
+      return el;
     }
 
     if (config.nextPageText) {
       if (text === config.nextPageText) {
-        return href;
+        return el;
       }
     } else {
-      // Default: take the first matched link
-      return href;
+      // Default: take the first matched link / element
+      return el;
     }
   }
   return null;
+}
+
+export function getNextPageUrl(context: Document | HTMLElement, config?: InfiniteScrollConfig): string | null {
+  const el = getNextPageElement(context, config);
+  return el ? el.getAttribute('href') : null;
+}
+
+export interface HandleInfiniteScrollOptions {
+  container?: Element;
+  rootContext?: Document | HTMLElement;
+  children?: ChildrenConfig[];
+  config?: InfiniteScrollConfig;
+  prevCounts?: Record<string, number>;
+  timeoutMs?: number;
+}
+
+export async function handleInfiniteScrollAnchor(
+  anchor: HTMLAnchorElement | HTMLElement,
+  options?: HandleInfiniteScrollOptions
+): Promise<Record<string, any> & { hasMore: boolean; nextUrl?: string | null }> {
+  const rawHref = anchor.getAttribute('href');
+  const isClientSide = isClientSideAnchor(rawHref);
+
+  if (isClientSide) {
+    const targetToObserve =
+      options?.container ||
+      anchor.closest('[data-spm-modernized]') ||
+      anchor.ownerDocument?.body ||
+      document.body;
+
+    const mutationPromise = new Promise<void>((resolve) => {
+      let debounceTimer: any = null;
+      let timeoutTimer: any = null;
+
+      const observer = new MutationObserver(() => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          cleanup();
+          resolve();
+        }, 50);
+      });
+
+      const cleanup = () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+        observer.disconnect();
+      };
+
+      if (targetToObserve) {
+        observer.observe(targetToObserve, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+          attributes: true,
+        });
+      }
+
+      timeoutTimer = setTimeout(() => {
+        cleanup();
+        resolve();
+      }, options?.timeoutMs ?? 1000);
+    });
+
+    // Trigger simulated click to execute client-side hydrated pagination event listener
+    anchor.click();
+
+    // Await mutation detection or timeout
+    await mutationPromise;
+
+    const rootCtx = options?.rootContext || anchor.ownerDocument || document;
+    const cont = options?.container || anchor.parentElement || document.body;
+    const allChildren =
+      options?.children && options.children.length > 0
+        ? extractChildren(rootCtx, cont, options.children)
+        : {};
+
+    const resultChildren: Record<string, any[]> = {};
+    let totalNewCount = 0;
+
+    if (options?.prevCounts) {
+      for (const [key, list] of Object.entries(allChildren)) {
+        const prev = options.prevCounts[key] || 0;
+        const sliced = list.slice(prev);
+        resultChildren[key] = sliced;
+        totalNewCount += sliced.length;
+        options.prevCounts[key] = list.length;
+      }
+    } else {
+      Object.assign(resultChildren, allChildren);
+      for (const list of Object.values(allChildren)) {
+        totalNewCount += (list as any[]).length;
+      }
+    }
+
+    let hasMore = true;
+    if (options?.config) {
+      const nextEl = getNextPageElement(rootCtx, options.config);
+      if (!nextEl) {
+        hasMore = false;
+      } else if (
+        nextEl.hasAttribute('disabled') ||
+        nextEl.classList.contains('disabled') ||
+        (nextEl instanceof HTMLElement && (nextEl.style.display === 'none' || nextEl.hidden))
+      ) {
+        hasMore = false;
+      }
+    }
+
+    if (options?.prevCounts && totalNewCount === 0) {
+      hasMore = false;
+    }
+
+    return {
+      ...resultChildren,
+      hasMore,
+    };
+  }
+
+  // Fallback / SSR URL fetch
+  if (!rawHref) {
+    return { items: [], tableRows: [], hasMore: false };
+  }
+
+  const absoluteUrl = new URL(rawHref, window.location.href).href;
+  console.log('[SPM Engine] Fetching next page:', absoluteUrl);
+  const res = await fetch(absoluteUrl);
+  if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+  const html = await res.text();
+
+  const parser = new DOMParser();
+  const nextDoc = parser.parseFromString(html, 'text/html');
+
+  const nextChildren = options?.children ? extractChildren(nextDoc, nextDoc.body, options.children) : {};
+  const nextUrl = options?.config ? getNextPageUrl(nextDoc, options.config) : null;
+
+  return {
+    ...nextChildren,
+    hasMore: !!nextUrl,
+    nextUrl,
+  };
 }
 
 export function runModernizer(
@@ -491,27 +639,55 @@ export function runModernizer(
             // Setup onLoadMore callback if infiniteScroll config exists
             let onLoadMore: any = undefined;
             if (reconConfig.infiniteScroll) {
-              let currentNextPageUrl = getNextPageUrl(rootDoc, reconConfig.infiniteScroll);
-              
+              const prevCounts: Record<string, number> = {};
+              for (const [key, list] of Object.entries(childrenLists)) {
+                prevCounts[key] = list.length;
+              }
+
+              const initialAnchor = getNextPageElement(rootDoc, reconConfig.infiniteScroll);
+              const initialHref = initialAnchor?.getAttribute('href');
+              const isClientHydrated = isClientSideAnchor(initialHref);
+              let currentNextPageUrl = !isClientHydrated ? initialHref : null;
+
               onLoadMore = async () => {
+                if (isClientHydrated) {
+                  const nextAnchor = getNextPageElement(rootDoc, reconConfig.infiniteScroll);
+                  if (!nextAnchor) {
+                    return { items: [], tableRows: [], hasMore: false };
+                  }
+                  try {
+                    return await handleInfiniteScrollAnchor(nextAnchor, {
+                      container,
+                      rootContext: rootDoc,
+                      children: children || [],
+                      config: reconConfig.infiniteScroll,
+                      prevCounts,
+                    });
+                  } catch (err) {
+                    console.error('[SPM Engine] Client-side infinite scroll failed:', err);
+                    return { items: [], tableRows: [], hasMore: false };
+                  }
+                }
+
                 if (!currentNextPageUrl) {
                   return { items: [], tableRows: [], hasMore: false };
                 }
+
                 try {
                   const absoluteUrl = new URL(currentNextPageUrl, window.location.href).href;
                   console.log('[SPM Engine] Fetching next page:', absoluteUrl);
                   const res = await fetch(absoluteUrl);
                   if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
                   const html = await res.text();
-                  
+
                   const parser = new DOMParser();
                   const nextDoc = parser.parseFromString(html, 'text/html');
-                  
-                  const nextChildren = extractChildren(nextDoc, nextDoc.body, children);
-                  
+
+                  const nextChildren = extractChildren(nextDoc, nextDoc.body, children || []);
+
                   currentNextPageUrl = getNextPageUrl(nextDoc, reconConfig.infiniteScroll);
                   console.log('[SPM Engine] Infinite Scroll next URL updated to:', currentNextPageUrl);
-                  
+
                   return {
                     ...nextChildren,
                     hasMore: !!currentNextPageUrl

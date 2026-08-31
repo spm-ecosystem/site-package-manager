@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, test, vi } from 'vitest';
 import { extractValue, triggerProxyClick, triggerProxyEvent } from '../src/content/engine';
-import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity, fetchThemeFiles, findElementWithShadow, findAllElementsWithShadow, markActiveNavigationLinks, setupActiveLinkListeners } from '../src/content/modernizer';
+import { runModernizer, parsePropValue, computeSha256, verifyManifestIntegrity, fetchThemeFiles, findElementWithShadow, findAllElementsWithShadow, markActiveNavigationLinks, setupActiveLinkListeners, handleInfiniteScrollAnchor, isClientSideAnchor, getNextPageElement, getNextPageUrl } from '../src/content/modernizer';
 import { computeManifestIntegrity } from '../src/popup/index';
 
 describe('extractValue engine helper', () => {
@@ -793,6 +793,265 @@ describe('markActiveNavigationLinks & setupActiveLinkListeners', () => {
     expect(() => {
       setupActiveLinkListeners();
     }).not.toThrow();
+  });
+});
+
+describe('infiniteScroll and handleInfiniteScrollAnchor Client-Side Hydrated Anchors', () => {
+  describe('isClientSideAnchor helper', () => {
+    it('correctly identifies javascript:void(0), javascript:;, and hash links as client-side anchors', () => {
+      expect(isClientSideAnchor('javascript:void(0)')).toBe(true);
+      expect(isClientSideAnchor('javascript:void(0);')).toBe(true);
+      expect(isClientSideAnchor('javascript:;')).toBe(true);
+      expect(isClientSideAnchor('javascript:')).toBe(true);
+      expect(isClientSideAnchor('#')).toBe(true);
+      expect(isClientSideAnchor('#;')).toBe(true);
+      expect(isClientSideAnchor('javascript:loadNextPage()')).toBe(true);
+      expect(isClientSideAnchor(null)).toBe(true);
+      expect(isClientSideAnchor(undefined)).toBe(true);
+      expect(isClientSideAnchor('')).toBe(true);
+    });
+
+    it('identifies standard HTTP/relative links as non-client-side (SSR) URLs', () => {
+      expect(isClientSideAnchor('/page/2')).toBe(false);
+      expect(isClientSideAnchor('https://example.com/posts?page=2')).toBe(false);
+      expect(isClientSideAnchor('?page=2')).toBe(false);
+      expect(isClientSideAnchor('index.php?offset=10')).toBe(false);
+    });
+  });
+
+  describe('getNextPageElement and getNextPageUrl helpers', () => {
+    it('finds next page element by selector and optional text/attribute', () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <a class="page-link" href="/page/1">1</a>
+        <a class="page-link" href="/page/2" rel="next">Next</a>
+      `;
+
+      const el = getNextPageElement(container, { nextPageSelector: '.page-link', nextPageText: 'Next' });
+      expect(el).not.toBeNull();
+      expect(el?.getAttribute('href')).toBe('/page/2');
+      expect(getNextPageUrl(container, { nextPageSelector: '.page-link', nextPageText: 'Next' })).toBe('/page/2');
+    });
+
+    it('returns null when element is missing', () => {
+      const container = document.createElement('div');
+      expect(getNextPageElement(container, { nextPageSelector: '.missing' })).toBeNull();
+      expect(getNextPageUrl(container, { nextPageSelector: '.missing' })).toBeNull();
+    });
+  });
+
+  describe('handleInfiniteScrollAnchor with javascript:void(0)', () => {
+    it('triggers simulated click on javascript:void(0) anchor and cleanly observes dynamic DOM mutations', async () => {
+      const container = document.createElement('div');
+      container.id = 'items-container';
+      container.innerHTML = `
+        <div class="item"><h3>Item 1</h3></div>
+        <div class="item"><h3>Item 2</h3></div>
+        <a id="load-more-btn" href="javascript:void(0)">Load More</a>
+      `;
+      document.body.appendChild(container);
+
+      const anchor = container.querySelector('#load-more-btn') as HTMLAnchorElement;
+      let clickFired = false;
+
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        clickFired = true;
+        // Dynamically append new items into container
+        const item3 = document.createElement('div');
+        item3.className = 'item';
+        item3.innerHTML = '<h3>Item 3</h3>';
+        const item4 = document.createElement('div');
+        item4.className = 'item';
+        item4.innerHTML = '<h3>Item 4</h3>';
+        container.insertBefore(item3, anchor);
+        container.insertBefore(item4, anchor);
+      });
+
+      const prevCounts = { items: 2 };
+      const res = await handleInfiniteScrollAnchor(anchor, {
+        container,
+        rootContext: document,
+        children: [
+          {
+            name: 'items',
+            selector: '.item',
+            propsMap: { title: 'h3 | text' }
+          }
+        ],
+        config: { nextPageSelector: '#load-more-btn' },
+        prevCounts,
+        timeoutMs: 300
+      });
+
+      expect(clickFired).toBe(true);
+      expect(res.items).toBeDefined();
+      expect(res.items).toHaveLength(2);
+      expect(res.items).toEqual([
+        { title: 'Item 3' },
+        { title: 'Item 4' }
+      ]);
+      expect(res.hasMore).toBe(true);
+      expect(prevCounts.items).toBe(4);
+
+      container.remove();
+    });
+
+    it('handles javascript:; and # client-side anchors with simulated click', async () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="row"><span>Row 1</span></div>
+        <a id="btn-hash" href="#">More</a>
+      `;
+      document.body.appendChild(container);
+
+      const anchor = container.querySelector('#btn-hash') as HTMLAnchorElement;
+      let clicked = false;
+
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        clicked = true;
+        const newRow = document.createElement('div');
+        newRow.className = 'row';
+        newRow.innerHTML = '<span>Row 2</span>';
+        container.insertBefore(newRow, anchor);
+      });
+
+      const prevCounts = { tableRows: 1 };
+      const res = await handleInfiniteScrollAnchor(anchor, {
+        container,
+        rootContext: document,
+        children: [
+          {
+            name: 'tableRows',
+            selector: '.row',
+            propsMap: { text: 'span | text' }
+          }
+        ],
+        config: { nextPageSelector: '#btn-hash' },
+        prevCounts,
+        timeoutMs: 300
+      });
+
+      expect(clicked).toBe(true);
+      expect(res.tableRows).toEqual([{ text: 'Row 2' }]);
+      expect(res.hasMore).toBe(true);
+
+      container.remove();
+    });
+
+    it('sets hasMore to false when next anchor is removed or disabled or no new items added', async () => {
+      const container = document.createElement('div');
+      container.innerHTML = `
+        <div class="item"><h3>Item 1</h3></div>
+        <a id="btn-final" href="javascript:void(0)">Last Page</a>
+      `;
+      document.body.appendChild(container);
+
+      const anchor = container.querySelector('#btn-final') as HTMLAnchorElement;
+      anchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Disables and hides the button, no new items
+        anchor.setAttribute('disabled', 'true');
+        anchor.style.display = 'none';
+      });
+
+      const prevCounts = { items: 1 };
+      const res = await handleInfiniteScrollAnchor(anchor, {
+        container,
+        rootContext: document,
+        children: [
+          {
+            name: 'items',
+            selector: '.item',
+            propsMap: { title: 'h3 | text' }
+          }
+        ],
+        config: { nextPageSelector: '#btn-final' },
+        prevCounts,
+        timeoutMs: 200
+      });
+
+      expect(res.items).toEqual([]);
+      expect(res.hasMore).toBe(false);
+
+      container.remove();
+    });
+  });
+
+  describe('runModernizer infiniteScroll integration with client-side hydrated anchor', () => {
+    it('sets up onLoadMore that triggers simulated click on javascript:void(0) anchor', async () => {
+      const container = document.createElement('div');
+      container.className = 'grid-recon-container';
+      container.innerHTML = `
+        <div class="gallery">
+          <div class="thumb"><img src="thumb1.jpg" /><span>Title 1</span></div>
+          <div class="thumb"><img src="thumb2.jpg" /><span>Title 2</span></div>
+        </div>
+        <a class="pagination-next" href="javascript:void(0)">Next Page</a>
+      `;
+      document.body.appendChild(container);
+
+      const nextAnchor = container.querySelector('.pagination-next') as HTMLAnchorElement;
+      let nextClicked = false;
+      nextAnchor.addEventListener('click', (e) => {
+        e.preventDefault();
+        nextClicked = true;
+        const gallery = container.querySelector('.gallery')!;
+        const newThumb = document.createElement('div');
+        newThumb.className = 'thumb';
+        newThumb.innerHTML = '<img src="thumb3.jpg" /><span>Title 3</span>';
+        gallery.appendChild(newThumb);
+      });
+
+      const manifest: any = {
+        reconstructs: [
+          {
+            containerSelector: '.grid-recon-container',
+            layoutComponent: 'UiSearchBar', // Registered layout component
+            children: [
+              {
+                name: 'items',
+                selector: '.thumb',
+                propsMap: {
+                  title: 'span | text',
+                  imageUrl: 'img | attr:src'
+                }
+              }
+            ],
+            infiniteScroll: {
+              nextPageSelector: '.pagination-next'
+            }
+          }
+        ]
+      };
+
+      runModernizer(document, manifest, '');
+
+      expect(nextAnchor).not.toBeNull();
+      // Test handleInfiniteScrollAnchor directly as called during onLoadMore
+      const prevCounts = { items: 2 };
+      const loadRes = await handleInfiniteScrollAnchor(nextAnchor, {
+        container,
+        rootContext: document,
+        children: manifest.reconstructs[0].children,
+        config: manifest.reconstructs[0].infiniteScroll,
+        prevCounts,
+        timeoutMs: 300
+      });
+
+      expect(nextClicked).toBe(true);
+      expect(loadRes.items).toHaveLength(1);
+      expect(loadRes.items[0]).toEqual({
+        title: 'Title 3',
+        imageUrl: 'thumb3.jpg'
+      });
+      expect(loadRes.hasMore).toBe(true);
+
+      // Clean up
+      container.remove();
+      document.querySelectorAll('[class^="modern-reconstruct-host-"]').forEach(h => h.remove());
+    });
   });
 });
 
