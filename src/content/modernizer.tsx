@@ -602,6 +602,12 @@ export function runModernizer(
           // Add scroll containment marker to body
           rootDoc.body.classList.add('spm-reconstructed');
 
+          // Clean up any previous reconstruct host for this component
+          const existingHost = container.parentNode?.querySelector(`.modern-reconstruct-host-${layoutComponent.toLowerCase()}`);
+          if (existingHost) {
+            existingHost.remove();
+          }
+
           // Setup Modern Shadow DOM Root Host
           const host = rootDoc.createElement('div');
           host.className = `modern-reconstruct-host-${layoutComponent.toLowerCase()}`;
