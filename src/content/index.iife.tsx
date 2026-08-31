@@ -30,20 +30,22 @@ export function updateShadowStyleTags(cssVarsString: string, newCss: string = ''
   hosts.forEach((host) => {
     if (host.shadowRoot) {
       const styleTags = host.shadowRoot.querySelectorAll('style');
-      let hasHostStyle = false;
+      let varsTag: HTMLStyleElement | null = null;
       styleTags.forEach((styleTag) => {
         if (styleTag.hasAttribute('data-spm-vars')) {
-          styleTag.textContent = `:host {\n${cssVarsString}\n}`;
-          hasHostStyle = true;
+          varsTag = styleTag as HTMLStyleElement;
         } else {
           styleTag.textContent = stylesTextVal + (newCss ? `\n/* Custom Theme Styles */\n${newCss}` : '');
         }
       });
-      if (!hasHostStyle && cssVarsString) {
-        const hostStyle = document.createElement('style');
-        hostStyle.setAttribute('data-spm-vars', 'true');
-        hostStyle.textContent = `:host {\n${cssVarsString}\n}`;
-        host.shadowRoot.appendChild(hostStyle);
+      if (!varsTag && cssVarsString) {
+        varsTag = document.createElement('style');
+        varsTag.setAttribute('data-spm-vars', 'true');
+        host.shadowRoot.appendChild(varsTag);
+      }
+      if (varsTag && cssVarsString) {
+        (varsTag as HTMLStyleElement).textContent = `:host {\n${cssVarsString}\n}`;
+        host.shadowRoot.appendChild(varsTag as HTMLStyleElement);
       }
     }
   });
