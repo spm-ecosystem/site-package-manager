@@ -21,6 +21,7 @@ declare global {
   interface Window {
     __spm_last_manifest?: SiteManifest;
     __spm_dev_manifest?: SiteManifest;
+    __spm_observer_attached?: boolean;
   }
 }
 
@@ -117,10 +118,10 @@ async function init() {
               window.__spm_last_manifest = devManifest;
 
               const runDevEngine = () => {
-                if (!hasRunModernizer) {
-                  hasRunModernizer = true;
-                  runModernizer(document, devManifest, stylesText, devCss, true);
+                runModernizer(document, devManifest, stylesText, devCss, true);
 
+                if (!window.__spm_observer_attached) {
+                  window.__spm_observer_attached = true;
                   const observer = new MutationObserver((mutations) => {
                     let shouldRun = false;
                     for (const mutation of mutations) {
@@ -128,7 +129,6 @@ async function init() {
                         if (node.nodeType === 1) {
                           const el = node as HTMLElement;
                           const className = typeof el.className === 'string' ? el.className : '';
-                          // Ignore changes inside our own shadow hosts and components
                           if (!className.includes('modern-') && el.id !== 'spm-global-toast-host' && el.id !== 'spm-dev-diagnostic-host') {
                             shouldRun = true;
                             break;
