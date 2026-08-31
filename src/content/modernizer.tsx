@@ -752,12 +752,18 @@ export function runModernizer(
 
         if (originalElements.length === 0) {
           if (isDev) {
+            const title = compConfig.action === 'hide'
+              ? `Optional Hidden Selector Unmatched: ${compConfig.selector}`
+              : `Missing Component Selector: ${compConfig.name || compConfig.selector}`;
+            const message = compConfig.action === 'hide'
+              ? `Selector "${compConfig.selector}" (action: hide) matched 0 elements on this route.`
+              : `Component "${compConfig.name || compConfig.selector}" selector "${compConfig.selector}" matched 0 elements.`;
             DevDiagnosticCollector.addDiagnostic({
               type: 'MISSING_SELECTOR',
               severity: 'warning',
-              title: `Missing Component Selector: ${compConfig.name}`,
-              message: `Component "${compConfig.name}" selector "${compConfig.selector}" matched 0 elements.`,
-              details: JSON.stringify({ component: compConfig.name, selector: compConfig.selector, action: compConfig.action })
+              title,
+              message,
+              details: JSON.stringify({ component: compConfig.name || compConfig.selector, selector: compConfig.selector, action: compConfig.action })
             });
           }
           continue;
