@@ -182,37 +182,32 @@ async function init() {
               const data = JSON.parse(event.data);
               console.log('[SPM] Dev Server update received:', data);
 
-              // Save to local storage for persistence on next load
+              const devManifest = data.manifest;
+              const devCss = data.css || '';
+
               chrome.storage.local.set({
-                [`dev-draft-manifest:${domain}`]: JSON.stringify(data.manifest),
-                [`dev-draft-css:${domain}`]: data.css
+                [`dev-draft-manifest:${domain}`]: JSON.stringify(devManifest),
+                [`dev-draft-css:${domain}`]: devCss
               }, () => {
-                const lastManifest = window.__spm_last_manifest;
-                const layoutChanged = !lastManifest ||
-                  JSON.stringify(data.manifest?.components || []) !== JSON.stringify(lastManifest?.components || []) ||
-                  JSON.stringify(data.manifest?.reconstructs || []) !== JSON.stringify(lastManifest?.reconstructs || []);
-
-                if (layoutChanged) {
-                  console.log('[SPM] Layout structure changed or first load, reloading page...');
-                  window.location.reload();
-                  return;
-                }
-
-                // Only styles or variables changed: dynamic hot-reload
-                window.__spm_last_manifest = data.manifest;
+                window.__spm_last_manifest = devManifest;
 
                 chrome.storage.local.get(['spm_theme_overrides'], (storageRes) => {
                   try {
                     const userOverrides = storageRes?.spm_theme_overrides?.[domain] || {};
-                    const cssVars = { ...(data.manifest?.theme?.cssVariables || {}), ...userOverrides };
+                    const cssVars = { ...(devManifest?.theme?.cssVariables || {}), ...userOverrides };
 
-                    applyThemeGlobally(cssVars, data.css, data.manifest?.theme?.noticeSelector);
+                    applyThemeGlobally(cssVars, devCss, devManifest?.theme?.noticeSelector);
 
                     const cssVarsString = Object.entries(cssVars)
                       .map(([key, val]) => `${key}: ${val};`)
                       .join('\n');
 
-                    updateShadowStyleTags(cssVarsString, data.css || '', stylesText);
+                    updateShadowStyleTags(cssVarsString, devCss, stylesText);
+
+                    // Re-run modernizer in-memory for instant 0-delay hot reload
+                    if (devManifest) {
+                      runModernizer(document, devManifest, stylesText, devCss, true);
+                    }
                   } catch (err) {
                     console.error('[SPM] Error in storage callback:', err);
                   }
