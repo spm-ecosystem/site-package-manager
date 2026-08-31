@@ -361,6 +361,9 @@ export function runModernizer(
     };
 
     // Show initial text if present and not explicitly hidden
+    if (noticeEl.hasAttribute('data-spm-observed')) return;
+    noticeEl.setAttribute('data-spm-observed', 'true');
+
     const initialText = noticeEl.textContent?.trim();
     const isInitiallyVisible = (noticeEl as HTMLElement).style.display !== 'none';
     if (initialText && isInitiallyVisible) {
