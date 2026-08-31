@@ -246,15 +246,16 @@ export function triggerProxyEvent(targetSelector: string, eventName: string, val
 }
 
 export function revealPage() {
-  setTimeout(() => {
-    const antiFlickerStyle = document.getElementById('spm-anti-flicker');
-    const loadingOverlay   = document.getElementById('spm-loading-overlay');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const antiFlickerStyle = document.getElementById('spm-anti-flicker');
+      const loadingOverlay   = document.getElementById('spm-loading-overlay');
 
-    if(!antiFlickerStyle) return;
+      if (!antiFlickerStyle) return;
 
-    console.log("[SPM] revealPage called")
+      console.log("[SPM] revealPage called");
 
-    antiFlickerStyle.textContent = `
+      antiFlickerStyle.textContent = `
         html {
           background-color: var(--spm-bg-primary) !important;
         }
@@ -263,12 +264,11 @@ export function revealPage() {
           transition: opacity 0.2s ease-in-out !important;
         }
       `;
-    setTimeout(() => {
-      antiFlickerStyle.remove();
-      loadingOverlay?.remove();
-      console.log(`[SPM] Anti-flicker style removed`)
-    }, 200);
-  }, 50)
-
-
+      setTimeout(() => {
+        antiFlickerStyle.remove();
+        loadingOverlay?.remove();
+        console.log(`[SPM] Anti-flicker style removed`);
+      }, 200);
+    });
+  });
 }

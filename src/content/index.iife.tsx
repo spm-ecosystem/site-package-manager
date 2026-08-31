@@ -25,7 +25,7 @@ declare global {
   }
 }
 
-export function updateShadowStyleTags(cssVarsString: string, _newCss: string, stylesTextVal = '') {
+export function updateShadowStyleTags(cssVarsString: string, newCss: string = '', stylesTextVal = '') {
   const hosts = document.querySelectorAll('[class^="modern-reconstruct-host-"], [class^="modern-host-"], #spm-global-toast-host, #spm-dev-diagnostic-host');
   hosts.forEach((host) => {
     if (host.shadowRoot) {
@@ -36,7 +36,7 @@ export function updateShadowStyleTags(cssVarsString: string, _newCss: string, st
           styleTag.textContent = `:host {\n${cssVarsString}\n}`;
           hasHostStyle = true;
         } else {
-          styleTag.textContent = stylesTextVal;
+          styleTag.textContent = stylesTextVal + (newCss ? `\n/* Custom Theme Styles */\n${newCss}` : '');
         }
       });
       if (!hasHostStyle && cssVarsString) {
