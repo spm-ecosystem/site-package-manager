@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { extractValue, revealPage } from './engine';
+import { extractValue, resolveTargetElement, revealPage } from './engine';
 import { COMPONENT_REGISTRY } from '../components-registry';
 import { UiToastContainer } from '../components/dedicated/UiToast';
 import { SpmErrorBoundary } from './SpmErrorBoundary';
@@ -589,7 +589,7 @@ export function runModernizer(
           const preservedNodes: Record<string, Element> = {};
           if (preserve) {
             for (const [slotName, selector] of Object.entries(preserve)) {
-              const targetNode = container.querySelector(selector);
+              const targetNode = resolveTargetElement(container, selector);
               if (targetNode) {
                 preservedNodes[slotName] = targetNode;
               }

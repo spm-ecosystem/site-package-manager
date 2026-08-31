@@ -47,6 +47,35 @@ export function parseCleanNumber(val: string | null | undefined): string | null 
   return String(result);
 }
 
+export function resolveTargetElement(element: Element, selector: string): Element | null {
+  if (!element || !selector) return null;
+  if (selector === 'self') return element;
+
+  try {
+    if (selector.startsWith('+')) {
+      const nextEl = element.nextElementSibling;
+      if (!nextEl) return null;
+      const innerSel = selector.replace(/^\+\s*\w*\s*/, '').trim();
+      return innerSel ? nextEl.querySelector(innerSel) : nextEl;
+    }
+    if (selector.startsWith('~')) {
+      const innerSel = selector.replace(/^~\s*\w*\s*/, '').trim();
+      if (!element.parentElement) return null;
+      const siblings = Array.from(element.parentElement.children);
+      const idx = siblings.indexOf(element);
+      for (let i = idx + 1; i < siblings.length; i++) {
+        const match = innerSel ? siblings[i].querySelector(innerSel) : siblings[i];
+        if (match) return match;
+      }
+      return null;
+    }
+    return element.querySelector(selector);
+  } catch (err) {
+    console.warn('[SPM Engine] Error resolving target element:', selector, err);
+    return null;
+  }
+}
+
 export function extractValue(element: Element, queryRule: string): string | null {
   const parts = queryRule.split('|').map((s) => s.trim());
   const selector = parts[0];
@@ -54,7 +83,7 @@ export function extractValue(element: Element, queryRule: string): string | null
 
   if (!selector || !extractor) return null;
 
-  const targetEl = selector === 'self' ? element : element.querySelector(selector);
+  const targetEl = resolveTargetElement(element, selector);
   if (!targetEl) return null;
 
   let val: string | null = null;
