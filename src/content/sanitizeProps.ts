@@ -23,6 +23,24 @@ export function parseCssStyleString(cssString: string): Record<string, string> {
   return styles;
 }
 
+export function tryParseRelaxedJson(str: string): any {
+  if (!str || typeof str !== 'string') return undefined;
+  const trimmed = str.trim();
+  if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) return undefined;
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {
+    try {
+      // Fix unquoted object keys (e.g. {creating: "t"} -> {"creating": "t"})
+      const quoted = trimmed.replace(/([{,]\s*)([a-zA-Z0-9_$]+)\s*:/g, '$1"$2":');
+      return JSON.parse(quoted);
+    } catch (err) {
+      return undefined;
+    }
+  }
+}
+
 export function sanitizeComponentProps<T extends Record<string, any>>(rawProps: T): T {
   if (!rawProps || typeof rawProps !== 'object') {
     return {} as T;
@@ -41,10 +59,9 @@ export function sanitizeComponentProps<T extends Record<string, any>>(rawProps: 
     }
 
     if (typeof value === 'string' && (value.trim().startsWith('[') || value.trim().startsWith('{'))) {
-      try {
-        safeProps[key] = JSON.parse(value);
-      } catch (e) {
-        // Keep original string if JSON parsing fails
+      const parsed = tryParseRelaxedJson(value);
+      if (parsed !== undefined) {
+        safeProps[key] = parsed;
       }
     }
 
