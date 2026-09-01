@@ -62,4 +62,19 @@ describe('sanitizeComponentProps (Real Data & Edge Case Validation)', () => {
     expect(clean.address).toBeUndefined();
     expect(clean.pageTitle).toBe('Sample');
   });
+
+  it('should parse CSS string style props into React camelCase CSSProperties objects', () => {
+    const rawProps = {
+      title: 'Form Title',
+      style: 'max-width: 480px; margin: 40px auto; opacity: 0.9;',
+    };
+
+    const clean = sanitizeComponentProps(rawProps);
+
+    expect(clean.style).toEqual({
+      maxWidth: '480px',
+      margin: '40px auto',
+      opacity: '0.9',
+    });
+  });
 });
