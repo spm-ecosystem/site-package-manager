@@ -1,8 +1,19 @@
 import React from 'react';
 
+export interface DevWorkspaceState {
+  domain?: string;
+  activeThemeId?: string;
+  availableThemes?: Array<{ id: string; label: string }>;
+  manifest?: any;
+  css?: string;
+}
+
 interface DevTabProps {
+  currentDomain: string;
   isDevMode: boolean;
   onToggleDevMode: () => void;
+  devWorkspaceState: DevWorkspaceState | null;
+  onSelectTheme: (themeId: string) => void;
   devDraftManifestRaw: string;
   devDraftLabel: string;
   devDraftVersion: string;
@@ -14,8 +25,11 @@ interface DevTabProps {
 }
 
 export const DevTab: React.FC<DevTabProps> = ({
+  currentDomain,
   isDevMode,
   onToggleDevMode,
+  devWorkspaceState,
+  onSelectTheme,
   devDraftManifestRaw,
   devDraftLabel,
   devDraftVersion,
@@ -25,8 +39,16 @@ export const DevTab: React.FC<DevTabProps> = ({
   onWatchPath,
   onOpenDevLoader,
 }) => {
+  const availableThemes = devWorkspaceState?.availableThemes || [];
+  const activeThemeId = devWorkspaceState?.activeThemeId || '';
+
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4 p-4 overflow-y-auto">
+      {/* Active Site Header */}
+      <div className="text-[10px] font-bold tracking-wider text-zinc-400 uppercase">
+        ACTIVE SITE: <span className="text-white font-mono">{currentDomain || 'N/A'}</span>
+      </div>
+
       {/* Dev Mode Toggle */}
       <div className="flex items-center justify-between">
         <div>
@@ -49,6 +71,24 @@ export const DevTab: React.FC<DevTabProps> = ({
 
       {isDevMode && (
         <div className="flex flex-col gap-4 border-t border-[#222222] pt-3">
+          {/* Theme Selector Dropdown */}
+          {availableThemes.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-semibold text-zinc-400">Available Dev Themes</label>
+              <select
+                value={activeThemeId}
+                onChange={(e) => onSelectTheme(e.target.value)}
+                className="w-full bg-black border border-[#333333] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-zinc-500 font-sans"
+              >
+                {availableThemes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label || t.id} ({t.id})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Active Local Draft Info */}
           {devDraftManifestRaw ? (
             <div className="bg-[#111111] border border-[#222222] rounded p-3 flex flex-col gap-1">

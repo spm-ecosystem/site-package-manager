@@ -171,65 +171,122 @@ async function init() {
             }
           }, 2000);
 
-          const ws = new WebSocket('ws://localhost:8080');
+          const CANDIDATE_PORTS = [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090];
+          let portIndex = 0;
 
-          ws.onopen = () => {
-            wsOpened = true;
-            clearTimeout(wsTimeout);
-            console.log('[SPM] WebSocket connection opened.');
-          };
+          const connectToNextPort = () => {
+            if (portIndex >= CANDIDATE_PORTS.length) {
+              console.warn('[SPM] WebSocket connection error across all candidate ports [8080-8090] (is dev server running?)');
+              if (!devManifestRaw) {
+                revealPage();
+              }
+              return;
+            }
 
-          ws.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data);
-              console.log('[SPM] Dev Server update received:', data);
+            const currentPort = CANDIDATE_PORTS[portIndex];
+            let attempted = false;
+            const socket = new WebSocket(`ws://localhost:${currentPort}`);
 
-              const devManifest = data.manifest;
-              const devCss = data.css || '';
+            const failAndTryNext = () => {
+              if (attempted) return;
+              attempted = true;
+              portIndex++;
+              connectToNextPort();
+            };
 
-              chrome.storage.local.set({
-                [`dev-draft-manifest:${domain}`]: JSON.stringify(devManifest),
-                [`dev-draft-css:${domain}`]: devCss
-              }, () => {
-                window.__spm_last_manifest = devManifest;
+            socket.onopen = () => {
+              wsOpened = true;
+              attempted = true;
+              clearTimeout(wsTimeout);
+              console.log(`[SPM] WebSocket connection opened on port ${currentPort}.`);
+              socket.send(JSON.stringify({
+                action: 'identify',
+                domain: window.location.hostname,
+                url: window.location.href
+              }));
+            };
 
-                chrome.storage.local.get(['spm_theme_overrides'], (storageRes) => {
-                  try {
-                    const userOverrides = storageRes?.spm_theme_overrides?.[domain] || {};
-                    const cssVars = { ...(devManifest?.theme?.cssVariables || {}), ...userOverrides };
+            socket.onmessage = (event) => {
+              try {
+                const data = JSON.parse(event.data);
+                console.log('[SPM] Dev Server update received:', data);
 
-                    applyThemeGlobally(cssVars, devCss, devManifest?.theme?.noticeSelector);
+                const targetDomain = data.domain || domain;
+                const devManifest = data.manifest;
+                const devCss = data.css || '';
 
-                    const cssVarsString = Object.entries(cssVars)
-                      .map(([key, val]) => `${key}: ${val};`)
-                      .join('\n');
+                const storageItems: Record<string, any> = {
+                  [`dev-draft-manifest:${targetDomain}`]: JSON.stringify(devManifest),
+                  [`dev-draft-css:${targetDomain}`]: devCss
+                };
 
-                    updateShadowStyleTags(cssVarsString, devCss, stylesText);
+                if (data.action === 'workspace_state' || data.type === 'workspace_state' || data.action === 'dev-workspace' || data.type === 'dev-workspace' || data.availableThemes) {
+                  storageItems[`dev-workspace:${targetDomain}`] = {
+                    domain: targetDomain,
+                    activeThemeId: data.activeThemeId,
+                    availableThemes: data.availableThemes || [],
+                    manifest: devManifest,
+                    css: devCss
+                  };
+                }
 
-                    // Re-run modernizer in-memory for instant 0-delay hot reload
-                    if (devManifest) {
-                      runModernizer(document, devManifest, stylesText, devCss, true);
+                if (devManifest) {
+                  const cssVars = { ...(devManifest.theme?.cssVariables || {}) };
+                  applyThemeGlobally(cssVars, devCss, devManifest.theme?.noticeSelector);
+                  const cssVarsString = Object.entries(cssVars)
+                    .map(([key, val]) => `${key}: ${val};`)
+                    .join('\n');
+                  updateShadowStyleTags(cssVarsString, devCss, stylesText);
+                }
+
+                chrome.storage.local.set(storageItems, () => {
+                  window.__spm_last_manifest = devManifest;
+
+                  chrome.storage.local.get(['spm_theme_overrides'], (storageRes) => {
+                    try {
+                      const userOverrides = storageRes?.spm_theme_overrides?.[domain] || {};
+                      const cssVars = { ...(devManifest?.theme?.cssVariables || {}), ...userOverrides };
+
+                      applyThemeGlobally(cssVars, devCss, devManifest?.theme?.noticeSelector);
+
+                      const cssVarsString = Object.entries(cssVars)
+                        .map(([key, val]) => `${key}: ${val};`)
+                        .join('\n');
+
+                      updateShadowStyleTags(cssVarsString, devCss, stylesText);
+
+                      // Re-run modernizer in-memory for instant 0-delay hot reload
+                      if (devManifest) {
+                        runModernizer(document, devManifest, stylesText, devCss, true);
+                      }
+                    } catch (err) {
+                      console.error('[SPM] Error in storage callback:', err);
                     }
-                  } catch (err) {
-                    console.error('[SPM] Error in storage callback:', err);
-                  }
+                  });
                 });
-              });
-            } catch (err) {
-              console.error('[SPM] Error processing WebSocket message:', err);
-            }
+              } catch (err) {
+                console.error('[SPM] Error processing WebSocket message:', err);
+              }
+            };
+
+            socket.onerror = (err) => {
+              if (!wsOpened) {
+                failAndTryNext();
+              } else {
+                console.warn(`[SPM] WebSocket connection error on port ${currentPort}:`, err);
+              }
+            };
+
+            socket.onclose = () => {
+              if (!wsOpened) {
+                failAndTryNext();
+              } else {
+                console.log('[SPM] WebSocket connection closed.');
+              }
+            };
           };
 
-          ws.onerror = (err) => {
-            console.warn('[SPM] WebSocket connection error (is dev server running?):', err);
-            if (!devManifestRaw) {
-              revealPage();
-            }
-          };
-
-          ws.onclose = () => {
-            console.log('[SPM] WebSocket connection closed.');
-          };
+          connectToNextPort();
 
           resolve();
           return;

@@ -10,6 +10,7 @@ import { ColorsTab } from './components/ColorsTab';
 import { DevTab } from './components/DevTab';
 
 const WORKER_ORIGIN = 'https://spm.hexacloud.net.br';
+const CANDIDATE_PORTS = [8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088, 8089, 8090];
 
 export async function computeManifestIntegrity(domain: string, themeName: string, version: string): Promise<string | null> {
   if (!domain || !themeName || !version) return null;
@@ -44,6 +45,7 @@ function Popup() {
   const [spmActivePackages, setSpmActivePackages] = useState<Record<string, string>>({});
   const [spmPinnedVersions, setSpmPinnedVersions] = useState<Record<string, Record<string, string>>>({});
   const [spmDevModeHosts, setSpmDevModeHosts] = useState<Record<string, boolean>>({});
+  const [devWorkspaceState, setDevWorkspaceState] = useState<{ activeThemeId?: string; availableThemes?: Array<{ id: string; label: string }>; manifest?: any; css?: string } | null>(null);
   const [devDraftManifestRaw, setDevDraftManifestRaw] = useState<string>('');
   const [devDraftCssRaw, setDevDraftCssRaw] = useState<string>('');
   const [manifestPathInput, setManifestPathInput] = useState('');
@@ -129,6 +131,7 @@ function Popup() {
               'spm_pinned_versions',
               'spm_dev_mode_hosts',
               'spm_dev_mode',
+              `dev-workspace:${domain}`,
               `dev-draft-manifest:${domain}`,
               `dev-draft-css:${domain}`,
               `spm_pinned_package:${domain}`,
@@ -162,6 +165,10 @@ function Popup() {
                 devHosts[domain] = true;
               }
               setSpmDevModeHosts(devHosts);
+
+              if (res[`dev-workspace:${domain}`]) {
+                setDevWorkspaceState(res[`dev-workspace:${domain}`]);
+              }
 
               setDevDraftManifestRaw(res[`dev-draft-manifest:${domain}`] || '');
               setDevDraftCssRaw(res[`dev-draft-css:${domain}`] || '');
@@ -346,6 +353,89 @@ function Popup() {
     }
   };
 
+  // Listen for storage updates (e.g. dev-workspace changes from content script WebSocket)
+  useEffect(() => {
+    if (!currentDomain || typeof chrome === 'undefined' || !chrome.storage) return;
+
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+      const wsKey = `dev-workspace:${currentDomain}`;
+      if (changes[wsKey]) {
+        setDevWorkspaceState(changes[wsKey].newValue || null);
+      }
+      const draftKey = `dev-draft-manifest:${currentDomain}`;
+      if (changes[draftKey]) {
+        setDevDraftManifestRaw(changes[draftKey].newValue || '');
+      }
+      const cssKey = `dev-draft-css:${currentDomain}`;
+      if (changes[cssKey]) {
+        setDevDraftCssRaw(changes[cssKey].newValue || '');
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, [currentDomain]);
+
+  const handleSelectTheme = (themeId: string) => {
+    if (!currentDomain) return;
+
+    const candidatePorts = CANDIDATE_PORTS;
+    let portIndex = 0;
+
+    const tryConnect = () => {
+      if (portIndex >= candidatePorts.length) {
+        console.warn('[SPM Popup] Could not connect to SPM Dev Server on candidate ports 8080-8090');
+        return;
+      }
+
+      const currentPort = candidatePorts[portIndex];
+      let attempted = false;
+      let connected = false;
+      const ws = new WebSocket(`ws://localhost:${currentPort}`);
+
+      const failAndTryNext = () => {
+        if (attempted) return;
+        attempted = true;
+        try { ws.close(); } catch (e) {}
+        portIndex++;
+        tryConnect();
+      };
+
+      ws.onopen = () => {
+        connected = true;
+        attempted = true;
+        ws.send(JSON.stringify({
+          action: 'select_theme',
+          domain: currentDomain,
+          themeId: themeId
+        }));
+        if (typeof chrome !== 'undefined' && chrome.tabs) {
+          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            const tab = tabs[0];
+            if (tab?.id) {
+              chrome.tabs.reload(tab.id);
+            }
+          });
+        }
+        setTimeout(() => {
+          try { ws.close(); } catch (e) {}
+        }, 500);
+      };
+
+      ws.onerror = () => {
+        if (!connected) failAndTryNext();
+      };
+
+      ws.onclose = () => {
+        if (!connected) failAndTryNext();
+      };
+    };
+
+    tryConnect();
+  };
+
   // Load saved path on domain change
   useEffect(() => {
     if (currentDomain && typeof chrome !== 'undefined' && chrome.storage) {
@@ -364,31 +454,66 @@ function Popup() {
       });
     }
 
-    const ws = new WebSocket('ws://localhost:8080');
-    ws.onopen = () => {
-      ws.send(JSON.stringify({
-        action: 'watch',
-        path: manifestPathInput
-      }));
-    };
-    ws.onmessage = (event) => {
-      try {
-        const res = JSON.parse(event.data);
-        if (res.status === 'success') {
-          console.log('[SPM Popup] Successfully set dev server watch path:', res.watching);
-          reloadTab();
-        } else if (res.status === 'error') {
-          alert(`Dev Server Error: ${res.message}`);
-        }
-      } catch (err) {
-        console.error('[SPM Popup] Error parsing watch response:', err);
+    const candidatePorts = CANDIDATE_PORTS;
+    let portIndex = 0;
+
+    const tryConnect = () => {
+      if (portIndex >= candidatePorts.length) {
+        alert('Could not connect to SPM Dev Server (tried ports 8080-8090). Make sure "spm dev" is running in your terminal.');
+        return;
       }
-      ws.close();
+
+      const currentPort = candidatePorts[portIndex];
+      let attempted = false;
+      let connected = false;
+      const ws = new WebSocket(`ws://localhost:${currentPort}`);
+
+      const failAndTryNext = () => {
+        if (attempted) return;
+        attempted = true;
+        try { ws.close(); } catch (e) {}
+        portIndex++;
+        tryConnect();
+      };
+
+      ws.onopen = () => {
+        connected = true;
+        attempted = true;
+        ws.send(JSON.stringify({
+          action: 'watch',
+          path: manifestPathInput
+        }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const res = JSON.parse(event.data);
+          if (res.status === 'success') {
+            console.log('[SPM Popup] Successfully set dev server watch path:', res.watching);
+            reloadTab();
+          } else if (res.status === 'error') {
+            alert(`Dev Server Error: ${res.message}`);
+          }
+        } catch (err) {
+          console.error('[SPM Popup] Error parsing watch response:', err);
+        }
+        ws.close();
+      };
+
+      ws.onerror = () => {
+        if (!connected) {
+          failAndTryNext();
+        }
+      };
+
+      ws.onclose = () => {
+        if (!connected) {
+          failAndTryNext();
+        }
+      };
     };
-    ws.onerror = () => {
-      alert('Could not connect to SPM Dev Server (ws://localhost:8080). Make sure "spm dev" is running in your terminal.');
-      ws.close();
-    };
+
+    tryConnect();
   };
 
   const isSupportedDomain = !!registry[currentDomain];
@@ -521,8 +646,11 @@ function Popup() {
         {/* Tab: Dev */}
         {activeTab === 'dev' && (
           <DevTab
+            currentDomain={currentDomain}
             isDevMode={isDevMode}
             onToggleDevMode={toggleDevMode}
+            devWorkspaceState={devWorkspaceState}
+            onSelectTheme={handleSelectTheme}
             devDraftManifestRaw={devDraftManifestRaw}
             devDraftLabel={devDraftLabel}
             devDraftVersion={devDraftVersion}
