@@ -441,7 +441,7 @@ export function runModernizer(
 
     const shadowRoot = toastHost.attachShadow({ mode: 'open' });
     const styleTag = rootDoc.createElement('style');
-    styleTag.textContent = stylesText;
+    styleTag.textContent = stylesText + (styleCSS ? `\n/* Custom Theme Styles */\n${styleCSS}` : '');
     shadowRoot.appendChild(styleTag);
 
     if (manifest.theme?.cssVariables) {
@@ -473,7 +473,7 @@ export function runModernizer(
 
     const shadowRoot = devHost.attachShadow({ mode: 'open' });
     const styleTag = rootDoc.createElement('style');
-    styleTag.textContent = stylesText;
+    styleTag.textContent = stylesText + (styleCSS ? `\n/* Custom Theme Styles */\n${styleCSS}` : '');
     shadowRoot.appendChild(styleTag);
 
     if (manifest.theme?.cssVariables) {
@@ -822,7 +822,7 @@ export function runModernizer(
           const shadowRoot = host.attachShadow({ mode: 'open' });
 
           const styleTag = rootDoc.createElement('style');
-          styleTag.textContent = stylesText;
+          styleTag.textContent = stylesText + (styleCSS ? `\n/* Custom Theme Styles */\n${styleCSS}` : '');
           shadowRoot.appendChild(styleTag);
 
           if (manifest.theme?.cssVariables) applyTheme(shadowRoot, manifest.theme.cssVariables);

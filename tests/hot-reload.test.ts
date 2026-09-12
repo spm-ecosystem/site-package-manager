@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { updateShadowStyleTags } from '../src/content/index.iife';
+import { runModernizer, SiteManifest } from '../src/content/modernizer';
 
 describe('Hot Reloading and WebSocket Error handling', () => {
   beforeEach(() => {
@@ -55,5 +56,56 @@ describe('Hot Reloading and WebSocket Error handling', () => {
     const isSameAC = JSON.stringify(manifestA.components) === JSON.stringify(manifestC.components) &&
                      JSON.stringify(manifestA.reconstructs) === JSON.stringify(manifestC.reconstructs);
     expect(isSameAC).toBe(false);
+  });
+
+  it('should append custom theme CSS to shadow root style tags when runModernizer is called', () => {
+    const targetEl = document.createElement('div');
+    targetEl.id = 'target-header';
+    document.body.appendChild(targetEl);
+
+    const manifest: SiteManifest = {
+      components: [
+        {
+          name: 'UiNavHeader',
+          selector: '#target-header',
+          action: 'replace',
+          propsMap: {},
+        },
+      ],
+    };
+
+    const baseCss = '.base-style { color: black; }';
+    const customCss = '.custom-theme-override { background: gold; }';
+
+    runModernizer(document, manifest, baseCss, customCss);
+
+    const hostEl = document.querySelector('.modern-host-uinavheader');
+    expect(hostEl).not.toBeNull();
+    expect(hostEl?.shadowRoot).not.toBeNull();
+
+    const styleTag = hostEl!.shadowRoot!.querySelector('style:not([data-spm-vars])');
+    expect(styleTag).not.toBeNull();
+    expect(styleTag!.textContent).toContain(baseCss);
+    expect(styleTag!.textContent).toContain('/* Custom Theme Styles */');
+    expect(styleTag!.textContent).toContain(customCss);
+  });
+
+  it('should preserve base CSS and append custom CSS when updateShadowStyleTags is called', () => {
+    const host = document.createElement('div');
+    host.className = 'modern-host-test';
+    document.body.appendChild(host);
+    const shadowRoot = host.attachShadow({ mode: 'open' });
+
+    const mainStyle = document.createElement('style');
+    mainStyle.textContent = '.initial-style { color: green; }';
+    shadowRoot.appendChild(mainStyle);
+
+    const customCss = '.custom-updated-style { color: red; }';
+
+    updateShadowStyleTags('', customCss, '.initial-style { color: green; }');
+
+    expect(mainStyle.textContent).toContain('.initial-style { color: green; }');
+    expect(mainStyle.textContent).toContain('/* Custom Theme Styles */');
+    expect(mainStyle.textContent).toContain(customCss);
   });
 });

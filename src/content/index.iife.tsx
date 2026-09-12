@@ -25,17 +25,18 @@ declare global {
   }
 }
 
-export function updateShadowStyleTags(cssVarsString: string, newCss: string = '', stylesTextVal = '') {
+export function updateShadowStyleTags(cssVarsString: string, styleCSS: string = '', stylesTextVal: string = stylesText) {
   const hosts = document.querySelectorAll('[class^="modern-reconstruct-host-"], [class^="modern-host-"], #spm-global-toast-host, #spm-dev-diagnostic-host');
   hosts.forEach((host) => {
     if (host.shadowRoot) {
       const styleTags = host.shadowRoot.querySelectorAll('style');
       let varsTag: HTMLStyleElement | null = null;
+      const baseCss = stylesTextVal || stylesText;
       styleTags.forEach((styleTag) => {
         if (styleTag.hasAttribute('data-spm-vars')) {
           varsTag = styleTag as HTMLStyleElement;
         } else {
-          styleTag.textContent = stylesTextVal + (newCss ? `\n/* Custom Theme Styles */\n${newCss}` : '');
+          styleTag.textContent = baseCss + (styleCSS ? `\n/* Custom Theme Styles */\n${styleCSS}` : '');
         }
       });
       if (!varsTag && cssVarsString) {
@@ -45,7 +46,6 @@ export function updateShadowStyleTags(cssVarsString: string, newCss: string = ''
       }
       if (varsTag && cssVarsString) {
         (varsTag as HTMLStyleElement).textContent = `:host {\n${cssVarsString}\n}`;
-        host.shadowRoot.appendChild(varsTag as HTMLStyleElement);
       }
     }
   });
